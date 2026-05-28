@@ -1,34 +1,16 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabaseServerSSR'
-import { handleLogout } from '@/app/actions/handleLogout' // 1. IMPORT YOUR ACTION HERE
+import { handleLogout } from '@/app/actions/handleLogout' // Fixed import path
+import { enforceRole } from '@/lib/authProtection' // Imported helper
 
 interface UserInfo {
   email: string
 }
 
 export default async function SuperadminDashboard() {
-  const supabase = await createClient()
+  // 1. One line secures the admin portal completely and fetches the user
+  const authUser = await enforceRole('superadmin')
 
-  const {
-    data: { user: authUser },
-  } = await supabase.auth.getUser()
-
-  if (!authUser) {
-    redirect('/admin-login')
-  }
-
-  const { data: userData } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', authUser.id)
-    .single()
-
-  if (!userData || userData.role !== 'superadmin') {
-    redirect('/admin-login')
-  }
-
+  // 2. Set up the UI variables
   const user: UserInfo = { email: authUser.email || '' }
-
   const logoutAction = handleLogout.bind(null, '/admin-login')
 
   return (

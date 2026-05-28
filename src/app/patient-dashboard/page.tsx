@@ -1,6 +1,6 @@
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabaseServerSSR'
-import { handleLogout } from '@/app/actions/handleLogout' // 1. IMPORT YOUR ACTION HERE
+import { handleLogout } from '@/app/actions/handleLogout'
+import { enforceRole } from '@/lib/authProtection' // Import helper
 
 interface PatientInfo {
   first_name: string
@@ -9,21 +9,17 @@ interface PatientInfo {
 }
 
 export default async function PatientDashboard() {
+  // 1. One line secures the whole page and gives you the valid user object
+  const authUser = await enforceRole('patient')
+
   const supabase = await createClient()
 
-  const {
-    data: { user: authUser },
-  } = await supabase.auth.getUser()
-
-  if (!authUser) {
-    redirect('/login')
-  }
-
+  // 2. Fetch the UI display data normally
   const { data: patientData } = await supabase
     .from('patients')
     .select('first_name, last_name')
     .eq('user_id', authUser.id)
-    .single()
+    .maybeSingle()
 
   const patient: PatientInfo = {
     first_name: patientData?.first_name ?? '',
@@ -31,8 +27,6 @@ export default async function PatientDashboard() {
     email: authUser.email ?? '',
   }
 
-  // 2. PRE-BIND THE REDIRECT TARGET PATH
-  // This passes '/login' safely into the action's first parameter
   const logoutAction = handleLogout.bind(null, '/login')
 
   return (

@@ -67,7 +67,10 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // Explicitly list routes that MUST run through the middleware
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/patient-dashboard/:path*',
+    '/superadmin-portal/:path*',
   ],
 }

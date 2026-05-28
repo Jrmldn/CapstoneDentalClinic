@@ -32,42 +32,19 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error && data.user) {
-      const user = data.user
-
-      // Check role for superadmin redirect
+      // 1. Fetch user role from database
       const { data: userData } = await supabase
         .from('users')
         .select('role')
-        .eq('id', user.id)
-        .single()
+        .eq('id', data.user.id)
+        .maybeSingle()
 
+      // 2. Route them based on their verified role
       if (userData?.role === 'superadmin') {
         return NextResponse.redirect(new URL('/superadmin-portal', request.url))
       }
 
-      // For Google OAuth users, auto-create a patients row if one doesn't exist
-      if (user.app_metadata.provider === 'google') {
-        const { data: existingPatient } = await supabase
-          .from('patients')
-          .select('user_id')
-          .eq('user_id', user.id)
-          .single()
-
-        if (!existingPatient) {
-          const fullName = user.user_metadata.full_name ?? ''
-          const nameParts = fullName.trim().split(' ')
-          const firstName = nameParts[0] ?? ''
-          const lastName = nameParts.slice(1).join(' ') ?? ''
-
-          await supabase.from('patients').insert({
-            user_id: user.id,
-            first_name: firstName,
-            last_name: lastName,
-            email: user.email,
-          })
-        }
-      }
-
+      // 3. Fallback route for patients
       return NextResponse.redirect(new URL('/patient-dashboard', request.url))
     }
   }
