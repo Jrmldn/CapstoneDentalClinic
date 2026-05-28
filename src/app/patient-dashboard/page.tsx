@@ -15,11 +15,14 @@ export default async function PatientDashboard() {
   const supabase = await createClient()
 
   // 2. Fetch the UI display data normally
-  const { data: patientData } = await supabase
+  const { data: patientData, error: patientError } = await supabase
     .from('patients')
     .select('first_name, last_name')
     .eq('user_id', authUser.id)
     .maybeSingle()
+
+
+
 
   const patient: PatientInfo = {
     first_name: patientData?.first_name ?? '',

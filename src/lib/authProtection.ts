@@ -16,7 +16,7 @@ export async function enforceRole(requiredRole: 'patient' | 'superadmin') {
 
   if (!authUser) {
     // If not logged in, send them to the corresponding login portal
-    redirect(requiredRole === 'superadmin' ? '/admin-login' : '/login')
+    redirect(requiredRole === 'superadmin' ? '/superadmin-login' : '/login')
   }
 
   // 2. Fetch verified role from DB
