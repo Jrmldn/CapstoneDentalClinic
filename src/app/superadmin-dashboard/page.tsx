@@ -11,14 +11,14 @@ export default async function SuperadminDashboard() {
 
   // 2. Set up the UI variables
   const user: UserInfo = { email: authUser.email || '' }
-  const logoutAction = handleLogout.bind(null, '/admin-login')
+  const logoutAction = handleLogout.bind(null, '/superadmin-login')
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">AppointDent Admin Control</h1>
+          <h1 className="text-3xl font-bold text-gray-900">AppointDent Superadmin Dashboard</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600">{user?.email}</span>
             <form action={logoutAction}>

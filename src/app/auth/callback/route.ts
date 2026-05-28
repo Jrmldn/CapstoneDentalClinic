@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
 
       // 2. Route them based on their verified role
       if (userData?.role === 'superadmin') {
-        return NextResponse.redirect(new URL('/superadmin-portal', request.url))
+        return NextResponse.redirect(new URL('/superadmin-dashboard', request.url))
       }
 
       // 3. Fallback route for patients

@@ -38,27 +38,27 @@ export async function middleware(request: NextRequest) {
     if (pathname.startsWith('/patient-dashboard')) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
-    if (pathname.startsWith('/superadmin-portal')) {
-      return NextResponse.redirect(new URL('/admin-login', request.url))
+    if (pathname.startsWith('/superadmin-dashboard')) {
+      return NextResponse.redirect(new URL('/superadmin-login', request.url))
     }
   }
 
   // --- 3. ROLE ENFORCEMENT (Logged in, but trying to cross boundaries) ---
   if (user) {
     // Stop patients from accessing superadmin files
-    if (pathname.startsWith('/superadmin-portal') && userRole !== 'superadmin') {
-      return NextResponse.redirect(new URL('/admin-login', request.url))
+    if (pathname.startsWith('/superadmin-dashboard') && userRole !== 'superadmin') {
+      return NextResponse.redirect(new URL('/superadmin-login', request.url))
     }
     
     // Stop superadmins from accessing patient files
     if (pathname.startsWith('/patient-dashboard') && userRole !== 'patient') {
-      return NextResponse.redirect(new URL('/login', request.url))
+      return NextResponse.redirect(new URL('/superadmin-login', request.url))
     }
 
     // --- 4. REDIRECTS AWAY FROM AUTH PAGES ---
     // Safely route authenticated users back to their respective dashboards
-    if (pathname === '/login' || pathname === '/admin-login') {
-      const destination = userRole === 'superadmin' ? '/superadmin-portal' : '/patient-dashboard'
+    if (pathname === '/login' || pathname === '/superadmin-login') {
+      const destination = userRole === 'superadmin' ? '/superadmin-dashboard' : '/patient-dashboard'
       return NextResponse.redirect(new URL(destination, request.url))
     }
   }
@@ -71,6 +71,6 @@ export const config = {
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     '/patient-dashboard/:path*',
-    '/superadmin-portal/:path*',
+    '/superadmin-dashboard/:path*',
   ],
 }

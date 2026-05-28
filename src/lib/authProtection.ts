@@ -30,7 +30,7 @@ export async function enforceRole(requiredRole: 'patient' | 'superadmin') {
   if (!userData || userData.role !== requiredRole) {
     // Cross-boundary safety redirects
     if (userData?.role === 'superadmin') {
-      redirect('/superadmin-portal')
+      redirect('/superadmin-dashboard')
     }
     if (userData?.role === 'patient') {
       redirect('/patient-dashboard')

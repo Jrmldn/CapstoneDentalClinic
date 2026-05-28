@@ -57,8 +57,8 @@ export default function AdminLoginPage() {
         return
       }
 
-      // Redirect to superadmin portal
-      router.push('/superadmin-portal')
+      // Redirect to superadmin dashboard
+      router.push('/superadmin-dashboard')
     } catch (err) {
       setError('An unexpected error occurred')
       console.error(err)
@@ -70,7 +70,7 @@ export default function AdminLoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 p-4">
       <div className="w-full max-w-md bg-white rounded-lg shadow-2xl p-8">
         <h1 className="text-3xl font-bold text-center text-gray-900 mb-2">
-          AppointDent Admin
+          AppointDent Superadmin Login
         </h1>
         <p className="text-center text-gray-600 mb-8">System Administration Portal</p>
 
