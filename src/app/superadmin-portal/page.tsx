@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabaseServerSSR'
+import { handleLogout } from '@/app/actions/handleLogout' // 1. IMPORT YOUR ACTION HERE
 
 interface UserInfo {
   email: string
@@ -28,12 +29,7 @@ export default async function SuperadminDashboard() {
 
   const user: UserInfo = { email: authUser.email || '' }
 
-  const handleLogout = async () => {
-    'use server'
-    const client = await createClient()
-    await client.auth.signOut()
-    redirect('/admin-login')
-  }
+  const logoutAction = handleLogout.bind(null, '/admin-login')
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -43,7 +39,7 @@ export default async function SuperadminDashboard() {
           <h1 className="text-3xl font-bold text-gray-900">AppointDent Admin Control</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600">{user?.email}</span>
-            <form action={handleLogout}>
+            <form action={logoutAction}>
               <button
                 type="submit"
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 transition"

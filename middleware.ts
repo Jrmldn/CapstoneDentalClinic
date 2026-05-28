@@ -25,28 +25,41 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // REQUIRED: refreshes the session so server components can read it
+  // 1. Refresh session and get the current user
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Protect /patient-dashboard
-  if (!user && request.nextUrl.pathname.startsWith('/patient-dashboard')) {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
+  const pathname = request.nextUrl.pathname
+  const userRole = user?.user_metadata?.role // Adjust this key based on how you store user roles (e.g., 'patient' or 'superadmin')
 
-  // Protect /superadmin-portal
-  if (!user && request.nextUrl.pathname.startsWith('/superadmin-portal')) {
-    return NextResponse.redirect(new URL('/admin-login', request.url))
-  }
-
-  // Redirect already-logged-in users away from login pages
-  if (user) {
-    if (request.nextUrl.pathname === '/login') {
-      return NextResponse.redirect(new URL('/patient-dashboard', request.url))
+  // --- 2. PROTECTION LOOKUPS (Not logged in) ---
+  if (!user) {
+    if (pathname.startsWith('/patient-dashboard')) {
+      return NextResponse.redirect(new URL('/login', request.url))
     }
-    if (request.nextUrl.pathname === '/admin-login') {
-      return NextResponse.redirect(new URL('/superadmin-portal', request.url))
+    if (pathname.startsWith('/superadmin-portal')) {
+      return NextResponse.redirect(new URL('/admin-login', request.url))
+    }
+  }
+
+  // --- 3. ROLE ENFORCEMENT (Logged in, but trying to cross boundaries) ---
+  if (user) {
+    // Stop patients from accessing superadmin files
+    if (pathname.startsWith('/superadmin-portal') && userRole !== 'superadmin') {
+      return NextResponse.redirect(new URL('/admin-login', request.url))
+    }
+    
+    // Stop superadmins from accessing patient files
+    if (pathname.startsWith('/patient-dashboard') && userRole !== 'patient') {
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+
+    // --- 4. REDIRECTS AWAY FROM AUTH PAGES ---
+    // Safely route authenticated users back to their respective dashboards
+    if (pathname === '/login' || pathname === '/admin-login') {
+      const destination = userRole === 'superadmin' ? '/superadmin-portal' : '/patient-dashboard'
+      return NextResponse.redirect(new URL(destination, request.url))
     }
   }
 

@@ -9,17 +9,28 @@ import { supabase } from '@/lib/supabaseClient'
 export default function LoginPage() {
   const router = useRouter()
 
-useEffect(() => {
-  const {
-    data: { subscription },
-  } = supabase.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN' && session) {
-      router.push('/patient-dashboard')
+  useEffect(() => {
+    // Force reload when browser restores page from bfcache (back/forward)
+    // This ensures Auth UI styles are re-injected properly
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        window.location.reload()
+      }
     }
-  })
+    window.addEventListener('pageshow', handlePageShow)
+    return () => window.removeEventListener('pageshow', handlePageShow)
+  }, [])
 
-  return () => subscription?.unsubscribe()
-}, [router])
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        router.push('/patient-dashboard')
+      }
+    })
+    return () => subscription?.unsubscribe()
+  }, [router])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
