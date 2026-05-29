@@ -1,89 +1,57 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import ClinicHeader from './components/ClinicHeader'
 import ClinicFilters from './components/ClinicFilters'
 import ClinicTable from './components/ClinicTable'
 import AddClinicModal from './components/AddClinicModal'
+import { addClinic, fetchClinics } from '@/app/actions/clinicActions'
 
 interface ClinicData {
   id: number
   name: string
-  users: number
-  status: 'active' | 'inactive'
+  is_active: boolean
   email: string
   phone: string
   address: string
-  capacity: number
+  max_appointments_per_day: number
+  latitude?: number
+  longitude?: number
+  created_at?: string
 }
 
 export default function ClientClinicPage() {
+  const router = useRouter()
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [clinics, setClinics] = useState<ClinicData[]>([
-    {
-      id: 1,
-      name: 'Number 1 Clinic',
-      users: 50,
-      status: 'active',
-      email: 'email@email.com',
-      phone: '09876543321',
-      address: 'Cavite, San Francisco',
-      capacity: 20,
-    },
-    {
-      id: 2,
-      name: 'Number 2 Clinic',
-      users: 22,
-      status: 'active',
-      email: 'clinic2@email.com',
-      phone: '09876543322',
-      address: 'Manila, Philippines',
-      capacity: 25,
-    },
-    {
-      id: 3,
-      name: 'Number 3 Clinic',
-      users: 40,
-      status: 'active',
-      email: 'clinic3@email.com',
-      phone: '09876543323',
-      address: 'Quezon City, Philippines',
-      capacity: 30,
-    },
-    {
-      id: 4,
-      name: 'Number 4 Clinic',
-      users: 43,
-      status: 'inactive',
-      email: 'clinic4@email.com',
-      phone: '09876543324',
-      address: 'Makati, Philippines',
-      capacity: 28,
-    },
-    {
-      id: 5,
-      name: 'Number 5 Clinic',
-      users: 57,
-      status: 'active',
-      email: 'clinic5@email.com',
-      phone: '09876543325',
-      address: 'Pasig, Philippines',
-      capacity: 35,
-    },
-  ])
+  const [clinics, setClinics] = useState<ClinicData[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
 
-  const handleAddClinic = (data: any) => {
-    const newClinic: ClinicData = {
-      id: clinics.length + 1,
-      name: data.name,
-      users: 0,
-      status: 'active',
-      email: data.email,
-      phone: data.phone,
-      address: data.address,
-      capacity: data.dailyCapacity,
+  useEffect(() => {
+    loadClinics()
+  }, [])
+
+  const loadClinics = async () => {
+    setIsLoading(true)
+    const result = await fetchClinics()
+    if (result.success) {
+      setClinics(result.clinics)
     }
-    setClinics([...clinics, newClinic])
+    setIsLoading(false)
+  }
+
+  const handleAddClinic = async (data: any) => {
+    setIsSaving(true)
+    const result = await addClinic(data)
+    
+    if (result.success) {
+      setIsModalOpen(false)
+      await loadClinics()
+    } else {
+      alert('Error adding clinic: ' + result.error)
+    }
+    setIsSaving(false)
   }
 
   return (
@@ -95,13 +63,20 @@ export default function ClientClinicPage() {
       <ClinicFilters />
 
       {/* Table */}
-      <ClinicTable clinics={clinics} />
+      {isLoading ? (
+        <div className="bg-white rounded-lg shadow p-8 text-center">
+          <p className="text-gray-500">Loading clinics...</p>
+        </div>
+      ) : (
+        <ClinicTable clinics={clinics} onRefresh={loadClinics} />
+      )}
 
       {/* Modal */}
       <AddClinicModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleAddClinic}
+        isSaving={isSaving}
       />
     </div>
   )

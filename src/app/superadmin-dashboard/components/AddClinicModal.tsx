@@ -7,6 +7,7 @@ interface AddClinicModalProps {
   isOpen: boolean
   onClose: () => void
   onSubmit: (data: ClinicFormData) => void
+  isSaving?: boolean
 }
 
 interface ClinicFormData {
@@ -17,7 +18,7 @@ interface ClinicFormData {
   dailyCapacity: number
 }
 
-export default function AddClinicModal({ isOpen, onClose, onSubmit }: AddClinicModalProps) {
+export default function AddClinicModal({ isOpen, onClose, onSubmit, isSaving }: AddClinicModalProps) {
   const [formData, setFormData] = useState<ClinicFormData>({
     name: '',
     email: '',
@@ -44,7 +45,6 @@ export default function AddClinicModal({ isOpen, onClose, onSubmit }: AddClinicM
       address: '',
       dailyCapacity: 0,
     })
-    onClose()
   }
 
   if (!isOpen) return null
@@ -57,7 +57,8 @@ export default function AddClinicModal({ isOpen, onClose, onSubmit }: AddClinicM
           <h2 className="text-2xl font-bold text-gray-900">Add Clinic</h2>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded transition"
+            disabled={isSaving}
+            className="p-1 hover:bg-gray-100 rounded transition disabled:opacity-50"
           >
             <X className="w-6 h-6 text-gray-600" />
           </button>
@@ -76,8 +77,9 @@ export default function AddClinicModal({ isOpen, onClose, onSubmit }: AddClinicM
               value={formData.name}
               onChange={handleChange}
               placeholder="Enter clinic name"
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition"
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition disabled:bg-gray-100"
               required
+              disabled={isSaving}
             />
           </div>
 
@@ -93,8 +95,9 @@ export default function AddClinicModal({ isOpen, onClose, onSubmit }: AddClinicM
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="clinic@example.com"
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition disabled:bg-gray-100"
                 required
+                disabled={isSaving}
               />
             </div>
             <div>
@@ -107,8 +110,9 @@ export default function AddClinicModal({ isOpen, onClose, onSubmit }: AddClinicM
                 value={formData.phone}
                 onChange={handleChange}
                 placeholder="+1 (555) 000-0000"
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition disabled:bg-gray-100"
                 required
+                disabled={isSaving}
               />
             </div>
           </div>
@@ -124,8 +128,9 @@ export default function AddClinicModal({ isOpen, onClose, onSubmit }: AddClinicM
               onChange={handleChange}
               placeholder="Enter clinic address"
               rows={3}
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition resize-none"
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition resize-none disabled:bg-gray-100"
               required
+              disabled={isSaving}
             />
           </div>
 
@@ -140,9 +145,10 @@ export default function AddClinicModal({ isOpen, onClose, onSubmit }: AddClinicM
               value={formData.dailyCapacity || ''}
               onChange={handleChange}
               placeholder="Enter maximum daily patients"
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition"
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition disabled:bg-gray-100"
               min="1"
               required
+              disabled={isSaving}
             />
             <p className="text-xs text-gray-500 mt-1">
               The maximum number of patients this clinic can schedule in one day.
@@ -154,15 +160,20 @@ export default function AddClinicModal({ isOpen, onClose, onSubmit }: AddClinicM
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition font-medium"
+              disabled={isSaving}
+              className="px-6 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-lg hover:shadow-lg transition font-medium"
+              disabled={isSaving}
+              className="px-6 py-2 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-lg hover:shadow-lg transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              Save Clinic
+              {isSaving && (
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+              )}
+              {isSaving ? 'Saving...' : 'Save Clinic'}
             </button>
           </div>
         </form>
