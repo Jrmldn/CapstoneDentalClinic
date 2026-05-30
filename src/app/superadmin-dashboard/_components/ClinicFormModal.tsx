@@ -1,13 +1,14 @@
 'use client'
 
 import { X } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
-interface AddClinicModalProps {
+interface ClinicFormModalProps {
   isOpen: boolean
   onClose: () => void
   onSubmit: (data: ClinicFormData) => void
   isSaving?: boolean
+  initialData?: any | null // Passing the selected clinic data
 }
 
 interface ClinicFormData {
@@ -18,7 +19,9 @@ interface ClinicFormData {
   dailyCapacity: number
 }
 
-export default function AddClinicModal({ isOpen, onClose, onSubmit, isSaving }: AddClinicModalProps) {
+export default function ClinicFormModal({ isOpen, onClose, onSubmit, isSaving, initialData }: ClinicFormModalProps) {
+  const isEditMode = !!initialData
+
   const [formData, setFormData] = useState<ClinicFormData>({
     name: '',
     email: '',
@@ -26,6 +29,27 @@ export default function AddClinicModal({ isOpen, onClose, onSubmit, isSaving }: 
     address: '',
     dailyCapacity: 0,
   })
+
+  // Pre-fill form if editing, or reset if adding
+  useEffect(() => {
+    if (initialData && isOpen) {
+      setFormData({
+        name: initialData.name,
+        email: initialData.email,
+        phone: initialData.phone,
+        address: initialData.address,
+        dailyCapacity: initialData.max_appointments_per_day,
+      })
+    } else if (isOpen) {
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        address: '',
+        dailyCapacity: 0,
+      })
+    }
+  }, [initialData, isOpen])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -38,13 +62,6 @@ export default function AddClinicModal({ isOpen, onClose, onSubmit, isSaving }: 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSubmit(formData)
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      address: '',
-      dailyCapacity: 0,
-    })
   }
 
   if (!isOpen) return null
@@ -54,7 +71,9 @@ export default function AddClinicModal({ isOpen, onClose, onSubmit, isSaving }: 
       <div className="bg-white rounded-lg w-full max-w-lg mx-4 shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-900">Add Clinic</h2>
+          <h2 className="text-2xl font-bold text-gray-900">
+            {isEditMode ? 'Edit Clinic' : 'Add Clinic'}
+          </h2>
           <button
             onClick={onClose}
             disabled={isSaving}
@@ -173,7 +192,7 @@ export default function AddClinicModal({ isOpen, onClose, onSubmit, isSaving }: 
               {isSaving && (
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
               )}
-              {isSaving ? 'Saving...' : 'Save Clinic'}
+              {isSaving ? 'Saving...' : (isEditMode ? 'Update Clinic' : 'Save Clinic')}
             </button>
           </div>
         </form>
