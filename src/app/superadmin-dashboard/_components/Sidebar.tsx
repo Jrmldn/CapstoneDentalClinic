@@ -28,10 +28,10 @@ export default function Sidebar() {
       key: 'clinic'
     },
     { 
-      label: 'Staff', 
-      href: '/superadmin-dashboard/staff', 
+      label: 'Personnel', 
+      href: '/superadmin-dashboard/personnel', 
       icon: Users,
-      key: 'staff'
+      key: 'personnel'
     },
   ]
 

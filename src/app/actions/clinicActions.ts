@@ -169,3 +169,19 @@ export async function updateClinic(clinicId: number, data: AddClinicData) {
     }
   }
 }
+
+export async function getClinics() {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('clinics')
+      .select('id, name')
+      .order('name', { ascending: true })
+
+    if (error) throw new Error(error.message)
+    
+    return { success: true, data }
+  } catch (error) {
+    console.error('Fetch clinics error:', error)
+    return { success: false, data: [] }
+  }
+}
