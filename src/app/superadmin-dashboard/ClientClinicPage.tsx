@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import ClinicHeader from './components/ClinicHeader'
-import ClinicFilters from './components/ClinicFilters'
-import ClinicTable from './components/ClinicTable'
-import AddClinicModal from './components/AddClinicModal'
+import ClinicHeader from './_components/ClinicHeader'
+import ClinicFilters from './_components/ClinicFilters'
+import ClinicTable from './_components/ClinicTable'
+import AddClinicModal from './_components/AddClinicModal'
 import { addClinic, fetchClinics } from '@/app/actions/clinicActions'
 
 interface ClinicData {
@@ -28,17 +28,25 @@ export default function ClientClinicPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
 
+  // 1. Initial page load (Uses default true to show loading text)
   useEffect(() => {
     loadClinics()
   }, [])
 
-  const loadClinics = async () => {
-    setIsLoading(true)
+  // 2. Updated function with the silent refresh toggle
+  const loadClinics = async (showLoadingScreen = true) => {
+    if (showLoadingScreen) {
+      setIsLoading(true)
+    }
+    
     const result = await fetchClinics()
     if (result.success) {
       setClinics(result.clinics)
     }
-    setIsLoading(false)
+    
+    if (showLoadingScreen) {
+      setIsLoading(false)
+    }
   }
 
   const handleAddClinic = async (data: any) => {
@@ -47,7 +55,8 @@ export default function ClientClinicPage() {
     
     if (result.success) {
       setIsModalOpen(false)
-      await loadClinics()
+      // 3. Silent refresh after adding a clinic
+      await loadClinics(false) 
     } else {
       alert('Error adding clinic: ' + result.error)
     }
@@ -68,7 +77,8 @@ export default function ClientClinicPage() {
           <p className="text-gray-500">Loading clinics...</p>
         </div>
       ) : (
-        <ClinicTable clinics={clinics} onRefresh={loadClinics} />
+        // 4. Silent refresh when toggling status or deleting
+        <ClinicTable clinics={clinics} onRefresh={() => loadClinics(false)} />
       )}
 
       {/* Modal */}

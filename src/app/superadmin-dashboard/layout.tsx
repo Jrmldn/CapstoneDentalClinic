@@ -1,7 +1,7 @@
 import { enforceRole } from '@/lib/authProtection'
 import { handleLogout } from '@/app/actions/handleLogout'
-import Sidebar from './components/Sidebar'
-import TopBar from './components/TopBar'
+import Sidebar from './_components/Sidebar'
+import TopBar from './_components/TopBar'
 
 interface SuperadminLayoutProps {
   children: React.ReactNode
