@@ -1,126 +1,148 @@
-import { handleLogout } from '@/app/actions/handleLogout' // Fixed import path
-import { enforceRole } from '@/lib/authProtection' // Imported helper
+'use client'
 
-interface UserInfo {
-  email: string
+import { useState, useEffect } from 'react'
+import { Building2, Users, Stethoscope, UserCircle, ArrowRight } from 'lucide-react'
+import { getSuperadminStats } from '@/app/actions/dashboardActions'
+import Link from 'next/link'
+
+interface DashboardStats {
+  totalClinics: number
+  totalStaff: number
+  totalDentists: number
+  totalPatients: number
+  recentClinics: any[]
 }
 
-export default async function SuperadminDashboard() {
-  // 1. One line secures the admin portal completely and fetches the user
-  const authUser = await enforceRole('superadmin')
+export default function SuperadminDashboard() {
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-  // 2. Set up the UI variables
-  const user: UserInfo = { email: authUser.email || '' }
-  const logoutAction = handleLogout.bind(null, '/superadmin-login')
+  useEffect(() => {
+    const fetchStats = async () => {
+      const result = await getSuperadminStats()
+      if (result.success && result.data) {
+        setStats(result.data)
+      }
+      setIsLoading(false)
+    }
+    fetchStats()
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="p-8 flex justify-center items-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+      </div>
+    )
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="p-8 w-full">
       {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">AppointDent Superadmin Dashboard</h1>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">{user?.email}</span>
-            <form action={logoutAction}>
-              <button
-                type="submit"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 transition"
-              >
-                Logout
-              </button>
-            </form>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-slate-900">Platform Overview</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          Welcome back, Superadmin. Here is what is happening across AppointDent today.
+        </p>
+      </div>
+
+      {/* Metrics Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Card 1 */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm flex items-center gap-5">
+          <div className="w-12 h-12 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+            <Building2 className="w-6 h-6" />
           </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-8">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-6">Dashboard Overview</h2>
-
-          {/* Metrics Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Total Clinics Card */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Clinics</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">—</p>
-                </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            {/* Active Users Card */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Active Users</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">—</p>
-                </div>
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 12H9m6 0a6 6 0 11-12 0 6 6 0 0112 0z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            {/* Appointments Card */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Pending Appointments</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">—</p>
-                </div>
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            {/* System Health Card */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">System Health</p>
-                  <p className="text-3xl font-bold text-green-600 mt-2">✓</p>
-                </div>
-                <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">Total Clinics</p>
+            <h3 className="text-2xl font-bold text-slate-900">{stats?.totalClinics}</h3>
           </div>
         </div>
 
-        {/* Quick Actions Section */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <button className="p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition text-left">
-              <p className="font-medium text-gray-900">Manage Clinics</p>
-              <p className="text-sm text-gray-500">Add or configure clinics</p>
-            </button>
-            <button className="p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition text-left">
-              <p className="font-medium text-gray-900">View Users</p>
-              <p className="text-sm text-gray-500">Manage system users</p>
-            </button>
-            <button className="p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition text-left">
-              <p className="font-medium text-gray-900">System Settings</p>
-              <p className="text-sm text-gray-500">Configure system preferences</p>
-            </button>
+        {/* Card 2 */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm flex items-center gap-5">
+          <div className="w-12 h-12 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+            <Users className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">Active Staff</p>
+            <h3 className="text-2xl font-bold text-slate-900">{stats?.totalStaff}</h3>
           </div>
         </div>
-      </main>
+
+        {/* Card 3 */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm flex items-center gap-5">
+          <div className="w-12 h-12 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
+            <Stethoscope className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">Dentists</p>
+            <h3 className="text-2xl font-bold text-slate-900">{stats?.totalDentists}</h3>
+          </div>
+        </div>
+
+        {/* Card 4 */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm flex items-center gap-5">
+          <div className="w-12 h-12 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
+            <UserCircle className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">Registered Patients</p>
+            <h3 className="text-2xl font-bold text-slate-900">{stats?.totalPatients}</h3>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Section: Recent Clinics */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+        <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-[#f8f9fa]">
+          <h2 className="text-base font-semibold text-slate-900">Recently Added Clinics</h2>
+          <Link 
+            href="/superadmin-dashboard/clinic" 
+            className="text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1 transition"
+          >
+            View all <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="text-[11px] uppercase tracking-wider font-semibold text-gray-500 border-b border-gray-100">
+              <tr>
+                <th className="px-6 py-4">Clinic Name</th>
+                <th className="px-6 py-4">Date Added</th>
+                <th className="px-6 py-4">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50 text-gray-600">
+              {stats?.recentClinics && stats.recentClinics.length > 0 ? (
+                stats.recentClinics.map((clinic) => (
+                  <tr key={clinic.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 font-medium text-slate-900">{clinic.name}</td>
+                    <td className="px-6 py-4">
+                      {new Date(clinic.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2.5 py-1 rounded-md text-[11px] font-medium ${
+                        clinic.is_active 
+                          ? 'bg-emerald-50 text-emerald-700' 
+                          : 'bg-red-50 text-red-700'
+                      }`}>
+                        {clinic.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={3} className="px-6 py-8 text-center text-gray-500">
+                    No clinics have been added yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   )
 }
