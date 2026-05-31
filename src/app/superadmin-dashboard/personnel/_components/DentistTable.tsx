@@ -17,10 +17,22 @@ export interface Dentist {
 interface DentistTableProps {
   dentists: Dentist[]
   onRefresh?: () => void
-  onEdit: (dentist: Dentist) => void // 1. Added onEdit prop
+  onEdit: (dentist: Dentist) => void
+  currentPage: number
+  totalCount: number
+  itemsPerPage: number
+  onPageChange: (page: number) => void
 }
 
-export default function DentistTable({ dentists, onRefresh, onEdit }: DentistTableProps) {
+export default function DentistTable({
+  dentists,
+  onRefresh,
+  onEdit,
+  currentPage,
+  totalCount,
+  itemsPerPage,
+  onPageChange,
+}: DentistTableProps) {
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
 
   const handleDelete = async (userId: string) => {
@@ -102,11 +114,37 @@ export default function DentistTable({ dentists, onRefresh, onEdit }: DentistTab
       </div>
 
       <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500 bg-white">
-        <span>Showing {dentists.length} of {dentists.length}</span>
-        <div className="flex gap-4 items-center font-medium">
-          <button className="text-gray-400 hover:text-gray-900 transition">&lt;</button>
-          <button className="text-blue-600">1</button>
-          <button className="text-gray-400 hover:text-gray-900 transition">&gt;</button>
+        <span>Showing {dentists.length} of {totalCount}</span>
+        <div className="flex gap-1 items-center">
+          <button
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="p-1 hover:bg-gray-200 rounded transition disabled:opacity-50"
+          >
+            &lt;
+          </button>
+
+          {Array.from({ length: Math.ceil(totalCount / itemsPerPage) }, (_, i) => i + 1).map(
+            (page) => (
+              <button
+                key={page}
+                onClick={() => onPageChange(page)}
+                className={`px-2 py-1 hover:bg-gray-200 rounded transition ${
+                  currentPage === page ? 'text-blue-600 font-medium' : ''
+                }`}
+              >
+                {page}
+              </button>
+            )
+          )}
+
+          <button
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === Math.ceil(totalCount / itemsPerPage) || totalCount === 0}
+            className="p-1 hover:bg-gray-200 rounded transition disabled:opacity-50"
+          >
+            &gt;
+          </button>
         </div>
       </div>
     </div>

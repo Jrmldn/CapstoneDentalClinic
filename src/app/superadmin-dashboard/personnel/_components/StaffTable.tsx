@@ -16,10 +16,22 @@ export interface StaffMember {
 interface StaffTableProps {
   staff: StaffMember[]
   onRefresh?: () => void
-  onEdit: (staff: StaffMember) => void // <--- ADDED THIS
+  onEdit: (staff: StaffMember) => void
+  currentPage: number
+  totalCount: number
+  itemsPerPage: number
+  onPageChange: (page: number) => void
 }
 
-export default function StaffTable({ staff, onRefresh, onEdit }: StaffTableProps) { // <--- ADDED onEdit HERE
+export default function StaffTable({
+  staff,
+  onRefresh,
+  onEdit,
+  currentPage,
+  totalCount,
+  itemsPerPage,
+  onPageChange,
+}: StaffTableProps) {
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
 
   const handleDelete = async (userId: string) => {
@@ -99,7 +111,39 @@ export default function StaffTable({ staff, onRefresh, onEdit }: StaffTableProps
       </div>
       
       <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500 bg-white">
-        <span>Showing {staff.length} of {staff.length}</span>
+        <span>Showing {staff.length} of {totalCount}</span>
+
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="p-1 hover:bg-gray-200 rounded transition disabled:opacity-50"
+          >
+            &lt;
+          </button>
+
+          {Array.from({ length: Math.ceil(totalCount / itemsPerPage) }, (_, i) => i + 1).map(
+            (page) => (
+              <button
+                key={page}
+                onClick={() => onPageChange(page)}
+                className={`px-2 py-1 hover:bg-gray-200 rounded transition ${
+                  currentPage === page ? 'text-blue-600 font-medium' : ''
+                }`}
+              >
+                {page}
+              </button>
+            )
+          )}
+
+          <button
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === Math.ceil(totalCount / itemsPerPage) || totalCount === 0}
+            className="p-1 hover:bg-gray-200 rounded transition disabled:opacity-50"
+          >
+            &gt;
+          </button>
+        </div>
       </div>
     </div>
   )

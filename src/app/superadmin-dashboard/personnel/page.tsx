@@ -1,45 +1,94 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import PersonnelTabs from './_components/PersonnelTabs'
 import StaffTable, { StaffMember } from './_components/StaffTable'
 import DentistTable, { Dentist } from './_components/DentistTable'
+import PersonnelFilters from './_components/PersonnelFilters'
 import AddPersonnelModal from './_components/AddPersonnelModal'
-import EditPersonnelModal from './_components/EditPersonnelModal' 
-import { Plus, Search, Filter } from 'lucide-react'
-import { fetchPersonnel } from '@/app/actions/personnelActions'
+import EditPersonnelModal from './_components/EditPersonnelModal'
+import { Plus } from 'lucide-react'
+import { fetchPersonnel, fetchStaff, fetchDentists, getClinics } from '@/app/actions/personnelActions'
+
+const ITEMS_PER_PAGE = 10
 
 export default function PersonnelPage() {
   const [activeTab, setActiveTab] = useState<'staff' | 'dentists'>('staff')
   const [staffData, setStaffData] = useState<StaffMember[]>([])
   const [dentistData, setDentistData] = useState<Dentist[]>([])
+  const [clinics, setClinics] = useState<{ id: number; name: string }[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  
+
+  // Search and Filter States
+  const [searchQuery, setSearchQuery] = useState('')
+  const [clinicFilter, setClinicFilter] = useState('all')
+
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+
   // Modal States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [selectedPerson, setSelectedPerson] = useState<any | null>(null)
 
-  const loadData = async () => {
-    setIsLoading(true)
-    const result = await fetchPersonnel()
-    
-    if (result.success) {
-      setStaffData(result.staff || [])
-      setDentistData(result.dentists || [])
-    } else {
-      console.error(result.error)
-    }
-    setIsLoading(false)
-  }
+  // Ref to track if it's the first time the component is rendering
+  const isFirstRender = useRef(true)
 
+  // Initial page load - fetch clinics and load personnel
   useEffect(() => {
-    loadData()
+    loadClinics()
+    loadPersonnelData(true)
+    isFirstRender.current = false
   }, [])
 
-// AFTER
+  // Refetch data whenever the page number changes
+  useEffect(() => {
+    if (isFirstRender.current) return
+    loadPersonnelData(false)
+  }, [currentPage])
+
+  // Debounced effect for Search & Filter
+  useEffect(() => {
+    if (isFirstRender.current) return
+
+    const delayDebounceFn = setTimeout(() => {
+      setCurrentPage(1) // Always jump back to page 1 when searching
+      loadPersonnelData(false)
+    }, 300)
+
+    return () => clearTimeout(delayDebounceFn)
+  }, [searchQuery, clinicFilter, activeTab])
+
+  const loadClinics = async () => {
+    const result = await getClinics()
+    if (result.success) {
+      setClinics(result.data || [])
+    }
+  }
+
+  const loadPersonnelData = async (showLoadingScreen = true) => {
+    if (showLoadingScreen) setIsLoading(true)
+
+    if (activeTab === 'staff') {
+      const result = await fetchStaff(searchQuery, clinicFilter, currentPage, ITEMS_PER_PAGE)
+      if (result.success) {
+        setStaffData(result.staff)
+        setTotalCount(result.totalCount || 0)
+      }
+    } else {
+      const result = await fetchDentists(searchQuery, clinicFilter, currentPage, ITEMS_PER_PAGE)
+      if (result.success) {
+        setDentistData(result.dentists)
+        setTotalCount(result.totalCount || 0)
+      }
+    }
+
+    if (showLoadingScreen) setIsLoading(false)
+  }
+
   const handleRefresh = async () => {
-    await loadData()
+    await loadPersonnelData(false)
   }
 
   const handleEdit = (person: any) => {
@@ -47,76 +96,71 @@ export default function PersonnelPage() {
     setIsEditModalOpen(true)
   }
 
-  // REFACTORED: This ensures the modal state is completely wiped
   const handleCloseEditModal = () => {
     setIsEditModalOpen(false)
-    setSelectedPerson(null) 
+    setSelectedPerson(null)
   }
 
   return (
     <div className="p-8 w-full">
-      {/* 1. Header Section */}
+      {/* Header Section */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Personnel</h1>
-        
+        <h1 className="text-3xl font-bold text-gray-900">Personnel</h1>
+
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 transition shadow-sm"
+          className="inline-flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-lg hover:shadow-lg transition font-medium"
         >
           <Plus className="w-4 h-4" />
           Add a new {activeTab === 'staff' ? 'Staff' : 'Dentist'}
         </button>
       </div>
 
-      {/* 2. The Tab Navigation */}
+      {/* Tab Navigation */}
       <div className="mb-6">
         <PersonnelTabs activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
 
-      {/* 3. Search and Filter Bar */}
-      <div className="flex gap-4 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder={`Search ${activeTab} by name or email...`}
-            className="w-full pl-11 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-sm transition"
-          />
-        </div>
-        <div className="w-48">
-          <button className="w-full flex items-center justify-between px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 shadow-sm transition">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-gray-500" />
-              <span>All Clinics</span>
-            </div>
-            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-          </button>
-        </div>
-      </div>
+      {/* Filters */}
+      <PersonnelFilters
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        clinicFilter={clinicFilter}
+        setClinicFilter={setClinicFilter}
+        clinics={clinics}
+      />
 
-      {/* 4. Render Tables */}
+      {/* Render Tables with Pagination */}
       <div>
         {isLoading ? (
-          <div className="flex justify-center items-center py-20 bg-white rounded-xl border border-gray-200 shadow-sm">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+          <div className="bg-white rounded-lg shadow p-8 text-center">
+            <p className="text-gray-500">Loading {activeTab}...</p>
           </div>
         ) : activeTab === 'staff' ? (
-          <StaffTable 
-            staff={staffData} 
-            onRefresh={handleRefresh} 
-            onEdit={handleEdit} 
-          />
-        ) : (
-          <DentistTable 
-            dentists={dentistData} 
+          <StaffTable
+            staff={staffData}
             onRefresh={handleRefresh}
             onEdit={handleEdit}
+            currentPage={currentPage}
+            totalCount={totalCount}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+          />
+        ) : (
+          <DentistTable
+            dentists={dentistData}
+            onRefresh={handleRefresh}
+            onEdit={handleEdit}
+            currentPage={currentPage}
+            totalCount={totalCount}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
           />
         )}
       </div>
 
       {/* Add Modal */}
-      <AddPersonnelModal 
+      <AddPersonnelModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSuccess={handleRefresh}
@@ -124,8 +168,8 @@ export default function PersonnelPage() {
       />
 
       {/* Edit Modal */}
-      <EditPersonnelModal 
-        key={selectedPerson?.userId || 'none'} 
+      <EditPersonnelModal
+        key={selectedPerson?.userId || 'none'}
         isOpen={isEditModalOpen}
         onClose={handleCloseEditModal}
         onSuccess={handleRefresh}

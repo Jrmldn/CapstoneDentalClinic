@@ -27,14 +27,16 @@ export async function addStaff(data: StaffData) {
       email_confirm: true,
       user_metadata: {
         full_name: `${data.firstName} ${data.lastName}`,
-        role: 'staff', // Tells the DB trigger NOT to make them a patient
+        role: 'staff',
       },
     })
 
-    if (authError) throw new Error(authError.message)
+    if (authError) throw new Error(`Auth error: ${authError.message}`)
     if (!authData.user) throw new Error('Failed to create user account')
 
-    // 2. Insert into the clinic_staff table
+    // 💥 STEP 2 HAS BEEN REMOVED! The SQL trigger handles this automatically now.
+
+    // 3. Insert into the clinic_staff table
     const { error: staffError } = await supabaseAdmin
       .from('clinic_staff')
       .insert({
@@ -45,35 +47,39 @@ export async function addStaff(data: StaffData) {
       })
 
     if (staffError) {
-      // Rollback auth user if staff insertion fails
+      console.error('Staff insert error:', staffError)
+      // Rollback: delete from users table and auth
+      await supabaseAdmin.from('users').delete().eq('id', authData.user.id)
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
-      throw new Error(staffError.message)
+      throw new Error(`Database error: ${staffError.message}`)
     }
 
     revalidatePath('/superadmin-dashboard/personnel')
     return { success: true }
   } catch (error) {
+    console.error('addStaff error:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to add staff' }
   }
 }
 
 export async function addDentist(data: DentistData) {
   try {
-    // 1. Create the user in Supabase Auth via Admin API
+    // 1. Create the user in Supabase Auth
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
       email_confirm: true,
       user_metadata: {
         full_name: `${data.firstName} ${data.lastName}`,
-        role: 'dentist', 
+        role: 'dentist',
       },
     })
 
-    if (authError) throw new Error(authError.message)
+    if (authError) throw new Error(`Auth error: ${authError.message}`)
     if (!authData.user) throw new Error('Failed to create dentist account')
 
-    // 2. Insert into the dentists table
+
+    // 3. Insert into the dentists table
     const { error: dentistError } = await supabaseAdmin
       .from('dentists')
       .insert({
@@ -85,14 +91,17 @@ export async function addDentist(data: DentistData) {
       })
 
     if (dentistError) {
-      // Rollback auth user if dentist insertion fails
+      console.error('Dentist insert error:', dentistError)
+      // Rollback
+      await supabaseAdmin.from('users').delete().eq('id', authData.user.id)
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
-      throw new Error(dentistError.message)
+      throw new Error(`Database error: ${dentistError.message}`)
     }
 
     revalidatePath('/superadmin-dashboard/personnel')
     return { success: true }
   } catch (error) {
+    console.error('addDentist error:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to add dentist' }
   }
 }
@@ -179,10 +188,10 @@ export async function fetchPersonnel() {
       clinicName: dentist.clinics?.name || 'Unassigned',
     }))
 
-    return { 
-      success: true, 
-      staff: formattedStaff, 
-      dentists: formattedDentists 
+    return {
+      success: true,
+      staff: formattedStaff,
+      dentists: formattedDentists
     }
   } catch (error) {
     console.error('Fetch personnel error:', error)
@@ -190,14 +199,140 @@ export async function fetchPersonnel() {
   }
 }
 
+export async function fetchStaff(
+  searchQuery = '',
+  clinicFilter = 'all',
+  page = 1,
+  limit = 10
+) {
+  try {
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+
+    let query = supabaseAdmin
+      .from('clinic_staff')
+      .select(`
+        id,
+        user_id,
+        clinic_id,
+        first_name,
+        last_name,
+        users ( email ),
+        clinics ( name )
+      `, { count: 'exact' })
+      .order('first_name', { ascending: false })
+
+    if (searchQuery) {
+      query = query.or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,users.email.ilike.%${searchQuery}%`)
+    }
+
+    if (clinicFilter && clinicFilter !== 'all') {
+      query = query.eq('clinic_id', parseInt(clinicFilter))
+    }
+
+    query = query.range(from, to)
+
+    const { data: staffData, count, error } = await query
+
+    if (error) throw new Error(error.message)
+
+    const formattedStaff = (staffData || []).map((staff: any) => ({
+      id: staff.id,
+      userId: staff.user_id,
+      clinicId: staff.clinic_id,
+      firstName: staff.first_name,
+      lastName: staff.last_name,
+      email: staff.users?.email || 'No email',
+      clinicName: staff.clinics?.name || 'Unassigned',
+    }))
+
+    return {
+      success: true,
+      staff: formattedStaff,
+      totalCount: count || 0,
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch staff',
+      staff: [],
+      totalCount: 0,
+    }
+  }
+}
+
+export async function fetchDentists(
+  searchQuery = '',
+  clinicFilter = 'all',
+  page = 1,
+  limit = 10
+) {
+  try {
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+
+    let query = supabaseAdmin
+      .from('dentists')
+      .select(`
+        id,
+        user_id,
+        clinic_id,
+        first_name,
+        last_name,
+        specialty,
+        users ( email ),
+        clinics ( name )
+      `, { count: 'exact' })
+      .order('first_name', { ascending: false })
+
+    if (searchQuery) {
+      query = query.or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,users.email.ilike.%${searchQuery}%`)
+    }
+
+    if (clinicFilter && clinicFilter !== 'all') {
+      query = query.eq('clinic_id', parseInt(clinicFilter))
+    }
+
+    query = query.range(from, to)
+
+    const { data: dentistData, count, error } = await query
+
+    if (error) throw new Error(error.message)
+
+    const formattedDentists = (dentistData || []).map((dentist: any) => ({
+      id: dentist.id,
+      userId: dentist.user_id,
+      clinicId: dentist.clinic_id,
+      firstName: dentist.first_name,
+      lastName: dentist.last_name,
+      specialty: dentist.specialty,
+      email: dentist.users?.email || 'No email',
+      clinicName: dentist.clinics?.name || 'Unassigned',
+    }))
+
+    return {
+      success: true,
+      dentists: formattedDentists,
+      totalCount: count || 0,
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch dentists',
+      dentists: [],
+      totalCount: 0,
+    }
+  }
+}
+
 export async function updatePersonnel(
-  userId: string, 
-  type: 'staff' | 'dentists', 
-  data: { 
-    firstName: string; 
-    lastName: string; 
-    clinicId: number; 
-    specialty?: string 
+  userId: string,
+  type: 'staff' | 'dentists',
+  data: {
+    firstName: string;
+    lastName: string;
+    clinicId: number;
+    specialty?: string
   }
 ) {
   try {
@@ -227,9 +362,25 @@ export async function updatePersonnel(
     revalidatePath('/superadmin-dashboard/personnel')
     return { success: true }
   } catch (error) {
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to update personnel' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update personnel'
     }
+  }
+}
+
+export async function getClinics() {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('clinics')
+      .select('id, name')
+      .order('name', { ascending: true })
+
+    if (error) throw new Error(error.message)
+
+    return { success: true, data }
+  } catch (error) {
+    console.error('Fetch clinics error:', error)
+    return { success: false, data: [] }
   }
 }
