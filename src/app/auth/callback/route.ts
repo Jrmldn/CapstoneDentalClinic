@@ -40,8 +40,18 @@ export async function GET(request: NextRequest) {
         .maybeSingle()
 
       // 2. Route them based on their verified role
-      if (userData?.role === 'superadmin') {
+      const role = userData?.role
+
+      if (role === 'superadmin') {
         return NextResponse.redirect(new URL('/superadmin-dashboard', request.url))
+      } 
+      
+      if (role === 'staff') {
+        return NextResponse.redirect(new URL('/staff-dashboard', request.url))
+      }
+      
+      if (role === 'dentist') {
+        return NextResponse.redirect(new URL('/dentist-dashboard', request.url))
       }
 
       // 3. Fallback route for patients

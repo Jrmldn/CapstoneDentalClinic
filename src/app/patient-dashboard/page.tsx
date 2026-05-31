@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/serverSSR'
 import { handleLogout } from '@/actions/handleLogout'
 import { enforceRole } from '@/lib/auth/protection'
 
+
 interface PatientInfo {
   first_name: string
   last_name: string
@@ -21,9 +22,6 @@ export default async function PatientDashboard() {
     .eq('user_id', authUser.id)
     .maybeSingle()
 
-
-
-
   const patient: PatientInfo = {
     first_name: patientData?.first_name ?? '',
     last_name: patientData?.last_name ?? '',
@@ -31,6 +29,8 @@ export default async function PatientDashboard() {
   }
 
   const logoutAction = handleLogout.bind(null, '/login')
+
+  
 
   return (
     <div className="min-h-screen bg-gray-50">

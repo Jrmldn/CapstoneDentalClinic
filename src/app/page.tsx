@@ -1,7 +1,7 @@
 'use client' // Necessary because we are using useEffect to fetch on the client side
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabaseClient' // Importing your client!
+import { supabase } from '@/lib/supabase/client'
 
 
 export default function Home() {
