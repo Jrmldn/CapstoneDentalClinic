@@ -4,11 +4,11 @@ import { useEffect, useState, useRef } from 'react'
 import PersonnelTabs from './_components/PersonnelTabs'
 import StaffTable, { StaffMember } from './_components/StaffTable'
 import DentistTable, { Dentist } from './_components/DentistTable'
-import PersonnelFilters from './_components/PersonnelFilters'
 import AddPersonnelModal from './_components/AddPersonnelModal'
 import EditPersonnelModal from './_components/EditPersonnelModal'
 import { Plus } from 'lucide-react'
-import { fetchPersonnel, fetchStaff, fetchDentists, getClinics } from '@/app/actions/personnelActions'
+import PersonnelFilterBar from '@/components/features/personnel/PersonnelFilterBar'
+import { fetchPersonnel, fetchStaff, fetchDentists, getClinics } from '@/actions/personnelActions'
 
 const ITEMS_PER_PAGE = 10
 
@@ -122,11 +122,11 @@ export default function PersonnelPage() {
       </div>
 
       {/* Filters */}
-      <PersonnelFilters
+      <PersonnelFilterBar
         searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
+        onSearchChange={setSearchQuery}
         clinicFilter={clinicFilter}
-        setClinicFilter={setClinicFilter}
+        onClinicChange={(clinicId) => setClinicFilter(String(clinicId))}
         clinics={clinics}
       />
 

@@ -1,6 +1,6 @@
-import { createClient } from '@/lib/supabaseServerSSR'
-import { handleLogout } from '@/app/actions/handleLogout'
-import { enforceRole } from '@/lib/authProtection' // Import helper
+import { createClient } from '@/lib/supabase/serverSSR'
+import { handleLogout } from '@/actions/handleLogout'
+import { enforceRole } from '@/lib/auth/protection'
 
 interface PatientInfo {
   first_name: string

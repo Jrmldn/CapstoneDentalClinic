@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Building2, Users, Stethoscope, UserCircle, ArrowRight } from 'lucide-react'
-import { getSuperadminStats } from '@/app/actions/dashboardActions'
+import { getSuperadminStats } from '@/actions/dashboardActions'
 import Link from 'next/link'
 
 interface DashboardStats {

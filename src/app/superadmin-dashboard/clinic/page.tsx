@@ -3,10 +3,10 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import ClinicHeader from './_components/ClinicHeader'
-import ClinicFilters from './_components/ClinicFilters'
 import ClinicTable from './_components/ClinicTable'
 import ClinicFormModal from './_components/ClinicFormModal'
-import { addClinic, updateClinic, fetchClinics } from '@/app/actions/clinicActions'
+import ClinicFilterBar from '@/components/features/clinic/ClinicFilterBar'
+import { addClinic, updateClinic, fetchClinics } from '@/actions/clinicActions'
 
 interface ClinicData {
   id: number
@@ -116,11 +116,11 @@ export default function ClientClinicPage() {
       }} />
 
       {/* Filters */}
-      <ClinicFilters 
+      <ClinicFilterBar
         searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
+        onSearchChange={setSearchQuery}
         statusFilter={statusFilter}
-        setStatusFilter={setStatusFilter}
+        onStatusChange={(status) => setStatusFilter(String(status))}
       />
 
       {/* Table Updated with Pagination Props */}

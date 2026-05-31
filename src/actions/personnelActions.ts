@@ -1,9 +1,8 @@
 'use server'
 
-import { supabaseAdmin } from '@/lib/supabaseServer'
+import { supabaseAdmin } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-// --- INTERFACES ---
 interface StaffData {
   firstName: string
   lastName: string
@@ -16,11 +15,8 @@ interface DentistData extends StaffData {
   specialty: string
 }
 
-// --- CREATE ACTIONS ---
-
 export async function addStaff(data: StaffData) {
   try {
-    // 1. Create the user in Supabase Auth via Admin API
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
@@ -34,9 +30,6 @@ export async function addStaff(data: StaffData) {
     if (authError) throw new Error(`Auth error: ${authError.message}`)
     if (!authData.user) throw new Error('Failed to create user account')
 
-    // 💥 STEP 2 HAS BEEN REMOVED! The SQL trigger handles this automatically now.
-
-    // 3. Insert into the clinic_staff table
     const { error: staffError } = await supabaseAdmin
       .from('clinic_staff')
       .insert({
@@ -48,7 +41,6 @@ export async function addStaff(data: StaffData) {
 
     if (staffError) {
       console.error('Staff insert error:', staffError)
-      // Rollback: delete from users table and auth
       await supabaseAdmin.from('users').delete().eq('id', authData.user.id)
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
       throw new Error(`Database error: ${staffError.message}`)
@@ -64,7 +56,6 @@ export async function addStaff(data: StaffData) {
 
 export async function addDentist(data: DentistData) {
   try {
-    // 1. Create the user in Supabase Auth
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
@@ -78,8 +69,6 @@ export async function addDentist(data: DentistData) {
     if (authError) throw new Error(`Auth error: ${authError.message}`)
     if (!authData.user) throw new Error('Failed to create dentist account')
 
-
-    // 3. Insert into the dentists table
     const { error: dentistError } = await supabaseAdmin
       .from('dentists')
       .insert({
@@ -92,7 +81,6 @@ export async function addDentist(data: DentistData) {
 
     if (dentistError) {
       console.error('Dentist insert error:', dentistError)
-      // Rollback
       await supabaseAdmin.from('users').delete().eq('id', authData.user.id)
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
       throw new Error(`Database error: ${dentistError.message}`)
@@ -106,11 +94,8 @@ export async function addDentist(data: DentistData) {
   }
 }
 
-// --- DELETE ACTION ---
-
 export async function deletePersonnel(userId: string) {
   try {
-    // Delete from public.users (which cascades to clinic_staff/dentists)
     const { error: dbError } = await supabaseAdmin
       .from('users')
       .delete()
@@ -118,7 +103,6 @@ export async function deletePersonnel(userId: string) {
 
     if (dbError) throw new Error(dbError.message)
 
-    // Delete from Auth Admin
     const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId)
     if (authError) throw new Error(authError.message)
 
@@ -129,11 +113,8 @@ export async function deletePersonnel(userId: string) {
   }
 }
 
-// --- READ ACTION ---
-
 export async function fetchPersonnel() {
   try {
-    // 1. Fetch Staff (Joining with users for email, and clinics for clinic name)
     const { data: staffData, error: staffError } = await supabaseAdmin
       .from('clinic_staff')
       .select(`
@@ -149,7 +130,6 @@ export async function fetchPersonnel() {
 
     if (staffError) throw new Error(staffError.message)
 
-    // 2. Fetch Dentists (Joining with users and clinics)
     const { data: dentistData, error: dentistError } = await supabaseAdmin
       .from('dentists')
       .select(`
@@ -166,11 +146,10 @@ export async function fetchPersonnel() {
 
     if (dentistError) throw new Error(dentistError.message)
 
-    // 3. Format the data to match the UI tables
     const formattedStaff = staffData.map((staff: any) => ({
       id: staff.id,
       userId: staff.user_id,
-      clinicId: staff.clinic_id,   // ← ADD THIS
+      clinicId: staff.clinic_id,
       firstName: staff.first_name,
       lastName: staff.last_name,
       email: staff.users?.email || 'No email',
@@ -180,7 +159,7 @@ export async function fetchPersonnel() {
     const formattedDentists = dentistData.map((dentist: any) => ({
       id: dentist.id,
       userId: dentist.user_id,
-      clinicId: dentist.clinic_id, // ← ADD THIS
+      clinicId: dentist.clinic_id,
       firstName: dentist.first_name,
       lastName: dentist.last_name,
       specialty: dentist.specialty,
@@ -336,22 +315,18 @@ export async function updatePersonnel(
   }
 ) {
   try {
-    // 1. Determine which table to update
     const table = type === 'staff' ? 'clinic_staff' : 'dentists'
 
-    // 2. Build the update object
     const updatePayload: any = {
       first_name: data.firstName,
       last_name: data.lastName,
       clinic_id: data.clinicId,
     }
 
-    // 3. Only add specialty if it's a dentist
     if (type === 'dentists' && data.specialty) {
       updatePayload.specialty = data.specialty
     }
 
-    // 4. Perform the update
     const { error } = await supabaseAdmin
       .from(table)
       .update(updatePayload)
