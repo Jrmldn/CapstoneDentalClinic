@@ -91,7 +91,7 @@ export default async function PatientDashboard({ searchParams }: { searchParams:
     email: authUser.email ?? '',
   }
 
-  const logoutAction = handleLogout.bind(null, '/login')
+  const logoutAction = handleLogout.bind(null, '/')
 
   return (
     <div className="min-h-screen bg-gray-50">

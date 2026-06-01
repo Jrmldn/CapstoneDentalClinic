@@ -1,16 +1,30 @@
 'use client'
 import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
+import { useEffect } from 'react'
 
 export function LoginForm() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const clinicId = searchParams.get('clinic')
 
   const redirectTo = clinicId
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback?clinic=${clinicId}`
     : `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`
+
+  useEffect(() => {
+    // This listens for the silent password login and forces the redirect!
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN') {
+        const callbackUrl = clinicId ? `/auth/callback?clinic=${clinicId}` : '/auth/callback'
+        router.push(callbackUrl)
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [clinicId, router])
 
   return (
     <Auth

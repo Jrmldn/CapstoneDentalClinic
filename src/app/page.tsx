@@ -24,7 +24,7 @@ export default async function Home() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">landing page test</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">AppointDent</h1>
           <p className="text-lg text-gray-600">
             Find and book appointments at our dental clinics
           </p>
