@@ -1,37 +1,61 @@
-'use client' // Necessary because we are using useEffect to fetch on the client side
+import { createClient } from '@/lib/supabase/serverSSR'
+import { PageShell } from './components/PageShell'
+import { ClinicCard } from './components/ClinicCard'
 
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabaseClient' // Importing your client!
+interface Clinic {
+  id: string
+  name: string
+  address: string
+  phone: string
+}
 
+export default async function Home() {
+  const supabase = await createClient()
 
-export default function Home() {
-  const [status, setStatus] = useState<string>('Connecting to Supabase...')
+  const { data: clinics, error } = await supabase
+    .from('clinics')
+    .select('id, name, address, phone')
+    .eq('is_active', true)
 
-  useEffect(() => {
-    async function testConnection() {
-      // We try to fetch any single row from your database to see if it responds
-      const { data, error } = await supabase.from('services').select('*').limit(1)
-
-      if (error) {
-        // If it's just a "table not found" error, the connection actually WORKED! 
-        // It means Supabase responded to your keys.
-        if (error.code === 'PGRST116' || error.message.includes('does not exist')) {
-          setStatus('Connected successfully! (The keys are working, you just need to create your tables next).')
-        } else {
-          setStatus(`Connection failed: ${error.message}`)
-        }
-      } else {
-        setStatus('Connected successfully! Data fetched.')
-      }
-    }
-
-    testConnection()
-  }, [])
+  const clinicsList: Clinic[] = clinics || []
 
   return (
-    <main style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
-      <h1>Capstone Dental Clinic</h1>
-      <p>Status: <strong>{status}</strong></p>
-    </main>
+    <PageShell>
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">landing page test</h1>
+          <p className="text-lg text-gray-600">
+            Find and book appointments at our dental clinics
+          </p>
+        </div>
+
+        {/* Clinics Grid */}
+        {clinicsList.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {clinicsList.map((clinic) => (
+              <ClinicCard
+                key={clinic.id}
+                id={clinic.id}
+                name={clinic.name}
+                address={clinic.address}
+                phone={clinic.phone}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <div className="bg-white rounded-lg shadow p-8 max-w-md mx-auto">
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                No Clinics Available
+              </h2>
+              <p className="text-gray-600">
+                We're setting up clinic information. Please check back soon.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </PageShell>
   )
 }

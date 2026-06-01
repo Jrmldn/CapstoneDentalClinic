@@ -1,5 +1,5 @@
-import { enforceRole } from '@/lib/authProtection'
-import { handleLogout } from '@/app/actions/handleLogout'
+import { enforceRole } from '@/lib/auth/protection'
+import { handleLogout } from '@/actions/handleLogout'
 import Sidebar from './_components/Sidebar'
 import TopBar from './_components/TopBar'
 

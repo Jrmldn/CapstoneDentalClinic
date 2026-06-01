@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
-import { updatePersonnel } from '@/app/actions/personnelActions'
-import { getClinics } from '@/app/actions/clinicActions'
+import { updatePersonnel } from '@/actions/personnelActions'
+import { getClinics } from '@/lib/queries/clinics'
 
 interface EditPersonnelModalProps {
   isOpen: boolean

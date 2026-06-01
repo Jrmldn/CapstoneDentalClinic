@@ -1,17 +1,8 @@
 'use server'
 
-import { supabaseAdmin } from '@/lib/supabaseServer'
+import { supabaseAdmin } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-
-interface AddClinicData {
-  name: string
-  email: string
-  phone: string
-  address: string
-  dailyCapacity: number
-  latitude?: number
-  longitude?: number
-}
+import { AddClinicData } from '@/types'
 
 export async function addClinic(data: AddClinicData) {
   try {
@@ -46,35 +37,29 @@ export async function addClinic(data: AddClinicData) {
 }
 
 export async function fetchClinics(
-  searchQuery = '', 
-  statusFilter = 'all', 
-  page = 1, 
+  searchQuery = '',
+  statusFilter = 'all',
+  page = 1,
   limit = 10
 ) {
   try {
-    // 1. Calculate the pagination range for Supabase
     const from = (page - 1) * limit
     const to = from + limit - 1
 
-    // 2. Request the exact count along with the data
     let query = supabaseAdmin
       .from('clinics')
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
 
-    // 3. Add search filter (searches both name and email)
     if (searchQuery) {
-      // Using ilike for case-insensitive matching
       query = query.or(`name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
     }
 
-    // 4. Add status filter
     if (statusFilter && statusFilter !== 'all') {
       const isActive = statusFilter === 'active'
       query = query.eq('is_active', isActive)
     }
 
-    // 5. Apply the pagination range
     query = query.range(from, to)
 
     const { data: clinics, count, error } = await query
@@ -167,21 +152,5 @@ export async function updateClinic(clinicId: number, data: AddClinicData) {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update clinic',
     }
-  }
-}
-
-export async function getClinics() {
-  try {
-    const { data, error } = await supabaseAdmin
-      .from('clinics')
-      .select('id, name')
-      .order('name', { ascending: true })
-
-    if (error) throw new Error(error.message)
-    
-    return { success: true, data }
-  } catch (error) {
-    console.error('Fetch clinics error:', error)
-    return { success: false, data: [] }
   }
 }

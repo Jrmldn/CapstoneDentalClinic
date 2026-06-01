@@ -1,6 +1,8 @@
-import { createClient } from '@/lib/supabaseServerSSR'
-import { handleLogout } from '@/app/actions/handleLogout'
-import { enforceRole } from '@/lib/authProtection' // Import helper
+import { createClient } from '@/lib/supabase/serverSSR'
+import { handleLogout } from '@/actions/handleLogout'
+import { enforceRole } from '@/lib/auth/protection'
+import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 
 interface PatientInfo {
   first_name: string
@@ -8,21 +10,80 @@ interface PatientInfo {
   email: string
 }
 
-export default async function PatientDashboard() {
+async function verifyPatient(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
+  const { data: patientData, error: patientError } = await supabase
+    .from('patients')
+    .select('id')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (patientError || !patientData) {
+    redirect('/')
+  }
+
+  return patientData
+}
+
+async function fetchClinicName(supabase: Awaited<ReturnType<typeof createClient>>, clinicId: string) {
+  const { data: clinicData, error: clinicError } = await supabase
+    .from('clinics')
+    .select('name')
+    .eq('id', clinicId)
+    .maybeSingle()
+
+  if (clinicError || !clinicData) {
+    return null
+  }
+
+  return clinicData.name
+}
+
+function verifyClinicAccess(cookieClinicId: string | undefined, urlClinicId: string | string[] | undefined) {
+  if (!cookieClinicId) {
+    redirect('/')
+  }
+
+  if (!urlClinicId) {
+    redirect('/')
+  }
+
+  const urlClinicIdString = Array.isArray(urlClinicId) ? urlClinicId[0] : urlClinicId
+
+  if (cookieClinicId !== urlClinicIdString) {
+    redirect('/')
+  }
+
+  return cookieClinicId
+}
+
+export default async function PatientDashboard({ searchParams }: { searchParams: Promise<Record<string, string | string[]>> }) {
   // 1. One line secures the whole page and gives you the valid user object
   const authUser = await enforceRole('patient')
 
+  // 2. Get clinic ID from cookie and URL
+  const cookieStore = await cookies()
+  const cookieClinicId = cookieStore.get('clinic_id')?.value
+
+  const resolvedSearchParams = await searchParams
+  const urlClinicId = resolvedSearchParams.clinic
+
+  // 3. Verify clinic access (cookie must match URL)
+  const clinicId = verifyClinicAccess(cookieClinicId, urlClinicId)
+
   const supabase = await createClient()
 
-  // 2. Fetch the UI display data normally
-  const { data: patientData, error: patientError } = await supabase
+  // 4. Verify patient exists
+  await verifyPatient(supabase, authUser.id)
+
+  // 5. Fetch clinic name
+  const clinicName = await fetchClinicName(supabase, clinicId)
+
+  // 6. Fetch the UI display data
+  const { data: patientData } = await supabase
     .from('patients')
     .select('first_name, last_name')
     .eq('user_id', authUser.id)
     .maybeSingle()
-
-
-
 
   const patient: PatientInfo = {
     first_name: patientData?.first_name ?? '',
@@ -36,9 +97,11 @@ export default async function PatientDashboard() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">AppointDent</h1>
-          
-          {/* 3. USE THE BOUND ACTION */}
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">AppointDent</h1>
+            {clinicName && <p className="text-sm text-gray-600 mt-1">You are viewing: {clinicName}</p>}
+          </div>
+
           <form action={logoutAction}>
             <button
               type="submit"

@@ -1,10 +1,9 @@
 'use server'
 
-import { supabaseAdmin } from '@/lib/supabaseServer'
+import { supabaseAdmin } from '@/lib/supabase/server'
 
 export async function getSuperadminStats() {
   try {
-    // We use Promise.all to fetch all 4 stats simultaneously for maximum speed
     const [
       { count: clinicCount },
       { count: staffCount },
