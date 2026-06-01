@@ -2,17 +2,18 @@
 
 import { supabaseAdmin } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { getClinics } from '@/lib/queries/clinics'
+import { StaffData, DentistData, FormattedStaff, FormattedDentist } from '@/types'
 
-interface StaffData {
-  firstName: string
-  lastName: string
-  email: string
-  password: string
-  clinicId: number
-}
+async function getMatchingUserIds(searchQuery: string): Promise<string[]> {
+  if (!searchQuery) return []
 
-interface DentistData extends StaffData {
-  specialty: string
+  const { data: matchingUsers } = await supabaseAdmin
+    .from('users')
+    .select('id')
+    .ilike('email', `%${searchQuery}%`)
+
+  return matchingUsers?.map(u => u.id) || []
 }
 
 export async function addStaff(data: StaffData) {
@@ -146,7 +147,7 @@ export async function fetchPersonnel() {
 
     if (dentistError) throw new Error(dentistError.message)
 
-    const formattedStaff = staffData.map((staff: any) => ({
+    const formattedStaff: FormattedStaff[] = staffData.map((staff: any) => ({
       id: staff.id,
       userId: staff.user_id,
       clinicId: staff.clinic_id,
@@ -156,7 +157,7 @@ export async function fetchPersonnel() {
       clinicName: staff.clinics?.name || 'Unassigned',
     }))
 
-    const formattedDentists = dentistData.map((dentist: any) => ({
+    const formattedDentists: FormattedDentist[] = dentistData.map((dentist: any) => ({
       id: dentist.id,
       userId: dentist.user_id,
       clinicId: dentist.clinic_id,
@@ -202,7 +203,15 @@ export async function fetchStaff(
       .order('first_name', { ascending: false })
 
     if (searchQuery) {
-      query = query.or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,users.email.ilike.%${searchQuery}%`)
+      const matchingUserIds = await getMatchingUserIds(searchQuery)
+
+      if (matchingUserIds.length > 0) {
+        query = query.or(
+          `first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,user_id.in.(${matchingUserIds.join(',')})`
+        )
+      } else {
+        query = query.or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%`)
+      }
     }
 
     if (clinicFilter && clinicFilter !== 'all') {
@@ -215,7 +224,7 @@ export async function fetchStaff(
 
     if (error) throw new Error(error.message)
 
-    const formattedStaff = (staffData || []).map((staff: any) => ({
+    const formattedStaff: FormattedStaff[] = (staffData || []).map((staff: any) => ({
       id: staff.id,
       userId: staff.user_id,
       clinicId: staff.clinic_id,
@@ -265,7 +274,15 @@ export async function fetchDentists(
       .order('first_name', { ascending: false })
 
     if (searchQuery) {
-      query = query.or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,users.email.ilike.%${searchQuery}%`)
+      const matchingUserIds = await getMatchingUserIds(searchQuery)
+
+      if (matchingUserIds.length > 0) {
+        query = query.or(
+          `first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,user_id.in.(${matchingUserIds.join(',')})`
+        )
+      } else {
+        query = query.or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%`)
+      }
     }
 
     if (clinicFilter && clinicFilter !== 'all') {
@@ -278,7 +295,7 @@ export async function fetchDentists(
 
     if (error) throw new Error(error.message)
 
-    const formattedDentists = (dentistData || []).map((dentist: any) => ({
+    const formattedDentists: FormattedDentist[] = (dentistData || []).map((dentist: any) => ({
       id: dentist.id,
       userId: dentist.user_id,
       clinicId: dentist.clinic_id,
@@ -341,21 +358,5 @@ export async function updatePersonnel(
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update personnel'
     }
-  }
-}
-
-export async function getClinics() {
-  try {
-    const { data, error } = await supabaseAdmin
-      .from('clinics')
-      .select('id, name')
-      .order('name', { ascending: true })
-
-    if (error) throw new Error(error.message)
-
-    return { success: true, data }
-  } catch (error) {
-    console.error('Fetch clinics error:', error)
-    return { success: false, data: [] }
   }
 }

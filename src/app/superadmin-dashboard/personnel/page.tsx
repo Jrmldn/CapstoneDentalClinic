@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import PersonnelTabs from './_components/PersonnelTabs'
 import StaffTable, { StaffMember } from './_components/StaffTable'
 import DentistTable, { Dentist } from './_components/DentistTable'
@@ -8,7 +8,8 @@ import AddPersonnelModal from './_components/AddPersonnelModal'
 import EditPersonnelModal from './_components/EditPersonnelModal'
 import { Plus } from 'lucide-react'
 import PersonnelFilterBar from '@/components/features/personnel/PersonnelFilterBar'
-import { fetchPersonnel, fetchStaff, fetchDentists, getClinics } from '@/actions/personnelActions'
+import { fetchPersonnel, fetchStaff, fetchDentists } from '@/actions/personnelActions'
+import { getClinics } from '@/lib/queries/clinics'
 
 const ITEMS_PER_PAGE = 10
 
@@ -30,10 +31,40 @@ export default function PersonnelPage() {
   // Modal States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const [selectedPerson, setSelectedPerson] = useState<any | null>(null)
+  const [selectedPerson, setSelectedPerson] = useState<StaffMember | Dentist | null>(null)
 
   // Ref to track if it's the first time the component is rendering
   const isFirstRender = useRef(true)
+
+  const loadClinics = async () => {
+    const result = await getClinics()
+    if (result.success) {
+      setClinics(result.data || [])
+    }
+  }
+
+  const loadPersonnelData = useCallback(
+    async (showLoadingScreen = true) => {
+      if (showLoadingScreen) setIsLoading(true)
+
+      if (activeTab === 'staff') {
+        const result = await fetchStaff(searchQuery, clinicFilter, currentPage, ITEMS_PER_PAGE)
+        if (result.success) {
+          setStaffData(result.staff)
+          setTotalCount(result.totalCount || 0)
+        }
+      } else {
+        const result = await fetchDentists(searchQuery, clinicFilter, currentPage, ITEMS_PER_PAGE)
+        if (result.success) {
+          setDentistData(result.dentists)
+          setTotalCount(result.totalCount || 0)
+        }
+      }
+
+      if (showLoadingScreen) setIsLoading(false)
+    },
+    [searchQuery, clinicFilter, activeTab, currentPage]
+  )
 
   // Initial page load - fetch clinics and load personnel
   useEffect(() => {
@@ -60,38 +91,11 @@ export default function PersonnelPage() {
     return () => clearTimeout(delayDebounceFn)
   }, [searchQuery, clinicFilter, activeTab])
 
-  const loadClinics = async () => {
-    const result = await getClinics()
-    if (result.success) {
-      setClinics(result.data || [])
-    }
-  }
-
-  const loadPersonnelData = async (showLoadingScreen = true) => {
-    if (showLoadingScreen) setIsLoading(true)
-
-    if (activeTab === 'staff') {
-      const result = await fetchStaff(searchQuery, clinicFilter, currentPage, ITEMS_PER_PAGE)
-      if (result.success) {
-        setStaffData(result.staff)
-        setTotalCount(result.totalCount || 0)
-      }
-    } else {
-      const result = await fetchDentists(searchQuery, clinicFilter, currentPage, ITEMS_PER_PAGE)
-      if (result.success) {
-        setDentistData(result.dentists)
-        setTotalCount(result.totalCount || 0)
-      }
-    }
-
-    if (showLoadingScreen) setIsLoading(false)
-  }
-
   const handleRefresh = async () => {
     await loadPersonnelData(false)
   }
 
-  const handleEdit = (person: any) => {
+  const handleEdit = (person: StaffMember | Dentist) => {
     setSelectedPerson(person)
     setIsEditModalOpen(true)
   }

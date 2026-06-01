@@ -23,7 +23,7 @@ export async function enforceRole(requiredRole: 'patient' | 'superadmin') {
       redirect('/superadmin-dashboard')
     }
     if (userData?.role === 'patient') {
-      redirect('/patient-dashboard')
+      redirect('/')
     }
 
     redirect('/login')

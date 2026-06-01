@@ -54,8 +54,35 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(new URL('/dentist-dashboard', request.url))
       }
 
-      // 3. Fallback route for patients
-      return NextResponse.redirect(new URL('/patient-dashboard', request.url))
+      // 3. Fallback route for patients with clinic verification
+      try {
+        const clinicId = searchParams.get('clinic')
+
+        if (!clinicId) {
+          return NextResponse.redirect(new URL('/', request.url))
+        }
+
+        // Verify patient exists
+        const { data: patientData, error: patientError } = await supabase
+          .from('patients')
+          .select('id')
+          .eq('user_id', data.user.id)
+          .maybeSingle()
+
+        if (patientError || !patientData) {
+          return NextResponse.redirect(new URL('/', request.url))
+        }
+
+        cookieStore.set('clinic_id', clinicId, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/',
+        })
+        return NextResponse.redirect(new URL(`/patient-dashboard?clinic=${clinicId}`, request.url))
+      } catch {
+        return NextResponse.redirect(new URL('/login?error=auth_failed', request.url))
+      }
     }
   }
 

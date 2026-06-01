@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { updatePersonnel } from '@/actions/personnelActions'
-import { getClinics } from '@/actions/clinicActions'
+import { getClinics } from '@/lib/queries/clinics'
 
 interface EditPersonnelModalProps {
   isOpen: boolean
