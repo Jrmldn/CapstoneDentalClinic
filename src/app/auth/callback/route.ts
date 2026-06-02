@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
+  const type = searchParams.get('type') // 'recovery' for password reset emails
 
   const cookieStore = await cookies()
   const supabase = createServerClient(
@@ -34,7 +35,13 @@ export async function GET(request: NextRequest) {
   if (code) {
     // A: They clicked an email link or used Google (we exchange the code)
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) sessionUser = data.user
+    if (!error) {
+      // Password reset flow — skip all role routing and go straight to update-password
+      if (type === 'recovery') {
+        return NextResponse.redirect(new URL('/update-password', request.url))
+      }
+      sessionUser = data.user
+    }
   } else {
     // B: They used standard Email/Password in the widget (session is already set)
     const { data } = await supabase.auth.getUser()
@@ -80,9 +87,6 @@ export async function GET(request: NextRequest) {
     // Patient Routing
     if (role === 'patient') {
       try {
-        // IMPORTANT: If they don't have a clinic ID, we send them to a clinic selector page, 
-        // OR default them to the dashboard without a clinic. 
-        // For now, let's just send them to the patient dashboard.
         const targetUrl = attemptedClinicId 
           ? `/patient-dashboard?clinic=${attemptedClinicId}`
           : `/patient-dashboard`

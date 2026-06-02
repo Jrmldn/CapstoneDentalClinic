@@ -15,10 +15,19 @@ export function LoginForm() {
     : `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`
 
   useEffect(() => {
-    // This listens for the silent password login and forces the redirect!
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        // Recovery flow: go straight to the update-password page.
+        // Do NOT let the SIGNED_IN handler below run for this session.
+        router.push('/update-password')
+        return
+      }
+
       if (event === 'SIGNED_IN') {
-        const callbackUrl = clinicId ? `/auth/callback?clinic=${clinicId}` : '/auth/callback'
+        // Normal login only — recovery sessions are handled above.
+        const callbackUrl = clinicId
+          ? `/auth/callback?clinic=${clinicId}`
+          : '/auth/callback'
         router.push(callbackUrl)
       }
     })
