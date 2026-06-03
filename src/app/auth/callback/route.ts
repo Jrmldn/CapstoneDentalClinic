@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
-  const type = searchParams.get('type') // 'recovery' for password reset emails
+  const next = searchParams.get('next') // Catches the secure PKCE redirect
 
   const cookieStore = await cookies()
   const supabase = createServerClient(
@@ -31,24 +31,29 @@ export async function GET(request: NextRequest) {
 
   let sessionUser = null;
 
-  // 1. Determine how they logged in
+  // 1. Standard Code Exchange (Handles BOTH Logins and Password Resets securely)
   if (code) {
-    // A: They clicked an email link or used Google (we exchange the code)
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+    
     if (!error) {
-      // Password reset flow — skip all role routing and go straight to update-password
-      if (type === 'recovery') {
+      sessionUser = data.user
+
+      // Intercept the Password Reset Flow
+      if (next === '/update-password') {
         return NextResponse.redirect(new URL('/update-password', request.url))
       }
-      sessionUser = data.user
+    } else {
+      // Clean Error Code 1
+      return NextResponse.redirect(new URL('/login?error=INVALID_LINK', request.url))
     }
-  } else {
-    // B: They used standard Email/Password in the widget (session is already set)
+  } 
+  // 2. Already logged in (e.g., coming from the Update Password page)
+  else {
     const { data } = await supabase.auth.getUser()
     sessionUser = data.user
   }
 
-  // 2. If we successfully found the user, run the Gatekeeper routing
+  // Gatekeeper Routing (Roles & Clinics)
   if (sessionUser) {
     // Fetch user role from database
     const { data: userData } = await supabase
@@ -77,7 +82,8 @@ export async function GET(request: NextRequest) {
 
       if (personnelData && attemptedClinicId && personnelData.clinic_id.toString() !== attemptedClinicId) {
         await supabase.auth.signOut()
-        return NextResponse.redirect(new URL(`/login?error=Unauthorized: You do not work at this clinic.`, request.url))
+        // Clean Error Code 2
+        return NextResponse.redirect(new URL(`/login?error=UNAUTHORIZED_CLINIC`, request.url))
       }
 
       const nextPath = role === 'staff' ? '/staff-dashboard' : '/dentist-dashboard'
@@ -113,11 +119,12 @@ export async function GET(request: NextRequest) {
         
         return NextResponse.redirect(new URL(targetUrl, request.url))
       } catch {
-        return NextResponse.redirect(new URL('/login?error=patient_routing_failed', request.url))
+        // Clean Error Code 3
+        return NextResponse.redirect(new URL('/login?error=PATIENT_ROUTING_FAILED', request.url))
       }
     }
   }
 
-  // Fallback if NO code and NO session are found
-  return NextResponse.redirect(new URL('/login?error=auth_failed_no_session', request.url))
+  // Clean Error Code 4 (Fallback if NO code and NO session are found)
+  return NextResponse.redirect(new URL('/login?error=NO_SESSION', request.url))
 }
