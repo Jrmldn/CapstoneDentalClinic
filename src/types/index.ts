@@ -17,8 +17,8 @@ export interface AddClinicData {
   phone: string
   address: string
   dailyCapacity: number
-  latitude?: number
-  longitude?: number
+  latitude?: number | null
+  longitude?: number | null
 }
 
 export interface StaffData {

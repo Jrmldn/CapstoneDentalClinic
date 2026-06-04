@@ -12,6 +12,8 @@ interface Clinic {
   phone: string
   address: string
   max_appointments_per_day: number
+  latitude?: number | null
+  longitude?: number | null
 }
 
 interface ClinicTableProps {
@@ -35,6 +37,19 @@ const getStatusBadge = (isActive: boolean) => {
       <AlertCircle className="w-3 h-3" />
       Inactive
     </div>
+  )
+}
+
+const getLocationCell = (lat?: number | null, lng?: number | null) => {
+  if (!lat || !lng) {
+    return (
+      <span className="text-xs text-gray-400 italic">Not set</span>
+    )
+  }
+  return (
+    <span className="text-xs text-gray-600 font-mono">
+      {lat.toFixed(4)}, {lng.toFixed(4)}
+    </span>
   )
 }
 
@@ -78,6 +93,11 @@ export default function ClinicTable({
       render: (address) => (
         <span className="truncate max-w-[200px] block">{address}</span>
       ),
+    },
+    {
+      key: 'latitude',
+      label: 'LOCATION',
+      render: (_, clinic) => getLocationCell(clinic.latitude, clinic.longitude),
     },
     { key: 'max_appointments_per_day', label: 'CAPACITY' },
   ]

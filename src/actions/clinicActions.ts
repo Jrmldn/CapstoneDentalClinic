@@ -22,9 +22,7 @@ export async function addClinic(data: AddClinicData) {
       ])
       .select()
 
-    if (error) {
-      throw new Error(error.message)
-    }
+    if (error) throw new Error(error.message)
 
     revalidatePath('/superadmin-dashboard/clinic')
     return { success: true, clinic: clinic?.[0] }
@@ -64,9 +62,7 @@ export async function fetchClinics(
 
     const { data: clinics, count, error } = await query
 
-    if (error) {
-      throw new Error(error.message)
-    }
+    if (error) throw new Error(error.message)
 
     return {
       success: true,
@@ -90,9 +86,7 @@ export async function deleteClinic(clinicId: number) {
       .delete()
       .eq('id', clinicId)
 
-    if (error) {
-      throw new Error(error.message)
-    }
+    if (error) throw new Error(error.message)
 
     revalidatePath('/superadmin-dashboard/clinic')
     return { success: true }
@@ -111,9 +105,7 @@ export async function updateClinicStatus(clinicId: number, isActive: boolean) {
       .update({ is_active: isActive })
       .eq('id', clinicId)
 
-    if (error) {
-      throw new Error(error.message)
-    }
+    if (error) throw new Error(error.message)
 
     revalidatePath('/superadmin-dashboard/clinic')
     return { success: true }
@@ -141,9 +133,7 @@ export async function updateClinic(clinicId: number, data: AddClinicData) {
       .eq('id', clinicId)
       .select()
 
-    if (error) {
-      throw new Error(error.message)
-    }
+    if (error) throw new Error(error.message)
 
     revalidatePath('/superadmin-dashboard/clinic')
     return { success: true, clinic: clinic?.[0] }
