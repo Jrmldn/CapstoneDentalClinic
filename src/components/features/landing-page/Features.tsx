@@ -1,12 +1,12 @@
-import { 
-  UserPlus, 
-  FileCheck, 
-  MapPin, 
-  Filter, 
-  Building2, 
-  Calendar, 
-  CreditCard, 
-  MessageCircle 
+import {
+  UserPlus,
+  FileCheck,
+  MapPin,
+  Filter,
+  Building2,
+  Calendar,
+  CreditCard,
+  MessageCircle
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -63,7 +63,7 @@ const features = [
 
 export function Features() {
   return (
-    <section className="py-20 bg-white">
+    <section id="features" className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
@@ -81,7 +81,7 @@ export function Features() {
         {/* Features Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map((feature, index) => (
-            <Card 
+            <Card
               key={index}
               className="group hover:shadow-lg transition-all duration-300 border-2 hover:border-blue-200"
             >

@@ -38,7 +38,7 @@ export default async function Home() {
         <Hero />
         
         {/* 3. Your Dynamic Database Content: Clinics Finder Grid */}
-        <section id="clinics" className="py-16 bg-slate-50/50">
+        <section id="find-clinics" className="py-16 bg-slate-50/50">
           <PageShell>
             <div className="max-w-6xl mx-auto">
               {/* Clean Section Heading */}
