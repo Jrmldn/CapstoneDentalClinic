@@ -79,15 +79,15 @@ export default async function StaffDashboardPage() {
       .gte('created_at', `${today.slice(0, 7)}-01T00:00:00`),
   ])
 
-  const todayAppts   = todayApptsRes.data ?? []
+  const todayAppts = todayApptsRes.data ?? []
   const uniquePatients = new Set(patientsRes.data?.map((a) => a.patient_id) ?? []).size
   const allInventory = stockAlertRes.data ?? []
-  const lowStock     = allInventory.filter(i => Number(i.quantity) <= Number(i.alert_threshold))
-  const pendingTx    = pendingTxRes.data ?? []
-  const unpaidTotal  = pendingTx.reduce((s, t) => s + Number(t.total_amount), 0)
+  const lowStock = allInventory.filter(i => Number(i.quantity) <= Number(i.alert_threshold))
+  const pendingTx = pendingTxRes.data ?? []
+  const unpaidTotal = pendingTx.reduce((s, t) => s + Number(t.total_amount), 0)
 
-  const confirmedToday  = todayAppts.filter(a => a.status === 'confirmed').length
-  const pendingToday    = todayAppts.filter(a => a.status === 'pending').length
+  const confirmedToday = todayAppts.filter(a => a.status === 'confirmed').length
+  const pendingToday = todayAppts.filter(a => a.status === 'pending').length
 
   const now = new Date()
   const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 18 ? 'Good afternoon' : 'Good evening'
@@ -97,7 +97,7 @@ export default async function StaffDashboardPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900">
-          {greeting}, {staffRecord.first_name} 👋
+          {greeting}, {staffRecord.first_name} !
         </h1>
         <p className="text-sm text-gray-500 mt-1">
           {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -232,10 +232,10 @@ export default async function StaffDashboardPage() {
 // ─────────────────────────────────────
 
 const colorMap = {
-  blue:   { card: 'bg-blue-50',   icon: 'text-blue-600',   text: 'text-blue-700' },
-  emerald:{ card: 'bg-emerald-50',icon: 'text-emerald-600',text: 'text-emerald-700' },
-  amber:  { card: 'bg-amber-50',  icon: 'text-amber-500',  text: 'text-amber-700' },
-  rose:   { card: 'bg-rose-50',   icon: 'text-rose-500',   text: 'text-rose-700' },
+  blue: { card: 'bg-blue-50', icon: 'text-blue-600', text: 'text-blue-700' },
+  emerald: { card: 'bg-emerald-50', icon: 'text-emerald-600', text: 'text-emerald-700' },
+  amber: { card: 'bg-amber-50', icon: 'text-amber-500', text: 'text-amber-700' },
+  rose: { card: 'bg-rose-50', icon: 'text-rose-500', text: 'text-rose-700' },
 }
 
 function StatCard({
@@ -266,12 +266,12 @@ function StatCard({
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    confirmed:  'bg-blue-50 text-blue-700',
-    pending:    'bg-amber-50 text-amber-700',
-    completed:  'bg-emerald-50 text-emerald-700',
-    rescheduled:'bg-purple-50 text-purple-700',
-    cancelled:  'bg-red-50 text-red-600',
-    no_show:    'bg-gray-100 text-gray-500',
+    confirmed: 'bg-blue-50 text-blue-700',
+    pending: 'bg-amber-50 text-amber-700',
+    completed: 'bg-emerald-50 text-emerald-700',
+    rescheduled: 'bg-purple-50 text-purple-700',
+    cancelled: 'bg-red-50 text-red-600',
+    no_show: 'bg-gray-100 text-gray-500',
   }
   return (
     <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold capitalize ${styles[status] ?? 'bg-gray-100 text-gray-500'}`}>

@@ -1,37 +1,37 @@
 # Clinic Backend Tasks
 
 ## Phase 1: Clinic Profile & Operating Setup
-- `[ ]` Create `updateClinicProfile` action
-- `[ ]` Create `updateOperatingHours` action
-- `[ ]` Create `manageClinicHMOs` action
-- `[ ]` Create `manageClinicSpecialties` action
-- `[ ]` Create `manageClinicGallery` action
+- `[x]` Create `updateClinicProfile` action
+- `[x]` Create `updateOperatingHours` action
+- `[x]` Create `manageClinicHMOs` action
+- `[x]` Create `manageClinicSpecialties` action
+- `[x]` Create `manageClinicGallery` action
 
 ## Phase 2: Services & Pricing
-- `[ ]` Create `addService`, `updateService`, `deleteService`, `fetchServices` actions
-- `[ ]` Create `addProduct`, `updateProduct`, `deleteProduct`, `fetchProducts` actions
+- `[x]` Create `addService`, `updateService`, `deleteService`, `fetchServices` actions
+- `[x]` Create `addProduct`, `updateProduct`, `deleteProduct`, `fetchProducts` actions
 
 ## Phase 3: Appointment Management
-- `[ ]` Create `fetchAppointmentsByDate` action
-- `[ ]` Create `getAvailableSlots` action
-- `[ ]` Create `createAppointment` action
-- `[ ]` Create `updateAppointmentStatus` action
-- `[ ]` Create `updateMaxAppointments` action
+- `[x]` Create `fetchAppointmentsByDate` action
+- `[x]` Create `getAvailableSlots` action
+- `[x]` Create `createAppointment` action
+- `[x]` Create `updateAppointmentStatus` action
+- `[x]` Create `updateMaxAppointments` action
 
 ## Phase 4: Patient Records & Walk-ins
-- `[ ]` Create `registerPatient` action
-- `[ ]` Create `fetchPatientRecord` action
-- `[ ]` Create `fetchPatientsByClinic` action
-- `[ ]` Create `addClinicalAssessment` action
-- `[ ]` Create `updateDentalChart` action
+- `[x]` Create `registerPatient` action
+- `[x]` Create `fetchPatientRecord` action
+- `[x]` Create `fetchPatientsByClinic` action
+- `[x]` Create `addClinicalAssessment` action
+- `[x]` Create `updateDentalChart` action
 
 ## Phase 5: Transactions, Discounts & Billing
-- `[ ]` Create `createTransaction` action
-- `[ ]` Create `fetchPatientBillingHistory` action
-- `[ ]` Create `processPayment` action
+- `[x]` Create `createTransaction` action
+- `[x]` Create `fetchPatientBillingHistory` action
+- `[x]` Create `processPayment` action
 
 ## Phase 6: Calendar, Inventory, Notifications & Reports
-- `[ ]` Create `manageClinicHolidays` action
-- `[ ]` Create `updateInventoryStock`, `fetchStockAlerts`, `logInventoryChange` actions
-- `[ ]` Create `retriggerNotification` action
-- `[ ]` Create `generateSalesReport`, `generateAppointmentSummary`, `generateServiceFrequency` actions
+- `[x]` Create `manageClinicHolidays` action
+- `[x]` Create `updateInventoryStock`, `fetchStockAlerts`, `logInventoryChange` actions
+- `[x]` Create `retriggerNotification` action
+- `[x]` Create `generateSalesReport`, `generateAppointmentSummary`, `generateServiceFrequency` actions

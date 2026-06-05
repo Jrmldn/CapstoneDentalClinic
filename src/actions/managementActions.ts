@@ -205,18 +205,95 @@ export async function fetchInventory(clinicId: number) {
   }
 }
 
+export async function addInventoryItem(
+  clinicId: number,
+  data: {
+    name: string
+    unit: string
+    quantity: number
+    alert_threshold: number
+  }
+) {
+  try {
+    const { data: item, error } = await supabaseAdmin
+      .from('inventory_items')
+      .insert([{
+        clinic_id: clinicId,
+        ...data
+      }])
+      .select()
+      .single()
+
+    if (error) throw new Error(error.message)
+
+    revalidatePath('/staff-dashboard/inventory')
+    return { success: true, item }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to add inventory item',
+    }
+  }
+}
+
+export async function deleteInventoryItem(itemId: number) {
+  try {
+    const { error } = await supabaseAdmin
+      .from('inventory_items')
+      .delete()
+      .eq('id', itemId)
+
+    if (error) throw new Error(error.message)
+
+    revalidatePath('/staff-dashboard/inventory')
+    return { success: true }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to delete inventory item',
+    }
+  }
+}
+
 /** Fetch change history for a single inventory item */
 export async function fetchInventoryLogs(itemId: number) {
   try {
     const { data: logs, error } = await supabaseAdmin
       .from('inventory_logs')
-      .select('*')
+      .select(`
+        *,
+        users (
+          id,
+          email,
+          role
+        )
+      `)
       .eq('item_id', itemId)
       .order('created_at', { ascending: false })
 
     if (error) throw new Error(error.message)
 
-    return { success: true, logs: logs ?? [] }
+    const userIds = [...new Set(logs.map((l: any) => l.changed_by).filter(Boolean))] as string[]
+    
+    const [staffRes, dentistRes] = await Promise.all([
+      supabaseAdmin.from('clinic_staff').select('user_id, first_name, last_name').in('user_id', userIds),
+      supabaseAdmin.from('dentists').select('user_id, first_name, last_name').in('user_id', userIds)
+    ])
+
+    const nameMap: Record<string, string> = {}
+    staffRes.data?.forEach(s => {
+      nameMap[s.user_id] = `${s.first_name} ${s.last_name}`
+    })
+    dentistRes.data?.forEach(d => {
+      nameMap[d.user_id] = `${d.first_name} ${d.last_name}`
+    })
+
+    const formattedLogs = logs.map((l: any) => ({
+      ...l,
+      performer_name: nameMap[l.changed_by] || l.users?.email || 'Unknown User'
+    }))
+
+    return { success: true, logs: formattedLogs }
   } catch (error) {
     return {
       success: false,
