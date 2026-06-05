@@ -4,46 +4,41 @@ import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { updatePersonnel } from '@/actions/personnelActions'
 import { getClinics } from '@/lib/queries/clinics'
+import { FormattedStaff, FormattedDentist } from '@/types' // FIX: Imported types
 
 interface EditPersonnelModalProps {
   isOpen: boolean
   onClose: () => void
-  onSuccess: () => Promise<void>  // ← was () => void
-  person: any | null
+  onSuccess: () => Promise<void>
+  person: FormattedStaff | FormattedDentist | null // FIX: Replaced any
   type: 'staff' | 'dentists'
 }
 
 export default function EditPersonnelModal({ isOpen, onClose, onSuccess, person, type }: EditPersonnelModalProps) {
   const [clinics, setClinics] = useState<{ id: number; name: string }[]>([])
+  
+  // FIX: Initializing state directly from props. Key in parent handles resets.
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    clinicId: '',
-    specialty: ''
+    firstName: person?.firstName || '',
+    lastName: person?.lastName || '',
+    email: person?.email || '',
+    clinicId: person?.clinicId?.toString() || '',
+    specialty: (person as FormattedDentist)?.specialty || ''
   })
   
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
 
-  // Load clinic options and fill form when modal opens
+  // Load clinic options when modal opens
   useEffect(() => {
-    if (isOpen && person) {
-      setFormData({
-        firstName: person.firstName,
-        lastName: person.lastName,
-        email: person.email,
-        clinicId: person.clinicId?.toString() || '',
-        specialty: person.specialty || ''
-      })
-      
+    if (isOpen) {
       const fetchClinics = async () => {
         const result = await getClinics()
         if (result.success && result.data) setClinics(result.data)
       }
       fetchClinics()
     }
-  }, [isOpen, person])
+  }, [isOpen])
 
   if (!isOpen || !person) return null
 

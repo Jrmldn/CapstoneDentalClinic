@@ -6,7 +6,7 @@ import { useState } from 'react'
 export type ColumnDef<T> = {
   key: keyof T
   label: string
-  render?: (value: any, item: T) => React.ReactNode
+  render?: (value: unknown, item: T) => React.ReactNode // FIX: Replaced any
   width?: string
   align?: 'left' | 'right' | 'center'
 }
@@ -25,7 +25,7 @@ interface DataTableProps<T> {
   columns: ColumnDef<T>[]
   getRowKey: (item: T) => string | number
   onEdit?: (item: T) => void
-  onDelete?: (item: T) => any
+  onDelete?: (item: T) => void | Promise<void> | unknown // FIX: Replaced any
   currentPage: number
   totalCount: number
   itemsPerPage: number
@@ -36,7 +36,7 @@ interface DataTableProps<T> {
   selectableRows?: boolean
 }
 
-export default function DataTable<T extends Record<string, any>>({
+export default function DataTable<T extends Record<string, unknown>>({ // FIX: Replaced any
   data,
   columns,
   getRowKey,

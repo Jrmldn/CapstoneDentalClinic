@@ -90,7 +90,7 @@ export default function InventoryLogsModal({ item, isOpen, onClose }: InventoryL
                         </div>
                       </div>
                       <p className="text-sm text-slate-600 leading-relaxed italic">
-                        "{log.reason || 'No reason provided'}"
+                        &quot;{log.reason || 'No reason provided'}&quot;
                       </p>
                     </div>
                   </div>

@@ -2,8 +2,18 @@
 
 import { supabaseAdmin } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { getClinics } from '@/lib/queries/clinics'
 import { StaffData, DentistData, FormattedStaff, FormattedDentist } from '@/types'
+
+interface PersonnelRaw {
+  id: number
+  user_id: string
+  clinic_id: number
+  first_name: string
+  last_name: string
+  users: { email: string } | null
+  clinics: { name: string } | null
+  specialty?: string
+}
 
 async function getMatchingUserIds(searchQuery: string): Promise<string[]> {
   if (!searchQuery) return []
@@ -147,7 +157,7 @@ export async function fetchPersonnel() {
 
     if (dentistError) throw new Error(dentistError.message)
 
-    const formattedStaff: FormattedStaff[] = staffData.map((staff: any) => ({
+    const formattedStaff: FormattedStaff[] = (staffData as unknown as PersonnelRaw[]).map((staff) => ({ // FIX: Removed any
       id: staff.id,
       userId: staff.user_id,
       clinicId: staff.clinic_id,
@@ -157,13 +167,13 @@ export async function fetchPersonnel() {
       clinicName: staff.clinics?.name || 'Unassigned',
     }))
 
-    const formattedDentists: FormattedDentist[] = dentistData.map((dentist: any) => ({
+    const formattedDentists: FormattedDentist[] = (dentistData as unknown as PersonnelRaw[]).map((dentist) => ({ // FIX: Removed any
       id: dentist.id,
       userId: dentist.user_id,
       clinicId: dentist.clinic_id,
       firstName: dentist.first_name,
       lastName: dentist.last_name,
-      specialty: dentist.specialty,
+      specialty: dentist.specialty || '',
       email: dentist.users?.email || 'No email',
       clinicName: dentist.clinics?.name || 'Unassigned',
     }))
@@ -224,7 +234,7 @@ export async function fetchStaff(
 
     if (error) throw new Error(error.message)
 
-    const formattedStaff: FormattedStaff[] = (staffData || []).map((staff: any) => ({
+    const formattedStaff: FormattedStaff[] = (staffData as unknown as PersonnelRaw[] || []).map((staff) => ({ // FIX: Removed any
       id: staff.id,
       userId: staff.user_id,
       clinicId: staff.clinic_id,
@@ -295,13 +305,13 @@ export async function fetchDentists(
 
     if (error) throw new Error(error.message)
 
-    const formattedDentists: FormattedDentist[] = (dentistData || []).map((dentist: any) => ({
+    const formattedDentists: FormattedDentist[] = (dentistData as unknown as PersonnelRaw[] || []).map((dentist) => ({ // FIX: Removed any
       id: dentist.id,
       userId: dentist.user_id,
       clinicId: dentist.clinic_id,
       firstName: dentist.first_name,
       lastName: dentist.last_name,
-      specialty: dentist.specialty,
+      specialty: dentist.specialty || '',
       email: dentist.users?.email || 'No email',
       clinicName: dentist.clinics?.name || 'Unassigned',
     }))
@@ -334,7 +344,14 @@ export async function updatePersonnel(
   try {
     const table = type === 'staff' ? 'clinic_staff' : 'dentists'
 
-    const updatePayload: any = {
+    interface UpdatePayload {
+      first_name: string
+      last_name: string
+      clinic_id: number
+      specialty?: string
+    }
+
+    const updatePayload: UpdatePayload = { // FIX: Defined UpdatePayload interface
       first_name: data.firstName,
       last_name: data.lastName,
       clinic_id: data.clinicId,

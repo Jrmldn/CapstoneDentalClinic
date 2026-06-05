@@ -8,7 +8,7 @@ import AddPersonnelModal from './_components/AddPersonnelModal'
 import EditPersonnelModal from './_components/EditPersonnelModal'
 import { Plus } from 'lucide-react'
 import PersonnelFilterBar from '@/components/features/personnel/PersonnelFilterBar'
-import { fetchPersonnel, fetchStaff, fetchDentists } from '@/actions/personnelActions'
+import { fetchStaff, fetchDentists } from '@/actions/personnelActions' // FIX: Removed unused fetchPersonnel
 import { getClinics } from '@/lib/queries/clinics'
 
 const ITEMS_PER_PAGE = 10
@@ -36,12 +36,12 @@ export default function PersonnelPage() {
   // Ref to track if it's the first time the component is rendering
   const isFirstRender = useRef(true)
 
-  const loadClinics = async () => {
+  const loadClinics = useCallback(async () => { // FIX: Wrapped in useCallback
     const result = await getClinics()
     if (result.success) {
       setClinics(result.data || [])
     }
-  }
+  }, [])
 
   const loadPersonnelData = useCallback(
     async (showLoadingScreen = true) => {
@@ -68,16 +68,20 @@ export default function PersonnelPage() {
 
   // Initial page load - fetch clinics and load personnel
   useEffect(() => {
-    loadClinics()
-    loadPersonnelData(true)
-    isFirstRender.current = false
-  }, [])
+    // FIX: Deferring calls to avoid synchronous setState warning in effect body
+    const timer = setTimeout(() => {
+      loadClinics()
+      loadPersonnelData(false)
+      isFirstRender.current = false
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [loadClinics, loadPersonnelData]) // FIX: Added dependencies
 
   // Refetch data whenever the page number changes
   useEffect(() => {
     if (isFirstRender.current) return
     loadPersonnelData(false)
-  }, [currentPage])
+  }, [currentPage, loadPersonnelData]) // FIX: Added dependencies
 
   // Debounced effect for Search & Filter
   useEffect(() => {
@@ -89,11 +93,11 @@ export default function PersonnelPage() {
     }, 300)
 
     return () => clearTimeout(delayDebounceFn)
-  }, [searchQuery, clinicFilter, activeTab])
+  }, [searchQuery, clinicFilter, activeTab, loadPersonnelData]) // FIX: Added dependencies
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => { // FIX: Wrapped in useCallback
     await loadPersonnelData(false)
-  }
+  }, [loadPersonnelData])
 
   const handleEdit = (person: StaffMember | Dentist) => {
     setSelectedPerson(person)

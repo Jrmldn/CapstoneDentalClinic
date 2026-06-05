@@ -38,7 +38,6 @@ export default async function StaffDashboardPage() {
   }
 
   const clinicId = staffRecord.clinic_id
-  const staffName = `${staffRecord.first_name} ${staffRecord.last_name}`
   const today = new Date().toISOString().slice(0, 10)
 
   // Fetch all dashboard data in parallel
@@ -107,7 +106,7 @@ export default async function StaffDashboardPage() {
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         <StatCard
-          label="Today's Appointments"
+          label="Today&apos;s Appointments"
           value={todayAppts.length}
           sub={`${confirmedToday} confirmed · ${pendingToday} pending`}
           icon={CalendarDays}
@@ -145,7 +144,7 @@ export default async function StaffDashboardPage() {
         {/* Today's schedule */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-            <h2 className="text-sm font-semibold text-slate-800">Today's Schedule</h2>
+            <h2 className="text-sm font-semibold text-slate-800">Today&apos;s Schedule</h2>
             <Link
               href="/staff-dashboard/appointments"
               className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 transition"

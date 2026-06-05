@@ -11,24 +11,19 @@ export function LoginForm() {
   const router = useRouter()
   const clinicId = searchParams.get('clinic')
 
-  const [isErrorModalOpen, setIsErrorModalOpen] = useState(false)
-
   // Grab the error object containing both a title and a message
   const errorCode = searchParams.get('error') as AuthErrorCode | null
   const errorData = errorCode ? (AUTH_ERRORS[errorCode] || AUTH_ERRORS.DEFAULT) : null
 
-  useEffect(() => {
-    if (errorData) {
-      setIsErrorModalOpen(true)
-    }
-  }, [errorData])
+  // FIX: Initializing state directly from searchParams to avoid cascading renders in useEffect
+  const [isErrorModalOpen, setIsErrorModalOpen] = useState(!!errorData)
 
   const redirectTo = clinicId
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback?clinic=${clinicId}`
     : `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => { // FIX: Removed unused session
       if (event === 'PASSWORD_RECOVERY') {
         router.push('/update-password')
         return

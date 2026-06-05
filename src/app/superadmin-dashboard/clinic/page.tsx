@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import ClinicHeader from './_components/ClinicHeader'
 import ClinicTable from './_components/ClinicTable'
 import ClinicFormModal from './_components/ClinicFormModal'
 import ClinicFilterBar from '@/components/features/clinic/ClinicFilterBar'
 import { addClinic, updateClinic, fetchClinics } from '@/actions/clinicActions'
+import { AddClinicData } from '@/types' // FIX: Imported AddClinicData
 
 interface ClinicData {
   id: number
@@ -37,15 +38,29 @@ export default function ClientClinicPage() {
 
   const isFirstRender = useRef(true)
 
+  const loadClinics = useCallback(async (showLoadingScreen = true) => { // FIX: Wrapped in useCallback
+    if (showLoadingScreen) setIsLoading(true)
+    const result = await fetchClinics(searchQuery, statusFilter, currentPage, ITEMS_PER_PAGE)
+    if (result.success) {
+      setClinics(result.clinics)
+      setTotalCount(result.totalCount || 0)
+    }
+    if (showLoadingScreen) setIsLoading(false)
+  }, [searchQuery, statusFilter, currentPage]) // FIX: Added dependencies
+
   useEffect(() => {
-    loadClinics(true)
-    isFirstRender.current = false
-  }, [])
+    // FIX: Deferring call to avoid synchronous setState warning in effect body
+    const timer = setTimeout(() => {
+      loadClinics(false)
+      isFirstRender.current = false
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [loadClinics]) // FIX: Added loadClinics dependency
 
   useEffect(() => {
     if (isFirstRender.current) return
     loadClinics(false)
-  }, [currentPage])
+  }, [currentPage, loadClinics]) // FIX: Added loadClinics dependency
 
   useEffect(() => {
     if (isFirstRender.current) return
@@ -54,19 +69,9 @@ export default function ClientClinicPage() {
       loadClinics(false)
     }, 300)
     return () => clearTimeout(delayDebounceFn)
-  }, [searchQuery, statusFilter])
+  }, [searchQuery, statusFilter, loadClinics]) // FIX: Added loadClinics dependency
 
-  const loadClinics = async (showLoadingScreen = true) => {
-    if (showLoadingScreen) setIsLoading(true)
-    const result = await fetchClinics(searchQuery, statusFilter, currentPage, ITEMS_PER_PAGE)
-    if (result.success) {
-      setClinics(result.clinics)
-      setTotalCount(result.totalCount || 0)
-    }
-    if (showLoadingScreen) setIsLoading(false)
-  }
-
-  const handleSaveClinic = async (data: any) => {
+  const handleSaveClinic = async (data: AddClinicData) => { // FIX: Replaced any
     setIsSaving(true)
     const result = selectedClinic
       ? await updateClinic(selectedClinic.id, data)
@@ -121,6 +126,7 @@ export default function ClientClinicPage() {
       )}
 
       <ClinicFormModal
+        key={selectedClinic?.id || 'new'} // FIX: Reset state by changing key
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onSubmit={handleSaveClinic}

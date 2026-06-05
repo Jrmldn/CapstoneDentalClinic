@@ -34,7 +34,7 @@ export default async function InventoryPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Inventory Management</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Track and manage your clinic's supplies and stock levels.
+            Track and manage your clinic&apos;s supplies and stock levels.
           </p>
         </div>
       </div>

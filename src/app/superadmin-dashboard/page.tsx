@@ -4,17 +4,10 @@ import { useState, useEffect } from 'react'
 import { Building2, Users, Stethoscope, UserCircle, ArrowRight } from 'lucide-react'
 import { getSuperadminStats } from '@/actions/dashboardActions'
 import Link from 'next/link'
-
-interface DashboardStats {
-  totalClinics: number
-  totalStaff: number
-  totalDentists: number
-  totalPatients: number
-  recentClinics: any[]
-}
+import { SuperadminStats } from '@/types' // FIX: Imported SuperadminStats
 
 export default function SuperadminDashboard() {
-  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [stats, setStats] = useState<SuperadminStats | null>(null) // FIX: Replaced any
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {

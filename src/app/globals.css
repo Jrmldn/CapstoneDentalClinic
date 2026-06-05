@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 
 /* KEEP_IN_SYNC(fullscreen/resources/figmake/shadcn/globals.css) */
 
@@ -129,4 +130,27 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Leaflet fix */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  z-index: 0;
+}
+
+/* Custom Popup Styling */
+.custom-clinic-popup .leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.custom-clinic-popup .leaflet-popup-content {
+  margin: 12px;
+}
+
+.custom-clinic-popup .leaflet-popup-tip {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }

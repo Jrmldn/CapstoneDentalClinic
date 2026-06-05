@@ -25,7 +25,7 @@ export function Header() {
             <a href="#how-it-works" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
               How It Works
             </a>
-            <a href="#find-clinics" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+            <a href="#clinic-map" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
               Find Clinics
             </a>
             <a href="#testimonials" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
@@ -78,7 +78,7 @@ export function Header() {
                 How It Works
               </a>
               <a
-                href="#find-clinics"
+                href="#clinic-map"
                 className="text-gray-700 hover:text-blue-600 transition-colors font-medium py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >

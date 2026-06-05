@@ -1,92 +1,143 @@
-# Clinic Backend Implementation Plan
+# Interactive Clinic Map — Landing Page
 
-This plan outlines the backend architecture and server actions for the comprehensive Clinic Management System. The plan is divided into 6 modular phases that align with the provided database schema. We prioritize DRY principles, scalability, and secure server actions.
+Add an interactive Leaflet.js + OpenStreetMap map section to the landing page that displays all active clinic locations as clickable markers, with a sidebar clinic list that syncs with the map.
 
-## User Review Required
+---
 
-Please review the proposed server actions mapping to ensure it fully covers your frontend requirements. 
+## Overview
+
+The map section will sit between the **Hero** and the existing "Our Partner Clinics" grid. It will:
+
+- Render a real Leaflet map centered on Metro Manila (or auto-fit to the clinics' bounds).
+- Place a custom dental-themed marker for every active clinic that has `latitude` and `longitude` stored in the database.
+- Show a popup on each marker with clinic name, address, and a **"View & Book"** button.
+- Include a scrollable sidebar list of all clinics; clicking a list item flies the map to that clinic and opens its popup.
+- Highlight/sync the active list item as the user interacts with markers.
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> **Q1 – Clinics without coordinates**: Some clinic rows may have `latitude: null` and `longitude: null` (added by superadmin without a pin). Should those clinics:
+> - **A)** Still appear in the sidebar list but be omitted from the map, OR
+> - **B)** Be hidden entirely from both list and map until coordinates are added?
+
+> [!IMPORTANT]
+> **Q2 – Default map center**: If no clinic has coordinates, should the map default to a hard-coded Metro Manila center `[14.5995, 120.9842]`, or should the map section be hidden entirely?
 
 > [!NOTE]
-> We will adapt some of your phase requirements to use the existing normalized database tables (e.g., instead of adding `opening_time` to the `clinics` table, we will use the existing `clinic_operating_hours` table; `is_guest` is natively supported in the `patients` table, etc.). 
+> **Q3 – Section placement**: Plan puts the map ABOVE the existing "Our Partner Clinics" card grid. Should it **replace** the card grid entirely, or keep both (map + card grid below)?
+
+---
 
 ## Proposed Changes
 
-We will separate the backend logic into domain-specific action files inside `src/actions/` to keep the code modular and scalable.
+### 1. Install `leaflet` + typings
 
-### Phase 1: Clinic Profile & Operating Setup
-**DB Alignment:**
-- `clinics` table exists with `manual_status` and `default_downpayment_amount`.
-- Operating hours are normalized in `clinic_operating_hours`.
-- HMOs are in `clinic_hmo`. Images are in `clinic_gallery`.
-- Specialties are in `clinic_specialties`.
+```
+npm install leaflet
+npm install -D @types/leaflet
+```
 
-**Server Actions (`src/actions/clinicSetupActions.ts`):**
-- `updateClinicProfile`: Update basic clinic details (name, address, max appointments, default downpayment).
-- `updateOperatingHours`: Upsert records in `clinic_operating_hours`.
-- `manageClinicHMOs`: Add/remove records from `clinic_hmo`.
-- `manageClinicSpecialties`: Add/remove records from `clinic_specialties`.
-- `manageClinicGallery`: Handle upload/reordering in `clinic_gallery`.
+Leaflet is a pure-client-side library — it must only be rendered inside a `'use client'` component with **dynamic import** (`ssr: false`) to avoid SSR issues in Next.js.
 
-### Phase 2: Services & Pricing
-**DB Alignment:**
-- `services` table exists with `slot_duration_min` per service.
-- `products` table exists for physical inventory pricing.
+---
 
-**Server Actions (`src/actions/serviceActions.ts`):**
-- `addService`, `updateService`, `deleteService`, `fetchServices`: CRUD operations for `services`.
-- `addProduct`, `updateProduct`, `deleteProduct`, `fetchProducts`: CRUD operations for `products`.
+### 2. Data Layer — extend `page.tsx` query
 
-### Phase 3: Appointment Management
-**DB Alignment:**
-- `appointments` table tracks status, scheduling (`scheduled_at`, `end_at`), and payment (`downpayment`, `payment_status`, `is_walk_in`).
-- Slot generation will dynamically query `clinic_operating_hours`, `dentist_availability`, `dentist_blocked_slots`, and existing `appointments`.
+#### [MODIFY] [page.tsx](file:///c:/Users/Reymond%20E.%20Billones/capstone-dental-clinic/src/app/page.tsx)
 
-**Server Actions (`src/actions/appointmentActions.ts`):**
-- `fetchAppointmentsByDate`: Retrieves appointments for a specific day/range.
-- `getAvailableSlots`: Generates slots dynamically based on service duration and clinic/dentist availability.
-- `createAppointment`: Books an appointment (handles downpayment logic).
-- `updateAppointmentStatus`: Manages status (Rescheduled, Completed, Cancelled, No-Show) and logs to `appointment_logs`.
-- `updateMaxAppointments`: Updates `max_appointments_per_day` in `clinics`.
+- Extend the Supabase select to also fetch `latitude`, `longitude`, `email`, and `is_active`.  
+- Pass the full clinic array as a prop to the new `<ClinicMap>` component.
 
-### Phase 4: Patient Records & Walk-ins
-**DB Alignment:**
-- `patients` (has `is_guest`), `patient_medical_history`, `clinical_assessments`, `dental_charts`, `tooth_conditions`, `treatment_history`.
+---
 
-**Server Actions (`src/actions/patientActions.ts`):**
-- `registerPatient`: Registers a new patient (walk-in/guest or full user) and records medical history. Will book them into a vacant hour if required.
-- `fetchPatientRecord`: Full aggregation of patient info, history, assessments, and dental charts.
-- `fetchPatientsByClinic`: Alphabetical list of patients for a clinic.
-- `addClinicalAssessment`: Records assessment details.
-- `updateDentalChart`: Adds/updates `tooth_conditions`.
+### 3. New Components
 
-### Phase 5: Transactions, Discounts & Billing
-**DB Alignment:**
-- `transactions` and `transaction_items` cover total billing, discounts (HMO, PWD/Senior, PhilHealth), and sub-items (services, products).
+#### [NEW] `src/components/features/landing-page/ClinicMap.tsx` — **Client Component**
 
-**Server Actions (`src/actions/billingActions.ts`):**
-- `createTransaction`: Compiles items (`transaction_items`), applies discounts, calculates totals.
-- `fetchPatientBillingHistory`: Retrieves past transactions and treatment history.
-- `processPayment`: Updates transaction and appointment payment status.
+This is the core component. It uses `dynamic` import to load Leaflet only on the client:
 
-### Phase 6: Calendar, Inventory, Notifications & Reports
-**DB Alignment:**
-- Calendar uses `clinic_holidays` (for special days/closures) and `appointments`.
-- Inventory uses `inventory_items` and `inventory_logs`.
-- Notifications use `notifications` table.
+```
+'use client'
+import dynamic from 'next/dynamic'
 
-**Server Actions (`src/actions/managementActions.ts`):**
-- **Calendar:** `manageClinicHolidays` (add/remove holidays/special days).
-- **Inventory:** `updateInventoryStock`, `fetchStockAlerts` (based on `alert_threshold`), `logInventoryChange`.
-- **Notifications:** `retriggerNotification` (resends failed SMS/email based on `notifications` table status).
-- **Reports:** `generateSalesReport`, `generateAppointmentSummary`, `generateServiceFrequency` (returns data ready for PDF generation on frontend).
+const LeafletMap = dynamic(() => import('./LeafletMapInner'), { ssr: false })
+```
+
+It receives `clinics: Clinic[]` as props and renders:
+- **Left panel**: scrollable clinic list (name, address, open/close badge, phone)
+- **Right panel**: `<LeafletMapInner>` with the actual Leaflet map
+
+On list-item click → fly map to marker + open popup.  
+On marker click → highlight matching list item.
+
+#### [NEW] `src/components/features/landing-page/LeafletMapInner.tsx` — **Pure Leaflet logic**
+
+Responsible for:
+- Initializing the `L.map()` instance in a `useEffect`
+- Importing Leaflet CSS via `import 'leaflet/dist/leaflet.css'`
+- Fixing the Leaflet default icon path (known Next.js gotcha — must override `L.Icon.Default.prototype._getIconUrl`)
+- Creating a custom `DivIcon` dental marker (SVG tooth emoji or FontAwesome via inline SVG)
+- Adding `L.tileLayer` with OpenStreetMap tiles
+- Placing markers for every clinic with `lat`/`lng`
+- Exposing a `ref` callback so `ClinicMap` can call `map.flyTo()` imperatively
+
+#### [MODIFY] `src/app/globals.css`
+
+Add one rule to ensure Leaflet tiles render correctly in the Next.js environment:
+
+```css
+/* Leaflet fix */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  z-index: 0;
+}
+```
+
+---
+
+### 4. Wire into Landing Page
+
+#### [MODIFY] [page.tsx](file:///c:/Users/Reymond%20E.%20Billones/capstone-dental-clinic/src/app/page.tsx)
+
+Add the `<ClinicMap>` section between Hero and Features:
+
+```tsx
+import { ClinicMap } from "@/components/features/landing-page/ClinicMap"
+
+// Inside return:
+<section id="clinic-map" className="py-16 bg-white">
+  <ClinicMap clinics={clinicsList} />
+</section>
+```
+
+---
+
+## Visual Design
+
+| Element | Design decision |
+|---|---|
+| Section heading | `"Find a Clinic Near You"` with subtitle |
+| Map height | `480px` (desktop), `320px` (mobile stacked below list) |
+| Marker | Custom blue SVG circle with a tooth icon |
+| Popup | White card: name (bold), address, phone, blue "Book Now" link |
+| Sidebar | Scrollable `max-h-[480px]`, hover highlight `bg-blue-50`, active border `border-l-4 border-blue-500` |
+| Layout | `grid lg:grid-cols-[320px_1fr]` — list left, map right |
+
+---
 
 ## Verification Plan
 
-### Automated Tests
-- Server action response validations for slot generation logic (`getAvailableSlots`) to ensure accurate booking windows and overlap prevention.
-- Validation for transaction calculations (discounts, subtotals, grand totals).
+### Automated
+- `npm run build` — must compile without errors (Leaflet SSR exclusion must be correct)
 
-### Manual Verification
-- Walk through the guest patient registration flow and verify automatic slot assignment.
-- Verify status transition logs are accurately captured in `appointment_logs`.
-- Test inventory deduction and low-stock alerts threshold functionality.
+### Manual
+1. Landing page loads — map section renders with OpenStreetMap tiles
+2. Clinic markers appear at correct coordinates
+3. Clicking a marker → popup with correct clinic info
+4. Clicking a sidebar clinic → map flies to marker, popup opens
+5. Mobile view → list stacks above map, both still functional
+6. Clinics without lat/lng → appear in sidebar only (or hidden, per Q1 answer)

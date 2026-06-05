@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Calendar, ArrowRight } from "lucide-react";
+import Image from "next/image"; // FIX: Imported next/image
 
 export function Hero() {
   return (
@@ -56,10 +57,13 @@ export function Hero() {
 
           {/* Right Column - Image */}
           <div className="relative">
-            <img
+            <Image
               src="/assets/hero-dental.png"
               alt="Dental Care Illustration"
-              className="w-full rounded-2xl shadow-lg"
+              width={800}
+              height={600}
+              priority
+              className="w-full h-auto rounded-2xl shadow-lg"
             />
             
             {/* Floating Card */}

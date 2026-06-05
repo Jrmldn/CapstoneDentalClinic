@@ -81,8 +81,8 @@ export default function AddPersonnelModal({ isOpen, onClose, onSuccess, type }: 
       } else {
         setError(result.error || `Failed to add ${type}`)
       }
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err) { // FIX: Removed any
+      setError(err instanceof Error ? err.message : 'An unknown error occurred') // FIX: Added type guard
     } finally {
       setIsSubmitting(false)
     }

@@ -104,7 +104,7 @@ export default function AddInventoryModal({ isOpen, onClose, onSuccess, clinicId
               value={formData.alert_threshold}
               onChange={e => setFormData({...formData, alert_threshold: e.target.value})}
             />
-            <p className="text-[10px] text-gray-400">You'll be notified when stock falls to or below this level.</p>
+            <p className="text-[10px] text-gray-400">You&apos;ll be notified when stock falls to or below this level.</p>
           </div>
 
           <div className="pt-4 flex gap-3">

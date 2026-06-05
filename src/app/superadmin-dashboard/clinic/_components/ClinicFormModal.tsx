@@ -1,14 +1,15 @@
 'use client'
 
 import { X } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { Clinic } from '@/types' // FIX: Imported Clinic type
 
 interface ClinicFormModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: ClinicFormData) => void
+  onSubmit: (data: ClinicFormData & { latitude: number | null; longitude: number | null }) => void
   isSaving?: boolean
-  initialData?: any | null
+  initialData?: Clinic | null // FIX: Replaced any
 }
 
 interface ClinicFormData {
@@ -30,39 +31,16 @@ export default function ClinicFormModal({
 }: ClinicFormModalProps) {
   const isEditMode = !!initialData
 
+  // FIX: Initializing state directly to avoid useEffect cascading renders. Key in parent handles resets.
   const [formData, setFormData] = useState<ClinicFormData>({
-    name: '',
-    email: '',
-    phone: '',
-    address: '',
-    dailyCapacity: 0,
-    latitude: '',
-    longitude: '',
+    name: initialData?.name || '',
+    email: initialData?.email || '',
+    phone: initialData?.phone || '',
+    address: initialData?.address || '',
+    dailyCapacity: initialData?.max_appointments_per_day || 0,
+    latitude: initialData?.latitude?.toString() ?? '',
+    longitude: initialData?.longitude?.toString() ?? '',
   })
-
-  useEffect(() => {
-    if (initialData && isOpen) {
-      setFormData({
-        name: initialData.name,
-        email: initialData.email,
-        phone: initialData.phone,
-        address: initialData.address,
-        dailyCapacity: initialData.max_appointments_per_day,
-        latitude: initialData.latitude?.toString() ?? '',
-        longitude: initialData.longitude?.toString() ?? '',
-      })
-    } else if (isOpen) {
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        address: '',
-        dailyCapacity: 0,
-        latitude: '',
-        longitude: '',
-      })
-    }
-  }, [initialData, isOpen])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -78,7 +56,7 @@ export default function ClinicFormModal({
       ...formData,
       latitude: formData.latitude !== '' ? parseFloat(formData.latitude) : null,
       longitude: formData.longitude !== '' ? parseFloat(formData.longitude) : null,
-    } as any)
+    }) // FIX: Removed as any
   }
 
   if (!isOpen) return null

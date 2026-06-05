@@ -255,6 +255,24 @@ export async function deleteInventoryItem(itemId: number) {
   }
 }
 
+interface InventoryLogRaw {
+  id: number
+  item_id: number
+  changed_by: string
+  delta: number
+  reason: string
+  created_at: string
+  users?: {
+    id: string
+    email: string
+    role: string
+  }
+}
+
+export interface FormattedInventoryLog extends InventoryLogRaw {
+  performer_name: string
+}
+
 /** Fetch change history for a single inventory item */
 export async function fetchInventoryLogs(itemId: number) {
   try {
@@ -273,7 +291,8 @@ export async function fetchInventoryLogs(itemId: number) {
 
     if (error) throw new Error(error.message)
 
-    const userIds = [...new Set(logs.map((l: any) => l.changed_by).filter(Boolean))] as string[]
+    const rawLogs = (logs || []) as InventoryLogRaw[] // FIX: Replace any with explicit cast
+    const userIds = [...new Set(rawLogs.map((l) => l.changed_by).filter(Boolean))] as string[] // FIX: Removed any
     
     const [staffRes, dentistRes] = await Promise.all([
       supabaseAdmin.from('clinic_staff').select('user_id, first_name, last_name').in('user_id', userIds),
@@ -288,7 +307,7 @@ export async function fetchInventoryLogs(itemId: number) {
       nameMap[d.user_id] = `${d.first_name} ${d.last_name}`
     })
 
-    const formattedLogs = logs.map((l: any) => ({
+    const formattedLogs: FormattedInventoryLog[] = rawLogs.map((l) => ({ // FIX: Removed any and added interface
       ...l,
       performer_name: nameMap[l.changed_by] || l.users?.email || 'Unknown User'
     }))
