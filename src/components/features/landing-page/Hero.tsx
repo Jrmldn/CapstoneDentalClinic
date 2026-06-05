@@ -16,7 +16,7 @@ export function Hero() {
               </span>
               Now Available for Patients
             </div>
-            
+
             <div className="space-y-4">
               <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
                 Your Dental Health,
@@ -58,14 +58,14 @@ export function Hero() {
           {/* Right Column - Image */}
           <div className="relative">
             <Image
-              src="/assets/hero-dental.png"
+              src="/assets/hero-dental.webp"
               alt="Dental Care Illustration"
               width={800}
               height={600}
               priority
               className="w-full h-auto rounded-2xl shadow-lg"
             />
-            
+
             {/* Floating Card */}
             <div className="absolute -bottom-6 -left-6 bg-white rounded-xl shadow-xl p-6 max-w-xs">
               <div className="flex items-center gap-4">

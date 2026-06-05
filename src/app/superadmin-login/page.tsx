@@ -27,13 +27,11 @@ export default function AdminLoginPage() {
 
       if (authError) {
         setError(authError.message)
-        setLoading(false)
         return
       }
 
       if (!data.user) {
         setError('Authentication failed')
-        setLoading(false)
         return
       }
 
@@ -45,7 +43,6 @@ export default function AdminLoginPage() {
 
       if (queryError) {
         setError('Failed to fetch user information')
-        setLoading(false)
         return
       }
 
@@ -54,7 +51,6 @@ export default function AdminLoginPage() {
         setError('Access Denied: You do not have superadmin privileges')
         setEmail('')
         setPassword('')
-        setLoading(false)
         return
       }
 
@@ -62,6 +58,7 @@ export default function AdminLoginPage() {
     } catch (err) {
       setError('An unexpected error occurred')
       console.error(err)
+    } finally {
       setLoading(false)
     }
   }

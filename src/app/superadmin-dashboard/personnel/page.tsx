@@ -47,21 +47,31 @@ export default function PersonnelPage() {
     async (showLoadingScreen = true) => {
       if (showLoadingScreen) setIsLoading(true)
 
-      if (activeTab === 'staff') {
-        const result = await fetchStaff(searchQuery, clinicFilter, currentPage, ITEMS_PER_PAGE)
-        if (result.success) {
-          setStaffData(result.staff)
-          setTotalCount(result.totalCount || 0)
+      try {
+        if (activeTab === 'staff') {
+          const result = await fetchStaff(searchQuery, clinicFilter, currentPage, ITEMS_PER_PAGE)
+          if (result.success) {
+            setStaffData(result.staff)
+            setTotalCount(result.totalCount || 0)
+          } else {
+            console.error('Failed to fetch staff:', result.error)
+            alert('Failed to load staff: ' + result.error)
+          }
+        } else {
+          const result = await fetchDentists(searchQuery, clinicFilter, currentPage, ITEMS_PER_PAGE)
+          if (result.success) {
+            setDentistData(result.dentists)
+            setTotalCount(result.totalCount || 0)
+          } else {
+            console.error('Failed to fetch dentists:', result.error)
+            alert('Failed to load dentists: ' + result.error)
+          }
         }
-      } else {
-        const result = await fetchDentists(searchQuery, clinicFilter, currentPage, ITEMS_PER_PAGE)
-        if (result.success) {
-          setDentistData(result.dentists)
-          setTotalCount(result.totalCount || 0)
-        }
+      } catch (err) {
+        console.error('Unexpected error loading personnel:', err)
+      } finally {
+        setIsLoading(false)
       }
-
-      if (showLoadingScreen) setIsLoading(false)
     },
     [searchQuery, clinicFilter, activeTab, currentPage]
   )

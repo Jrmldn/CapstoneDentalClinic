@@ -20,17 +20,23 @@ export default function UpdatePasswordPage() {
     setLoading(true)
     setError(null)
 
-    const { error } = await supabase.auth.updateUser({ password })
+    try {
+      const { error } = await supabase.auth.updateUser({ password })
 
-    if (error) {
-      setError(error.message)
+      if (error) {
+        setError(error.message)
+        return
+      }
+
+      // Password updated — sign them in properly and go to dashboard.
+      // New way: sends them to your role-checking gatekeeper
+      router.push('/auth/callback')
+    } catch (err) {
+      console.error(err)
+      setError('An unexpected error occurred.')
+    } finally {
       setLoading(false)
-      return
     }
-
-    // Password updated — sign them in properly and go to dashboard.
-    // New way: sends them to your role-checking gatekeeper
-    router.push('/auth/callback')
   }
 
   return (

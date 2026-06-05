@@ -60,7 +60,7 @@ export async function addStaff(data: StaffData) {
     revalidatePath('/superadmin-dashboard/personnel')
     return { success: true }
   } catch (error) {
-    console.error('addStaff error:', error)
+    console.error('Error in addStaff:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to add staff' }
   }
 }
@@ -100,7 +100,7 @@ export async function addDentist(data: DentistData) {
     revalidatePath('/superadmin-dashboard/personnel')
     return { success: true }
   } catch (error) {
-    console.error('addDentist error:', error)
+    console.error('Error in addDentist:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to add dentist' }
   }
 }
@@ -120,6 +120,7 @@ export async function deletePersonnel(userId: string) {
     revalidatePath('/superadmin-dashboard/personnel')
     return { success: true }
   } catch (error) {
+    console.error('Error in deletePersonnel:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to delete user' }
   }
 }
@@ -157,7 +158,7 @@ export async function fetchPersonnel() {
 
     if (dentistError) throw new Error(dentistError.message)
 
-    const formattedStaff: FormattedStaff[] = (staffData as unknown as PersonnelRaw[]).map((staff) => ({ // FIX: Removed any
+    const formattedStaff: FormattedStaff[] = (staffData as unknown as PersonnelRaw[]).map((staff) => ({
       id: staff.id,
       userId: staff.user_id,
       clinicId: staff.clinic_id,
@@ -167,7 +168,7 @@ export async function fetchPersonnel() {
       clinicName: staff.clinics?.name || 'Unassigned',
     }))
 
-    const formattedDentists: FormattedDentist[] = (dentistData as unknown as PersonnelRaw[]).map((dentist) => ({ // FIX: Removed any
+    const formattedDentists: FormattedDentist[] = (dentistData as unknown as PersonnelRaw[]).map((dentist) => ({
       id: dentist.id,
       userId: dentist.user_id,
       clinicId: dentist.clinic_id,
@@ -184,7 +185,7 @@ export async function fetchPersonnel() {
       dentists: formattedDentists
     }
   } catch (error) {
-    console.error('Fetch personnel error:', error)
+    console.error('Error in fetchPersonnel:', error)
     return { success: false, error: 'Failed to fetch personnel data.' }
   }
 }
@@ -232,9 +233,12 @@ export async function fetchStaff(
 
     const { data: staffData, count, error } = await query
 
-    if (error) throw new Error(error.message)
+    if (error) {
+      console.error('Database error in fetchStaff:', error)
+      throw new Error(error.message)
+    }
 
-    const formattedStaff: FormattedStaff[] = (staffData as unknown as PersonnelRaw[] || []).map((staff) => ({ // FIX: Removed any
+    const formattedStaff: FormattedStaff[] = (staffData as unknown as PersonnelRaw[] || []).map((staff) => ({
       id: staff.id,
       userId: staff.user_id,
       clinicId: staff.clinic_id,
@@ -250,6 +254,7 @@ export async function fetchStaff(
       totalCount: count || 0,
     }
   } catch (error) {
+    console.error('Error in fetchStaff:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch staff',
@@ -303,9 +308,12 @@ export async function fetchDentists(
 
     const { data: dentistData, count, error } = await query
 
-    if (error) throw new Error(error.message)
+    if (error) {
+      console.error('Database error in fetchDentists:', error)
+      throw new Error(error.message)
+    }
 
-    const formattedDentists: FormattedDentist[] = (dentistData as unknown as PersonnelRaw[] || []).map((dentist) => ({ // FIX: Removed any
+    const formattedDentists: FormattedDentist[] = (dentistData as unknown as PersonnelRaw[] || []).map((dentist) => ({
       id: dentist.id,
       userId: dentist.user_id,
       clinicId: dentist.clinic_id,
@@ -322,6 +330,7 @@ export async function fetchDentists(
       totalCount: count || 0,
     }
   } catch (error) {
+    console.error('Error in fetchDentists:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch dentists',
@@ -351,7 +360,7 @@ export async function updatePersonnel(
       specialty?: string
     }
 
-    const updatePayload: UpdatePayload = { // FIX: Defined UpdatePayload interface
+    const updatePayload: UpdatePayload = {
       first_name: data.firstName,
       last_name: data.lastName,
       clinic_id: data.clinicId,
@@ -371,6 +380,7 @@ export async function updatePersonnel(
     revalidatePath('/superadmin-dashboard/personnel')
     return { success: true }
   } catch (error) {
+    console.error('Error in updatePersonnel:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update personnel'

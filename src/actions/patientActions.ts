@@ -99,6 +99,7 @@ export async function registerPatient(data: RegisterPatientData) {
     revalidatePath('/staff-dashboard/patients')
     return { success: true, patient }
   } catch (error) {
+    console.error('Error in registerPatient:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to register patient',
@@ -236,6 +237,7 @@ export async function fetchPatientRecord(patientId: number) {
       },
     }
   } catch (error) {
+    console.error('Error in fetchPatientRecord:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch patient record',
@@ -289,6 +291,7 @@ export async function fetchPatientsByClinic(
 
     return { success: true, patients: patients ?? [] }
   } catch (error) {
+    console.error('Error in fetchPatientsByClinic:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch patients',
@@ -324,6 +327,7 @@ export async function addClinicalAssessment(data: ClinicalAssessmentData) {
     revalidatePath('/staff-dashboard/patients')
     return { success: true, assessment }
   } catch (error) {
+    console.error('Error in addClinicalAssessment:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to add assessment',
@@ -397,6 +401,7 @@ export async function updateDentalChart(
     revalidatePath('/staff-dashboard/patients')
     return { success: true, chartId, conditions }
   } catch (error) {
+    console.error('Error in updateDentalChart:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update dental chart',

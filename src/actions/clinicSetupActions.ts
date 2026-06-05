@@ -31,9 +31,11 @@ export async function updateClinicProfile(
 
     if (error) throw new Error(error.message)
 
+    revalidatePath('/')
     revalidatePath('/staff-dashboard/profile')
     return { success: true, clinic: clinic?.[0] }
   } catch (error) {
+    console.error('Error in updateClinicProfile:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update clinic profile',
@@ -66,9 +68,11 @@ export async function updateOperatingHours(clinicId: number, hours: OperatingHou
 
     if (error) throw new Error(error.message)
 
+    revalidatePath('/')
     revalidatePath('/staff-dashboard/profile')
     return { success: true, hours: data }
   } catch (error) {
+    console.error('Error in updateOperatingHours:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update operating hours',
@@ -96,9 +100,11 @@ export async function manageClinicHMOs(clinicId: number, hmoNames: string[]) {
       if (error) throw new Error(error.message)
     }
 
+    revalidatePath('/')
     revalidatePath('/staff-dashboard/profile')
     return { success: true }
   } catch (error) {
+    console.error('Error in manageClinicHMOs:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to manage HMOs',
@@ -126,9 +132,11 @@ export async function manageClinicSpecialties(clinicId: number, specialties: str
       if (error) throw new Error(error.message)
     }
 
+    revalidatePath('/')
     revalidatePath('/staff-dashboard/profile')
     return { success: true }
   } catch (error) {
+    console.error('Error in manageClinicSpecialties:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to manage specialties',
@@ -157,9 +165,11 @@ export async function manageClinicGallery(clinicId: number, imageUrls: { url: st
       if (error) throw new Error(error.message)
     }
 
+    revalidatePath('/')
     revalidatePath('/staff-dashboard/profile')
     return { success: true }
   } catch (error) {
+    console.error('Error in manageClinicGallery:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to manage gallery',

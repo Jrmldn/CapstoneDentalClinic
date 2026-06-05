@@ -27,9 +27,14 @@ export default function InventoryLogsModal({ item, isOpen, onClose }: InventoryL
     if (isOpen && item) {
       const loadLogs = async () => {
         setIsLoading(true)
-        const res = await fetchInventoryLogs(item.id)
-        if (res.success) setLogs(res.logs as Log[])
-        setIsLoading(false)
+        try {
+          const res = await fetchInventoryLogs(item.id)
+          if (res.success) setLogs(res.logs as Log[])
+        } catch (err) {
+          console.error("Failed to load logs:", err)
+        } finally {
+          setIsLoading(false)
+        }
       }
       loadLogs()
     }

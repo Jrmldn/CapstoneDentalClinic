@@ -118,6 +118,7 @@ export async function createTransaction(data: CreateTransactionData) {
       },
     }
   } catch (error) {
+    console.error('Error in createTransaction:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to create transaction',
@@ -184,6 +185,7 @@ export async function fetchPatientBillingHistory(
       treatmentHistory: treatmentHistory ?? [],
     }
   } catch (error) {
+    console.error('Error in fetchPatientBillingHistory:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch billing history',
@@ -227,6 +229,7 @@ export async function processPayment(
     revalidatePath('/staff-dashboard/transactions')
     return { success: true }
   } catch (error) {
+    console.error('Error in processPayment:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to process payment',
@@ -266,6 +269,7 @@ export async function fetchClinicTransactions(
 
     return { success: true, transactions: transactions ?? [] }
   } catch (error) {
+    console.error('Error in fetchClinicTransactions:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch transactions',

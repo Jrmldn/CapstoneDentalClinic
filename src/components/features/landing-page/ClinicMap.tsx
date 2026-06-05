@@ -1,28 +1,19 @@
 'use client'
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { MapPin, Star, Clock, CreditCard, Navigation, Briefcase } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
+import { MapPin, Navigation } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from '@/lib/utils'
 import dynamic from 'next/dynamic'
+import 'leaflet/dist/leaflet.css'
+import { getEffectiveClinicStatus } from '@/lib/clinicStatus'
+import { ClinicCard } from '@/app/components/ClinicCard'
 
-// Dynamically import LeafletMapInner with SSR disabled
+// Dynamically import LeafletMapInner without the loading prop to avoid Next.js dynamic loader hangs
 const LeafletMapInner = dynamic(
   () => import('./LeafletMapInner'),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="absolute inset-0 flex items-center justify-center bg-slate-50 z-20">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
-          <p className="text-slate-400 font-medium text-sm">Initializing Map...</p>
-        </div>
-      </div>
-    )
-  }
+  { ssr: false }
 )
 
 interface ClinicSpecialty {
@@ -40,6 +31,11 @@ interface ClinicOperatingHour {
   is_closed: boolean
 }
 
+interface ClinicGallery {
+  image_url: string
+  sort_order: number
+}
+
 interface ClinicFeedback {
   rating: number
 }
@@ -49,49 +45,20 @@ interface Clinic {
   name: string
   address: string
   phone: string
+  manual_status: string | null
   latitude: number | null
   longitude: number | null
   clinic_hmo: ClinicHMO[]
   clinic_specialties: ClinicSpecialty[]
   clinic_operating_hours: ClinicOperatingHour[]
+  clinic_gallery: ClinicGallery[]
   feedback: ClinicFeedback[]
 }
 
 interface ClinicMapProps {
   clinics: Clinic[]
-}
-
-
-// Helper: Calculate average rating for a clinic
-const calculateAvgRating = (feedback: ClinicFeedback[]) => {
-  if (!feedback?.length) return 0
-  const total = feedback.reduce((sum, item) => sum + item.rating, 0)
-  return parseFloat((total / feedback.length).toFixed(1))
-}
-
-// Helper: Check if clinic is currently open based on operating hours
-const checkCurrentlyOpen = (operatingHours: ClinicOperatingHour[]) => {
-  if (!operatingHours?.length) return false
-  const now = new Date()
-  const day = now.getDay()
-  const currentMinutes = now.getHours() * 100 + now.getMinutes()
-
-  const todaySchedule = operatingHours.find(h => h.day_of_week === day)
-  if (!todaySchedule || todaySchedule.is_closed) return false
-
-  const [openH, openM] = todaySchedule.open_time.split(':').map(Number)
-  const [closeH, closeM] = todaySchedule.close_time.split(':').map(Number)
-
-  return currentMinutes >= (openH * 100 + openM) && currentMinutes <= (closeH * 100 + closeM)
-}
-
-// Helper: Format 24h time to 12h AM/PM
-const formatTo12h = (time: string) => {
-  const [h, m] = time.split(':')
-  const hour = parseInt(h)
-  const ampm = hour >= 12 ? 'PM' : 'AM'
-  const h12 = hour % 12 || 12
-  return `${h12}:${m} ${ampm}`
+  availableSpecialties?: string[]
+  availableHMOs?: string[]
 }
 
 interface FilterSectionProps {
@@ -114,178 +81,97 @@ const FilterSection = ({
   minRating, setMinRating,
   showOpenOnly, setShowOpenOnly
 }: FilterSectionProps) => (
-  <Card className="shadow-md border-slate-200">
-    <CardContent className="p-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-            <Briefcase className="w-4 h-4 text-indigo-500" />
-            Specialty
-          </label>
-          <select
-            value={selectedSpecialty}
-            onChange={(e) => setSelectedSpecialty(e.target.value)}
-            className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-blue-500"
-          >
-            {specialtyOptions.map((spec) => <option key={spec} value={spec}>{spec}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-            <CreditCard className="w-4 h-4 text-blue-500" />
-            HMO / Health Card
-          </label>
-          <select
-            value={selectedHMO}
-            onChange={(e) => setSelectedHMO(e.target.value)}
-            className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-blue-500"
-          >
-            {hmoOptions.map((hmo) => <option key={hmo} value={hmo}>{hmo}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-            <Star className="w-4 h-4 text-amber-500" />
-            Minimum Rating
-          </label>
-          <select
-            value={minRating}
-            onChange={(e) => setMinRating(Number(e.target.value))}
-            className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-blue-500"
-          >
-            <option value={0}>All Ratings</option>
-            <option value={4.0}>4.0+ Stars</option>
-            <option value={4.5}>4.5+ Stars</option>
-            <option value={4.8}>4.8+ Stars</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-green-500" />
-            Status
-          </label>
-          <label className={cn(
-            "flex items-center gap-3 px-4 py-2 border rounded-lg cursor-pointer transition-all h-[42px]",
-            showOpenOnly ? "bg-blue-50 border-blue-200" : "bg-slate-50 border-slate-200"
-          )}>
-            <input
-              type="checkbox"
-              checked={showOpenOnly}
-              onChange={(e) => setShowOpenOnly(e.target.checked)}
-              className="w-4 h-4 text-blue-600 rounded"
-            />
-            <span className="text-sm font-medium text-slate-700">Open Now Only</span>
-          </label>
-        </div>
+  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Specialty</label>
+        <select
+          value={selectedSpecialty}
+          onChange={(e) => setSelectedSpecialty(e.target.value)}
+          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+        >
+          {specialtyOptions.map((spec) => <option key={spec} value={spec}>{spec}</option>)}
+        </select>
       </div>
-    </CardContent>
-  </Card>
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">HMO / Health Card</label>
+        <select
+          value={selectedHMO}
+          onChange={(e) => setSelectedHMO(e.target.value)}
+          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+        >
+          {hmoOptions.map((hmo) => <option key={hmo} value={hmo}>{hmo}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Minimum Rating</label>
+        <select
+          value={minRating}
+          onChange={(e) => setMinRating(Number(e.target.value))}
+          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+        >
+          <option value={0}>All Ratings</option>
+          <option value={4.0}>4.0+ Stars</option>
+          <option value={4.5}>4.5+ Stars</option>
+          <option value={4.8}>4.8+ Stars</option>
+        </select>
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Status</label>
+        <label className={cn(
+          "flex items-center gap-3 px-4 h-[42px] border rounded-lg cursor-pointer transition-all",
+          showOpenOnly ? "bg-blue-50 border-blue-200" : "bg-slate-50 border-slate-200"
+        )}>
+          <input
+            type="checkbox"
+            checked={showOpenOnly}
+            onChange={(e) => setShowOpenOnly(e.target.checked)}
+            className="w-4 h-4 text-blue-600 rounded"
+          />
+          <span className="text-sm font-medium text-slate-700">Open Now Only</span>
+        </label>
+      </div>
+    </div>
+  </div>
 )
 
-interface SidebarCardProps {
-  clinic: Clinic
-  activeClinicId: string | null
-  onSelect: (id: string) => void
-}
-
-// Sub-component: Individual Clinic Sidebar Card
-const SidebarCard = ({ clinic, activeClinicId, onSelect }: SidebarCardProps) => {
-  const rating = calculateAvgRating(clinic.feedback)
-  const isOpen = checkCurrentlyOpen(clinic.clinic_operating_hours)
-  const isActive = activeClinicId === clinic.id
-
-  const todaySchedule = clinic.clinic_operating_hours?.find((h) => h.day_of_week === new Date().getDay())
-
-  return (
-    <Card
-      className={cn(
-        "cursor-pointer transition-all duration-300 border-slate-200 shrink-0",
-        isActive ? "ring-2 ring-blue-500 shadow-md" : "hover:shadow-md"
-      )}
-      onClick={() => onSelect(clinic.id)}
-    >
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex-1">
-            <h3 className="font-bold text-slate-900 text-base mb-1">{clinic.name}</h3>
-            <div className="flex items-center gap-1.5">
-              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-              <span className="text-xs font-bold text-slate-700">{rating > 0 ? rating : 'New'}</span>
-              <span className="text-[10px] text-gray-400">({clinic.feedback.length} reviews)</span>
-            </div>
-          </div>
-          <Badge className={cn("text-[10px] px-2 py-0 font-bold", isOpen ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500")}>
-            {isOpen ? 'OPEN' : 'CLOSED'}
-          </Badge>
-        </div>
-
-        <div className="flex flex-wrap gap-1 mb-3">
-          {clinic.clinic_specialties?.slice(0, 2).map((spec, i) => ( // FIX: Removed any
-            <Badge key={i} variant="outline" className="text-[10px] text-slate-500 py-0">{spec.specialty_name}</Badge>
-          ))}
-        </div>
-
-        <div className="space-y-2 text-xs text-slate-600 mb-4">
-          <div className="flex items-start gap-2">
-            <MapPin className="w-3.5 h-3.5 mt-0.5 text-blue-500 shrink-0" />
-            <span className="line-clamp-2">{clinic.address}</span>
-          </div>
-          {clinic.clinic_hmo && clinic.clinic_hmo.length > 0 && (
-            <div className="flex items-center gap-2">
-              <CreditCard className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-              <span className="line-clamp-1">
-                {clinic.clinic_hmo.map((h) => h.hmo_name).join(", ")}
-              </span>
-            </div>
-          )}
-          <div className="flex items-center gap-2 text-[11px]">
-            <Clock className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-            <span>
-              {(!todaySchedule || todaySchedule.is_closed)
-                ? "Closed today"
-                : `${formatTo12h(todaySchedule.open_time)} - ${formatTo12h(todaySchedule.close_time)}`}
-            </span>
-          </div>
-        </div>
-
-        <Link
-          href={`/login?clinic=${clinic.id}`}
-          onClick={(e) => e.stopPropagation()}
-          className="inline-flex items-center justify-center w-full h-9 px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-        >
-          Book Appointment
-        </Link>
-      </CardContent>
-    </Card>
-  )
-}
-
-export const ClinicMap = ({ clinics }: ClinicMapProps) => {
+export const ClinicMap = ({ clinics, availableSpecialties, availableHMOs }: ClinicMapProps) => {
   const router = useRouter()
   const [selectedSpecialty, setSelectedSpecialty] = useState("All Specialties")
   const [selectedHMO, setSelectedHMO] = useState("All HMOs")
   const [showOpenOnly, setShowOpenOnly] = useState(false)
   const [minRating, setMinRating] = useState(0)
   const [activeClinicId, setActiveClinicId] = useState<string | null>(null)
+  const [isMapReady, setIsMapReady] = useState(false)
 
   // Memoized Filter Options
   const specialtyOptions = useMemo(() => {
+    if (availableSpecialties && availableSpecialties.length > 0) {
+      return ["All Specialties", ...availableSpecialties]
+    }
     const specs = new Set<string>(["All Specialties"])
     clinics.forEach(c => c.clinic_specialties?.forEach(s => specs.add(s.specialty_name)))
     return Array.from(specs).sort()
-  }, [clinics])
+  }, [clinics, availableSpecialties])
 
   const hmoOptions = useMemo(() => {
+    if (availableHMOs && availableHMOs.length > 0) {
+      return ["All HMOs", ...availableHMOs]
+    }
     const hmos = new Set<string>(["All HMOs"])
     clinics.forEach(c => c.clinic_hmo?.forEach(h => hmos.add(h.hmo_name)))
     return Array.from(hmos).sort()
-  }, [clinics])
+  }, [clinics, availableHMOs])
 
   // Memoized Filtered List
   const filteredClinics = useMemo(() => {
     return clinics.filter((clinic) => {
-      const rating = calculateAvgRating(clinic.feedback)
-      const isOpen = checkCurrentlyOpen(clinic.clinic_operating_hours)
+      const ratingCount = clinic.feedback?.length || 0
+      const rating = ratingCount > 0 
+        ? clinic.feedback.reduce((sum, f) => sum + f.rating, 0) / ratingCount 
+        : 0
+      
+      const isOpen = getEffectiveClinicStatus(clinic.manual_status, clinic.clinic_operating_hours) === 'open'
 
       const matchSpecialty = selectedSpecialty === "All Specialties" ||
         clinic.clinic_specialties?.some(s => s.specialty_name === selectedSpecialty)
@@ -315,8 +201,10 @@ export const ClinicMap = ({ clinics }: ClinicMapProps) => {
     return () => window.removeEventListener('click', handlePopupClick)
   }, [router])
 
-  // Stable callback for map readiness to prevent re-initialization
-  const handleMapReady = useCallback(() => { }, [])
+  // Map readiness callback
+  const handleMapReady = useCallback(() => {
+    setIsMapReady(true)
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -336,6 +224,16 @@ export const ClinicMap = ({ clinics }: ClinicMapProps) => {
       <div className="grid lg:grid-cols-3 gap-6 h-[650px]">
         {/* Main Map Container */}
         <div className="lg:col-span-2 rounded-xl overflow-hidden border border-slate-200 shadow-lg bg-slate-50 relative min-h-[400px]">
+          {/* Manual Loading UI controlled by state, not dynamic loader */}
+          {!isMapReady && (
+            <div className="absolute inset-0 flex items-center justify-center bg-slate-50 z-20">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-8 h-8 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
+                <p className="text-slate-400 font-medium text-sm">Initializing Map...</p>
+              </div>
+            </div>
+          )}
+
           <div className="absolute top-4 left-4 right-4 z-10 pointer-events-none">
             <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-md p-3 flex items-center justify-between pointer-events-auto">
               <div className="flex items-center gap-2">
@@ -349,6 +247,7 @@ export const ClinicMap = ({ clinics }: ClinicMapProps) => {
           </div>
 
           <LeafletMapInner
+            key="leaflet-map-instance"
             clinics={filteredClinics}
             onMapReady={handleMapReady}
             activeClinicId={activeClinicId}
@@ -359,15 +258,26 @@ export const ClinicMap = ({ clinics }: ClinicMapProps) => {
         {/* Sidebar Clinic List */}
         <div className="flex flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar">
           {filteredClinics.map((clinic) => (
-            <SidebarCard
+            <ClinicCard
               key={clinic.id}
-              clinic={clinic}
-              activeClinicId={activeClinicId}
-              onSelect={setActiveClinicId}
+              id={clinic.id}
+              name={clinic.name}
+              address={clinic.address}
+              phone={clinic.phone}
+              specialties={clinic.clinic_specialties}
+              gallery={clinic.clinic_gallery}
+              feedback={clinic.feedback}
+              isOpen={getEffectiveClinicStatus(clinic.manual_status, clinic.clinic_operating_hours) === 'open'}
+              hmos={clinic.clinic_hmo}
+              operatingHours={clinic.clinic_operating_hours}
+              className={cn(
+                "shrink-0",
+                activeClinicId === clinic.id ? "ring-2 ring-blue-500 shadow-md" : ""
+              )}
             />
           ))}
           {filteredClinics.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2">
+            <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2 bg-white rounded-xl border border-slate-100">
               <MapPin className="w-8 h-8 opacity-20" />
               <p className="text-sm font-medium">No clinics match your filters</p>
             </div>

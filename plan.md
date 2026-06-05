@@ -11,13 +11,16 @@
 - [x] Appointment engine core (Slots, scheduling, and status management implemented)
 - [x] Clinical chart backend (Tables and actions for dental chart/assessments implemented)
 - [x] Staff module backend (Clinic profile, inventory, and personnel actions implemented)
-- [ ] Map-based clinic discovery, payment gateway, notifications (SMS/Email), chatbot, and PDF export remaining
+- [x] Map-based clinic discovery (Interactive Leaflet map with filters and interactive cards)
+- [x] Codebase health & Observability (Server logs, error handling, and loading state stability)
+- [ ] Payment gateway, notifications (SMS/Email), chatbot, and PDF export remaining
 
 ## Security (all weeks)
 - [ ] Encryption: pgcrypto AES-256 on PII cols; bcrypt passwords via Supabase Auth
 - [x] RBAC: Patient/Staff/Dentist roles in JWT; enforced at API middleware + RLS
 - [x] No raw SQL: parameterized queries only (Supabase client used); Zod schemas on most inputs
 - [x] Sessions: JWT 15-min expiry + refresh rotation; HttpOnly; SameSite=Strict (Default Supabase Auth)
+- [x] RLS Compliance: Public read access for clinic data (specialties, feedback) standardized
 - [ ] Compliance: RA 10173 — consent stored as timestamped audit record
 
 ## Week 1 — Infrastructure, Auth, Patient Portal (Days 1–7)
@@ -25,24 +28,27 @@
 **DB & RLS**
 - [x] Tables: users, clinics, appointments, dental_charts, prescriptions, inventory, notifications, logs, feedback
 - [x] RLS on every table; patients see own rows only; staff see own clinic only; dentist sees assigned patients
+- [x] Public access policies for joined data (specialties, gallery, ratings) implemented
 - [ ] PII cols encrypted at rest with pgcrypto
 
 **Auth**
 - [x] Supabase Auth; role claim in JWT; middleware guard on every route
+- [x] Login resilience: Fixed "never-ending loading" on error states in login and password pages
 - [ ] Login rate-limit: 5 attempts/15 min
-- [ ] Email password reset; signed token; 1-hr expiry
+- [x] Email password reset; signed token; 1-hr expiry
 
 **Patient Portal**
 - [x] Registration + Zod validation; consent audit record (via RegisterPatientData)
-- [ ] Map-based clinic discovery (geolocation API); filters: specialty, HMO, rating, status
-- [x] Patient reads/updates own profile only (RLS enforced)
+- [x] Map-based clinic discovery (Leaflet integration); filters: specialty, HMO, rating, status
+- [x] Unified Discovery UI: Sidebar + Map pins use high-contrast, interactive clinic cards
+- [x] Gallery support: Interactive image slider implemented for all clinic discovery cards
 
 Deliverables:
 - [x] DB migrations committed
 - [x] auth passing for patient login and dashboard access
 - [x] RLS unit-tested
-- [x] patient portal on dev (Landing page fetching clinics)
-- [x] zero raw SQL confirmed
+- [x] patient portal on dev (Landing page fetching clinics via secure anon client)
+- [x] interactive clinic map with real-time filtering
 
 ## Week 2 — Scheduling, Clinical Records, Staff Module (Days 8–14)
 
@@ -88,6 +94,7 @@ Deliverables:
 - [ ] Inputs sanitized before Dialogflow call; no DB access path from chat
 
 **Security Hardening**
+- [x] Observability: Implementation of comprehensive server-side error logging for all actions
 - [ ] Grep audit: replace any remaining string-interpolated queries with parameterized
 - [ ] CSP headers: no inline scripts, strict-origin
 - [ ] CORS locked to production origin
@@ -117,7 +124,7 @@ Deliverables:
 | DB/Auth | Supabase (PostgreSQL + RLS + pgcrypto) |
 | Chatbot | Dialogflow |
 | Notifications | Twilio / SendGrid |
-| Maps | Geolocation API |
+| Maps | Leaflet.js |
 | Payments | GCash, PayMaya, Credit Card |
 | Deploy | Vercel |
 

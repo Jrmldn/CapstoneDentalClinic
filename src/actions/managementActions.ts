@@ -45,6 +45,7 @@ export async function manageClinicHolidays(
     revalidatePath('/staff-dashboard/calendar')
     return { success: true }
   } catch (error) {
+    console.error('Error in manageClinicHolidays:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to manage holiday',
@@ -95,6 +96,7 @@ export async function fetchCalendarData(
       appointments: appointmentsRes.data ?? [],
     }
   } catch (error) {
+    console.error('Error in fetchCalendarData:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch calendar data',
@@ -150,6 +152,7 @@ export async function updateInventoryStock(
     revalidatePath('/staff-dashboard/inventory')
     return { success: true, newQuantity: newQty, isLow }
   } catch (error) {
+    console.error('Error in updateInventoryStock:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update stock',
@@ -176,6 +179,7 @@ export async function fetchStockAlerts(clinicId: number) {
 
     return { success: true, alerts: lowStock }
   } catch (error) {
+    console.error('Error in fetchStockAlerts:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch stock alerts',
@@ -197,6 +201,7 @@ export async function fetchInventory(clinicId: number) {
 
     return { success: true, items: items ?? [] }
   } catch (error) {
+    console.error('Error in fetchInventory:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch inventory',
@@ -229,6 +234,7 @@ export async function addInventoryItem(
     revalidatePath('/staff-dashboard/inventory')
     return { success: true, item }
   } catch (error) {
+    console.error('Error in addInventoryItem:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to add inventory item',
@@ -248,6 +254,7 @@ export async function deleteInventoryItem(itemId: number) {
     revalidatePath('/staff-dashboard/inventory')
     return { success: true }
   } catch (error) {
+    console.error('Error in deleteInventoryItem:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to delete inventory item',
@@ -291,8 +298,8 @@ export async function fetchInventoryLogs(itemId: number) {
 
     if (error) throw new Error(error.message)
 
-    const rawLogs = (logs || []) as InventoryLogRaw[] // FIX: Replace any with explicit cast
-    const userIds = [...new Set(rawLogs.map((l) => l.changed_by).filter(Boolean))] as string[] // FIX: Removed any
+    const rawLogs = (logs || []) as InventoryLogRaw[]
+    const userIds = [...new Set(rawLogs.map((l) => l.changed_by).filter(Boolean))] as string[]
     
     const [staffRes, dentistRes] = await Promise.all([
       supabaseAdmin.from('clinic_staff').select('user_id, first_name, last_name').in('user_id', userIds),
@@ -307,13 +314,14 @@ export async function fetchInventoryLogs(itemId: number) {
       nameMap[d.user_id] = `${d.first_name} ${d.last_name}`
     })
 
-    const formattedLogs: FormattedInventoryLog[] = rawLogs.map((l) => ({ // FIX: Removed any and added interface
+    const formattedLogs: FormattedInventoryLog[] = rawLogs.map((l) => ({
       ...l,
       performer_name: nameMap[l.changed_by] || l.users?.email || 'Unknown User'
     }))
 
     return { success: true, logs: formattedLogs }
   } catch (error) {
+    console.error('Error in fetchInventoryLogs:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch inventory logs',
@@ -345,6 +353,7 @@ export async function retriggerNotification(notificationId: number) {
     revalidatePath('/staff-dashboard/notifications')
     return { success: true, notification }
   } catch (error) {
+    console.error('Error in retriggerNotification:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to retrigger notification',
@@ -384,6 +393,7 @@ export async function fetchNotifications(
 
     return { success: true, notifications: notifications ?? [] }
   } catch (error) {
+    console.error('Error in fetchNotifications:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch notifications',
@@ -447,6 +457,7 @@ export async function generateSalesReport(
       transactions: txList,
     }
   } catch (error) {
+    console.error('Error in generateSalesReport:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to generate sales report',
@@ -497,6 +508,7 @@ export async function generateAppointmentSummary(
       appointments: apptList,
     }
   } catch (error) {
+    console.error('Error in generateAppointmentSummary:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to generate appointment summary',
@@ -543,6 +555,7 @@ export async function generateServiceFrequency(
 
     return { success: true, from, to, serviceFrequency }
   } catch (error) {
+    console.error('Error in generateServiceFrequency:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to generate service frequency report',

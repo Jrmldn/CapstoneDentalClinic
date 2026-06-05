@@ -63,6 +63,7 @@ export async function fetchAppointmentsByDate(clinicId: number, date: string) {
 
     return { success: true, appointments: appointments || [] }
   } catch (error) {
+    console.error('Error in fetchAppointmentsByDate:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch appointments',
@@ -179,6 +180,7 @@ export async function getAvailableSlots(
 
     return { success: true, slots }
   } catch (error) {
+    console.error('Error in getAvailableSlots:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to get available slots',
@@ -274,6 +276,7 @@ export async function createAppointment(data: CreateAppointmentData) {
     revalidatePath('/staff-dashboard/appointments')
     return { success: true, appointment }
   } catch (error) {
+    console.error('Error in createAppointment:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to create appointment',
@@ -329,6 +332,7 @@ export async function updateAppointmentStatus(
     revalidatePath('/staff-dashboard/appointments')
     return { success: true }
   } catch (error) {
+    console.error('Error in updateAppointmentStatus:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update appointment status',
@@ -352,6 +356,7 @@ export async function updateMaxAppointments(clinicId: number, max: number) {
     revalidatePath('/staff-dashboard/settings')
     return { success: true }
   } catch (error) {
+    console.error('Error in updateMaxAppointments:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update max appointments',

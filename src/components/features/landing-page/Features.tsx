@@ -69,6 +69,7 @@ export function Features() {
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm mb-4">
             Features
+
           </div>
           <h2 className="text-4xl font-bold text-gray-900 mb-4">
             Everything You Need for Better Dental Care

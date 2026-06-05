@@ -2,90 +2,50 @@
 
 import React, { useEffect, useRef, useMemo } from 'react'
 import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
+import { createRoot, Root } from 'react-dom/client'
+import { ClinicCard } from '@/app/components/ClinicCard'
+import { getEffectiveClinicStatus } from '@/lib/clinicStatus'
 
 interface Clinic {
   id: string
   name: string
   address: string
   phone: string
+  manual_status: string | null
+  clinic_operating_hours: { day_of_week: number; open_time: string; close_time: string; is_closed: boolean }[]
+  clinic_specialties: { specialty_name: string }[]
+  clinic_hmo: { hmo_name: string }[]
+  clinic_gallery?: { image_url: string; sort_order: number }[]
+  feedback: { rating: number }[]
   latitude: number | null
   longitude: number | null
-  clinic_hmo: { hmo_name: string }[]
-  clinic_specialties: { specialty_name: string }[]
-  clinic_operating_hours: { day_of_week: number; open_time: string; close_time: string; is_closed: boolean }[]
-  feedback: { rating: number }[]
 }
 
 interface LeafletMapInnerProps {
   clinics: Clinic[]
-  onMapReady: (map: L.Map) => void
+  onMapReady: () => void
   activeClinicId: string | null
   onMarkerClick: (id: string) => void
-}
-
-/**
- * LeafletMapInner Refactor Summary:
- * - Extracted helper functions for rating, opening status, and popup content to improve readability.
- * - Used useMemo for custom dental icon to prevent redundant object creation.
- * - Standardized map initialization and marker synchronization logic.
- * - Added detailed comments for better maintainability.
- */
-
-// Helper: Calculate average rating for a clinic
-const getClinicRating = (feedback: Clinic['feedback']) => {
-  if (!feedback || feedback.length === 0) return 'New'
-  const total = feedback.reduce((sum, item) => sum + item.rating, 0)
-  return (total / feedback.length).toFixed(1)
-}
-
-// Helper: Check if clinic is currently open
-const checkIsClinicOpen = (hours: Clinic['clinic_operating_hours']) => {
-  if (!hours || hours.length === 0) return false
-  const now = new Date()
-  const day = now.getDay()
-  const curTime = now.getHours() * 100 + now.getMinutes()
-  
-  const today = hours.find(h => h.day_of_week === day)
-  if (!today || today.is_closed) return false
-  
-  const [oh, om] = today.open_time.split(':').map(Number)
-  const [ch, cm] = today.close_time.split(':').map(Number)
-  return curTime >= (oh * 100 + om) && curTime <= (ch * 100 + cm)
-}
-
-// Helper: Generate HTML content for the map popup
-const generatePopupHtml = (clinic: Clinic, rating: string, isOpen: boolean) => {
-  return `
-    <div class="p-1 w-64">
-      <h4 class="font-bold text-gray-900 text-sm mb-2">${clinic.name}</h4>
-      <div class="flex items-center gap-1 mb-3">
-        <span class="text-amber-400">★</span>
-        <span class="text-xs font-bold text-gray-700">${rating}</span>
-        <span class="text-[10px] text-gray-400">(${clinic.feedback?.length || 0})</span>
-        <span class="ml-auto px-2 py-0.5 rounded text-[10px] font-bold ${isOpen ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}">
-          ${isOpen ? 'OPEN' : 'CLOSED'}
-        </span>
-      </div>
-      <div class="space-y-2 text-[11px] text-gray-600 mb-4">
-        <div class="flex items-start gap-2">
-          <span class="text-blue-500 mt-0.5">📍</span>
-          <span class="line-clamp-2">${clinic.address}</span>
-        </div>
-      </div>
-      <a href="/login?clinic=${clinic.id}" class="popup-book-btn block w-full text-center py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors shadow-sm">
-        Book Appointment
-      </a>
-    </div>
-  `
 }
 
 const LeafletMapInner = ({ clinics, onMapReady, activeClinicId, onMarkerClick }: LeafletMapInnerProps) => {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const markersRef = useRef<{ [key: string]: L.Marker }>({})
+  const popupRootsRef = useRef<Map<string, Root>>(new Map())
 
-  // Memoized custom dental icon to avoid recreation on every render
+  // Helper to safely unmount a React root asynchronously
+  const safeUnmount = (root: Root) => {
+    setTimeout(() => {
+      try {
+        root.unmount()
+      } catch (err) {
+        // Ignore unmount errors
+      }
+    }, 0)
+  }
+
+  // Memoized custom dental icon
   const dentalIcon = useMemo(() => {
     if (typeof window === 'undefined') return null
     return L.divIcon({
@@ -100,101 +60,129 @@ const LeafletMapInner = ({ clinics, onMapReady, activeClinicId, onMarkerClick }:
       className: 'custom-leaflet-icon',
       iconSize: [40, 40],
       iconAnchor: [20, 20],
+      popupAnchor: [0, -20]
     })
   }, [])
 
   // Initialize Map
   useEffect(() => {
-    if (typeof window === 'undefined' || !mapContainerRef.current || mapRef.current) return
+    if (!mapContainerRef.current || mapRef.current) return
 
-    // Standard Leaflet Icon Fix for Next.js
-    // @ts-expect-error - internal property
-    delete L.Icon.Default.prototype._getIconUrl
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-      iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-      shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-    })
+    try {
+      // Create map instance
+      mapRef.current = L.map(mapContainerRef.current, {
+        zoomControl: false,
+        scrollWheelZoom: true
+      }).setView([14.5995, 120.9842], 12)
 
-    const map = L.map(mapContainerRef.current, {
-      center: [14.5995, 120.9842],
-      zoom: 12,
-      zoomControl: false,
-      scrollWheelZoom: true,
-    })
+      // Add tiles
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19,
+        detectRetina: true,
+      }).addTo(mapRef.current)
 
-    L.control.zoom({ position: 'bottomright' }).addTo(map)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-      maxZoom: 19,
-    }).addTo(map)
+      // Add zoom control
+      L.control.zoom({ position: 'bottomright' }).addTo(mapRef.current)
 
-    mapRef.current = map
-    onMapReady(map)
+      // SIGNAL READINESS IMMEDIATELY - Ensures the loading screen goes away even if other things hang
+      onMapReady()
 
-    // Correction for container resize
-    setTimeout(() => map.invalidateSize(), 100)
+      // Handle window resize to prevent white screen
+      const resizeObserver = new ResizeObserver(() => {
+        if (mapRef.current) mapRef.current.invalidateSize()
+      })
+      resizeObserver.observe(mapContainerRef.current)
+
+      // Initial size correction after a short delay
+      setTimeout(() => {
+        if (mapRef.current) mapRef.current.invalidateSize()
+      }, 250)
+
+    } catch (error) {
+      console.error("Leaflet init error:", error)
+      onMapReady()
+    }
 
     return () => {
       if (mapRef.current) {
         mapRef.current.remove()
         mapRef.current = null
       }
+      popupRootsRef.current.forEach(root => safeUnmount(root))
+      popupRootsRef.current.clear()
     }
   }, [onMapReady])
 
-  // Synchronize Markers
+  // Update Markers
   useEffect(() => {
     if (!mapRef.current || !dentalIcon) return
 
-    // Cleanup existing markers
-    Object.values(markersRef.current).forEach(marker => marker.remove())
+    // Clear old markers and roots
+    Object.values(markersRef.current).forEach(m => m.remove())
     markersRef.current = {}
+    popupRootsRef.current.forEach(root => safeUnmount(root))
+    popupRootsRef.current.clear()
 
     const bounds = L.latLngBounds([])
-    let validMarkerCount = 0
+    let hasMarkers = false
 
-    clinics.forEach(clinic => {
-      if (clinic.latitude && clinic.longitude) {
-        const rating = getClinicRating(clinic.feedback)
-        const isOpen = checkIsClinicOpen(clinic.clinic_operating_hours)
+    clinics.forEach((clinic) => {
+      if (!clinic.latitude || !clinic.longitude) return
+      hasMarkers = true
 
-        const marker = L.marker([clinic.latitude, clinic.longitude], { icon: dentalIcon })
-          .addTo(mapRef.current!)
-          .on('click', () => {
-            onMarkerClick(clinic.id)
-            marker.openPopup()
-          })
+      const container = L.DomUtil.create('div', 'popup-card-wrapper')
+      const root = createRoot(container)
+      root.render(
+        <ClinicCard 
+          id={clinic.id}
+          name={clinic.name}
+          address={clinic.address}
+          phone={clinic.phone}
+          specialties={clinic.clinic_specialties}
+          gallery={clinic.clinic_gallery}
+          feedback={clinic.feedback}
+          isOpen={getEffectiveClinicStatus(clinic.manual_status, clinic.clinic_operating_hours) === 'open'}
+          hmos={clinic.clinic_hmo}
+          operatingHours={clinic.clinic_operating_hours}
+          compact={true}
+          className="bg-transparent shadow-none"
+        />
+      )
+      
+      popupRootsRef.current.set(clinic.id, root)
 
-        marker.bindPopup(generatePopupHtml(clinic, rating, isOpen), {
-          closeButton: false,
+      const marker = L.marker([clinic.latitude, clinic.longitude], { icon: dentalIcon })
+        .addTo(mapRef.current!)
+        .bindPopup(container, {
+          maxWidth: 280,
+          minWidth: 240,
           className: 'custom-clinic-popup'
         })
+        .on('click', () => onMarkerClick(clinic.id))
 
-        markersRef.current[clinic.id] = marker
-        bounds.extend([clinic.latitude, clinic.longitude])
-        validMarkerCount++
-      }
+      markersRef.current[clinic.id] = marker
+      bounds.extend([clinic.latitude, clinic.longitude])
     })
 
-    // Adjust view to fit all markers
-    if (validMarkerCount > 0) {
+    if (hasMarkers && mapRef.current) {
       mapRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 })
     }
+    
+    // Size correction after markers are added
+    setTimeout(() => {
+      if (mapRef.current) mapRef.current.invalidateSize()
+    }, 100)
+
   }, [clinics, dentalIcon, onMarkerClick])
 
-  // External Activation Control
+  // Sync active marker selection
   useEffect(() => {
     if (activeClinicId && markersRef.current[activeClinicId]) {
       const marker = markersRef.current[activeClinicId]
       marker.openPopup()
-      
-      // Smoothly pan to the selected clinic
       if (mapRef.current) {
-        mapRef.current.flyTo(marker.getLatLng(), 15, {
-          duration: 1.5,
-          easeLinearity: 0.25
-        })
+        mapRef.current.panTo(marker.getLatLng(), { animate: true })
       }
     }
   }, [activeClinicId])
@@ -202,8 +190,7 @@ const LeafletMapInner = ({ clinics, onMapReady, activeClinicId, onMarkerClick }:
   return (
     <div 
       ref={mapContainerRef} 
-      className="w-full h-full min-h-[400px] z-0" 
-      style={{ backgroundColor: '#f8fafc' }} 
+      className="w-full h-full min-h-[400px] relative bg-slate-50" 
     />
   )
 }

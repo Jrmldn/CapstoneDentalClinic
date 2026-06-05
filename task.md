@@ -1,4 +1,4 @@
-# Clinic Backend Tasks
+# Clinic Backend & Discovery Tasks
 
 ## Phase 1: Clinic Profile & Operating Setup
 - `[x]` Create `updateClinicProfile` action
@@ -35,3 +35,16 @@
 - `[x]` Create `updateInventoryStock`, `fetchStockAlerts`, `logInventoryChange` actions
 - `[x]` Create `retriggerNotification` action
 - `[x]` Create `generateSalesReport`, `generateAppointmentSummary`, `generateServiceFrequency` actions
+
+## Phase 7: Clinic Discovery & Map (NEW)
+- `[x]` Implement Leaflet.js interactive map with custom dental pins
+- `[x]` Create unified `ClinicCard` with compact mode and gallery slider
+- `[x]` Build real-time filters (Specialty, HMO, Rating, Status) for map and list
+- `[x]` Implement synchronized data parity between Map Pins and Sidebar list
+- `[x]` Handle safe unmounting and asynchronous initialization to prevent navigation hangs
+
+## Phase 8: System Health & Security (NEW)
+- `[x]` Implement server-side `console.error` logging across all 30+ server actions
+- `[x]` Resolve "Never-Ending Loading" UI hangs using `finally` blocks in client components
+- `[x]` Transition landing page data fetching to secure standardized anon client
+- `[x]` Audit and implement missing RLS policies for joined public data

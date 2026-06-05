@@ -40,12 +40,20 @@ export default function ClientClinicPage() {
 
   const loadClinics = useCallback(async (showLoadingScreen = true) => { // FIX: Wrapped in useCallback
     if (showLoadingScreen) setIsLoading(true)
-    const result = await fetchClinics(searchQuery, statusFilter, currentPage, ITEMS_PER_PAGE)
-    if (result.success) {
-      setClinics(result.clinics)
-      setTotalCount(result.totalCount || 0)
+    try {
+      const result = await fetchClinics(searchQuery, statusFilter, currentPage, ITEMS_PER_PAGE)
+      if (result.success) {
+        setClinics(result.clinics)
+        setTotalCount(result.totalCount || 0)
+      } else {
+        console.error('Failed to fetch clinics:', result.error)
+        alert('Failed to load clinics: ' + result.error)
+      }
+    } catch (err) {
+      console.error('Unexpected error loading clinics:', err)
+    } finally {
+      setIsLoading(false)
     }
-    if (showLoadingScreen) setIsLoading(false)
   }, [searchQuery, statusFilter, currentPage]) // FIX: Added dependencies
 
   useEffect(() => {
@@ -73,16 +81,22 @@ export default function ClientClinicPage() {
 
   const handleSaveClinic = async (data: AddClinicData) => { // FIX: Replaced any
     setIsSaving(true)
-    const result = selectedClinic
-      ? await updateClinic(selectedClinic.id, data)
-      : await addClinic(data)
-    if (result.success) {
-      handleCloseModal()
-      await loadClinics(false)
-    } else {
-      alert(`Error ${selectedClinic ? 'updating' : 'adding'} clinic: ` + result.error)
+    try {
+      const result = selectedClinic
+        ? await updateClinic(selectedClinic.id, data)
+        : await addClinic(data)
+      if (result.success) {
+        handleCloseModal()
+        await loadClinics(false)
+      } else {
+        alert(`Error ${selectedClinic ? 'updating' : 'adding'} clinic: ` + result.error)
+      }
+    } catch (err) {
+      console.error('Error saving clinic:', err)
+      alert('An unexpected error occurred while saving.')
+    } finally {
+      setIsSaving(false)
     }
-    setIsSaving(false)
   }
 
   const handleCloseModal = () => {
