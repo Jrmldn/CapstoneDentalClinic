@@ -1,12 +1,14 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
-import Link from 'next/link'
-import { ChevronLeft, ChevronRight, Star, MapPin, CreditCard, Clock } from 'lucide-react'
+import React from 'react'
+import { Star, MapPin, CreditCard, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { useClinicCard } from './useClinicCard'
+import ImageSlider from './ImageSlider'
+import { formatTo12h } from './clinicCardHelpers'
 
-interface ClinicCardProps {
+export interface ClinicCardProps {
   id: string
   name: string
   address: string
@@ -21,47 +23,23 @@ interface ClinicCardProps {
   compact?: boolean
 }
 
-// Helper: Format 24h time to 12h AM/PM
-const formatTo12h = (time: string) => {
-  if (!time) return ''
-  const [h, m] = time.split(':')
-  const hour = parseInt(h)
-  const ampm = hour >= 12 ? 'PM' : 'AM'
-  const h12 = hour % 12 || 12
-  return `${h12}:${m} ${ampm}`
-}
-
+/**
+ * ClinicCard Component
+ * Presentational UI component displaying clinic details, HMOs, specialties, schedules, and images.
+ * Delegates slider logic and scheduling calculations to useClinicCard hook.
+ */
 export function ClinicCard({ 
   id, name, address, phone, specialties, gallery, 
   feedback, isOpen, hmos, operatingHours, className, compact 
 }: ClinicCardProps) {
-  const images = useMemo(() => {
-    return (gallery || []).sort((a, b) => a.sort_order - b.sort_order)
-  }, [gallery])
-
-  const [currentImgIndex, setCurrentImgIndex] = useState(0)
-
-  const handleNextImg = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setCurrentImgIndex((prev) => (prev + 1) % images.length)
-  }
-
-  const handlePrevImg = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setCurrentImgIndex((prev) => (prev - 1 + images.length) % images.length)
-  }
-
-  const rating = useMemo(() => {
-    if (!feedback?.length) return 0
-    const total = feedback.reduce((sum, item) => sum + item.rating, 0)
-    return parseFloat((total / feedback.length).toFixed(1))
-  }, [feedback])
-
-  const todaySchedule = useMemo(() => {
-    return operatingHours?.find((h) => h.day_of_week === new Date().getDay())
-  }, [operatingHours])
+  const {
+    images,
+    currentImgIndex,
+    handleNextImg,
+    handlePrevImg,
+    rating,
+    todaySchedule,
+  } = useClinicCard({ gallery, feedback, operatingHours })
 
   return (
     <div className={cn(
@@ -70,47 +48,14 @@ export function ClinicCard({
       className
     )}>
       {/* Image Slider */}
-      {images.length > 0 && (
-        <div className={cn(
-          "w-full relative overflow-hidden bg-slate-100 rounded-lg",
-          compact ? "h-28" : "h-40"
-        )}>
-          <img 
-            src={images[currentImgIndex].image_url} 
-            alt={`${name} - ${currentImgIndex + 1}`} 
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-          
-          {images.length > 1 && (
-            <>
-              <button 
-                onClick={handlePrevImg}
-                className="absolute left-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full bg-white/80 text-slate-800 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white z-10"
-              >
-                <ChevronLeft className={compact ? "w-3.5 h-3.5" : "w-5 h-5"} />
-              </button>
-              <button 
-                onClick={handleNextImg}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full bg-white/80 text-slate-800 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white z-10"
-              >
-                <ChevronRight className={compact ? "w-3.5 h-3.5" : "w-5 h-5"} />
-              </button>
-              <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1 z-10">
-                {images.map((_, i) => (
-                  <div 
-                    key={i} 
-                    className={cn(
-                      "rounded-full transition-all",
-                      compact ? "w-1 h-1" : "w-1.5 h-1.5",
-                      i === currentImgIndex ? "bg-white" : "bg-white/40"
-                    )} 
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      )}
+      <ImageSlider
+        images={images}
+        name={name}
+        compact={compact}
+        currentImgIndex={currentImgIndex}
+        handlePrevImg={handlePrevImg}
+        handleNextImg={handleNextImg}
+      />
       
       <div className={cn("flex-1 flex flex-col", compact ? "pt-3 px-1 pb-1" : "p-5")}>
         {/* Title and Badge Row */}
@@ -185,8 +130,7 @@ export function ClinicCard({
         <a
           href={`/login?clinic=${id}`}
           onClick={(e) => {
-            // Let the global listener in ClinicMap handle smooth navigation
-            // This prevents "no router context" errors when rendered in Leaflet popups
+            // Let the global listener handle smooth navigation to avoid "no router context" errors in Leaflet popups
           }}
           className={cn(
             "popup-book-btn inline-flex items-center justify-center w-full bg-blue-600 !text-white font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-sm mt-auto",

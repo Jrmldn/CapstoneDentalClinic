@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/serverSSR'
 import { enforceRole } from '@/lib/auth/protection'
 import { fetchInventory } from '@/actions/managementActions'
-import InventoryClient from './_components/InventoryClient'
+import InventoryClient from '@/components/features/inventory/InventoryClient'
+
 
 export const metadata = { title: 'Inventory — AppoinDent' }
 

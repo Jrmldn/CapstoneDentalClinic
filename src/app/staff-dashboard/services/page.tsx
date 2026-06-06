@@ -1,7 +1,9 @@
 import { createClient } from '@/lib/supabase/serverSSR'
 import { enforceRole } from '@/lib/auth/protection'
 import { supabaseAdmin } from '@/lib/supabase/server'
-import ServicesTabs from './_components/ServicesTabs'
+import ServicesTabs from '@/components/features/clinic-services/ServicesTabs'
+
+
 
 export const metadata = { title: 'Services & Products — AppoinDent' }
 

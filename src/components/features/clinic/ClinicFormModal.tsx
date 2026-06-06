@@ -2,12 +2,13 @@
 
 import { X } from 'lucide-react'
 import { useState } from 'react'
-import { Clinic } from '@/types' // FIX: Imported Clinic type
+import { Clinic } from '@/types/clinic'
+
 
 interface ClinicFormModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: ClinicFormData & { latitude: number | null; longitude: number | null }) => void
+  onSubmit: (data: Omit<ClinicFormData, 'latitude' | 'longitude'> & { latitude: number | null; longitude: number | null }) => void
   isSaving?: boolean
   initialData?: Clinic | null // FIX: Replaced any
 }

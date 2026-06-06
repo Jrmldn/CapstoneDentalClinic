@@ -3,20 +3,13 @@
 import DataTable, { type ColumnDef } from '@/components/common/DataTable'
 import { deletePersonnel } from '@/actions/personnelActions'
 
-export interface Dentist {
-  id: number
-  userId: string
-  firstName: string
-  lastName: string
-  email: string
-  clinicName: string
-  specialty: string
-}
+import { FormattedDentist } from '@/types/clinic'
+
 
 interface DentistTableProps {
-  dentists: Dentist[]
+  dentists: FormattedDentist[]
   onRefresh?: () => void
-  onEdit: (dentist: Dentist) => void
+  onEdit: (dentist: FormattedDentist) => void
   currentPage: number
   totalCount: number
   itemsPerPage: number
@@ -32,7 +25,7 @@ export default function DentistTable({
   itemsPerPage,
   onPageChange,
 }: DentistTableProps) {
-  const columns: ColumnDef<Dentist>[] = [
+  const columns: ColumnDef<FormattedDentist>[] = [
     {
       key: 'firstName',
       label: 'Name',
@@ -48,7 +41,7 @@ export default function DentistTable({
   ]
 
   return (
-    <DataTable<Dentist>
+    <DataTable<FormattedDentist>
       data={dentists}
       columns={columns}
       getRowKey={(dentist) => dentist.userId}

@@ -3,19 +3,13 @@
 import DataTable, { type ColumnDef } from '@/components/common/DataTable'
 import { deletePersonnel } from '@/actions/personnelActions'
 
-export interface StaffMember {
-  id: number
-  userId: string
-  firstName: string
-  lastName: string
-  email: string
-  clinicName: string
-}
+import { FormattedStaff } from '@/types/clinic'
+
 
 interface StaffTableProps {
-  staff: StaffMember[]
+  staff: FormattedStaff[]
   onRefresh?: () => void
-  onEdit: (staff: StaffMember) => void
+  onEdit: (staff: FormattedStaff) => void
   currentPage: number
   totalCount: number
   itemsPerPage: number
@@ -31,7 +25,7 @@ export default function StaffTable({
   itemsPerPage,
   onPageChange,
 }: StaffTableProps) {
-  const columns: ColumnDef<StaffMember>[] = [
+  const columns: ColumnDef<FormattedStaff>[] = [
     {
       key: 'firstName',
       label: 'Name',
@@ -42,7 +36,7 @@ export default function StaffTable({
   ]
 
   return (
-    <DataTable<StaffMember>
+    <DataTable<FormattedStaff>
       data={staff}
       columns={columns}
       getRowKey={(member) => member.userId}

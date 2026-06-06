@@ -20,8 +20,9 @@ export async function enforceRole(requiredRole: 'patient' | 'superadmin' | 'staf
 
   if (!userData || userData.role !== requiredRole) {
     if (userData?.role === 'superadmin') redirect('/superadmin-dashboard')
-    if (userData?.role === 'staff')      redirect('/staff-dashboard')
-    if (userData?.role === 'patient')    redirect('/')
+    if (userData?.role === 'staff') redirect('/staff-dashboard')
+    if (userData?.role === 'dentist') redirect('/dentist-dashboard')
+    if (userData?.role === 'patient') redirect('/')
 
     redirect('/login')
   }

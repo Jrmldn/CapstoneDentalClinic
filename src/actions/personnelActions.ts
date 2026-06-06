@@ -1,59 +1,50 @@
 'use server'
 
-import { supabaseAdmin } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { StaffData, DentistData, FormattedStaff, FormattedDentist } from '@/types'
+import { StaffData, DentistData } from '@/types/clinic'
 
-interface PersonnelRaw {
-  id: number
-  user_id: string
-  clinic_id: number
-  first_name: string
-  last_name: string
-  users: { email: string } | null
-  clinics: { name: string } | null
-  specialty?: string
-}
-
-async function getMatchingUserIds(searchQuery: string): Promise<string[]> {
-  if (!searchQuery) return []
-
-  const { data: matchingUsers } = await supabaseAdmin
-    .from('users')
-    .select('id')
-    .ilike('email', `%${searchQuery}%`)
-
-  return matchingUsers?.map(u => u.id) || []
-}
+import {
+  getMatchingUserIds,
+  createAuthUser,
+  deleteAuthUser,
+  insertStaff,
+  insertDentist,
+  deleteUserRecord,
+  getAllStaff,
+  getAllDentists,
+  getStaffList,
+  getDentistsList,
+  updatePersonnelRecord
+} from '@/services/personnelService'
+import {
+  getPaginationRange,
+  formatStaff,
+  formatDentists
+} from '@/utils/personnel-helpers'
 
 export async function addStaff(data: StaffData) {
   try {
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    const { data: authData, error: authError } = await createAuthUser({
       email: data.email,
       password: data.password,
-      email_confirm: true,
-      user_metadata: {
-        full_name: `${data.firstName} ${data.lastName}`,
-        role: 'staff',
-      },
+      fullName: `${data.firstName} ${data.lastName}`,
+      role: 'staff',
     })
 
     if (authError) throw new Error(`Auth error: ${authError.message}`)
     if (!authData.user) throw new Error('Failed to create user account')
 
-    const { error: staffError } = await supabaseAdmin
-      .from('clinic_staff')
-      .insert({
-        user_id: authData.user.id,
-        clinic_id: data.clinicId,
-        first_name: data.firstName,
-        last_name: data.lastName,
-      })
+    const { error: staffError } = await insertStaff({
+      userId: authData.user.id,
+      clinicId: data.clinicId,
+      firstName: data.firstName,
+      lastName: data.lastName,
+    })
 
     if (staffError) {
       console.error('Staff insert error:', staffError)
-      await supabaseAdmin.from('users').delete().eq('id', authData.user.id)
-      await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
+      await deleteUserRecord(authData.user.id)
+      await deleteAuthUser(authData.user.id)
       throw new Error(`Database error: ${staffError.message}`)
     }
 
@@ -67,33 +58,28 @@ export async function addStaff(data: StaffData) {
 
 export async function addDentist(data: DentistData) {
   try {
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    const { data: authData, error: authError } = await createAuthUser({
       email: data.email,
       password: data.password,
-      email_confirm: true,
-      user_metadata: {
-        full_name: `${data.firstName} ${data.lastName}`,
-        role: 'dentist',
-      },
+      fullName: `${data.firstName} ${data.lastName}`,
+      role: 'dentist',
     })
 
     if (authError) throw new Error(`Auth error: ${authError.message}`)
     if (!authData.user) throw new Error('Failed to create dentist account')
 
-    const { error: dentistError } = await supabaseAdmin
-      .from('dentists')
-      .insert({
-        user_id: authData.user.id,
-        clinic_id: data.clinicId,
-        first_name: data.firstName,
-        last_name: data.lastName,
-        specialty: data.specialty,
-      })
+    const { error: dentistError } = await insertDentist({
+      userId: authData.user.id,
+      clinicId: data.clinicId,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      specialty: data.specialty,
+    })
 
     if (dentistError) {
       console.error('Dentist insert error:', dentistError)
-      await supabaseAdmin.from('users').delete().eq('id', authData.user.id)
-      await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
+      await deleteUserRecord(authData.user.id)
+      await deleteAuthUser(authData.user.id)
       throw new Error(`Database error: ${dentistError.message}`)
     }
 
@@ -107,14 +93,11 @@ export async function addDentist(data: DentistData) {
 
 export async function deletePersonnel(userId: string) {
   try {
-    const { error: dbError } = await supabaseAdmin
-      .from('users')
-      .delete()
-      .eq('id', userId)
+    const { error: dbError } = await deleteUserRecord(userId)
 
     if (dbError) throw new Error(dbError.message)
 
-    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId)
+    const { error: authError } = await deleteAuthUser(userId)
     if (authError) throw new Error(authError.message)
 
     revalidatePath('/superadmin-dashboard/personnel')
@@ -127,57 +110,16 @@ export async function deletePersonnel(userId: string) {
 
 export async function fetchPersonnel() {
   try {
-    const { data: staffData, error: staffError } = await supabaseAdmin
-      .from('clinic_staff')
-      .select(`
-        id,
-        user_id,
-        clinic_id,
-        first_name,
-        last_name,
-        users ( email ),
-        clinics ( name )
-      `)
-      .order('first_name', { ascending: true })
+    const { data: staffData, error: staffError } = await getAllStaff()
 
     if (staffError) throw new Error(staffError.message)
 
-    const { data: dentistData, error: dentistError } = await supabaseAdmin
-      .from('dentists')
-      .select(`
-        id,
-        user_id,
-        clinic_id,
-        first_name,
-        last_name,
-        specialty,
-        users ( email ),
-        clinics ( name )
-      `)
-      .order('first_name', { ascending: true })
+    const { data: dentistData, error: dentistError } = await getAllDentists()
 
     if (dentistError) throw new Error(dentistError.message)
 
-    const formattedStaff: FormattedStaff[] = (staffData as unknown as PersonnelRaw[]).map((staff) => ({
-      id: staff.id,
-      userId: staff.user_id,
-      clinicId: staff.clinic_id,
-      firstName: staff.first_name,
-      lastName: staff.last_name,
-      email: staff.users?.email || 'No email',
-      clinicName: staff.clinics?.name || 'Unassigned',
-    }))
-
-    const formattedDentists: FormattedDentist[] = (dentistData as unknown as PersonnelRaw[]).map((dentist) => ({
-      id: dentist.id,
-      userId: dentist.user_id,
-      clinicId: dentist.clinic_id,
-      firstName: dentist.first_name,
-      lastName: dentist.last_name,
-      specialty: dentist.specialty || '',
-      email: dentist.users?.email || 'No email',
-      clinicName: dentist.clinics?.name || 'Unassigned',
-    }))
+    const formattedStaff = formatStaff(staffData || [])
+    const formattedDentists = formatDentists(dentistData || [])
 
     return {
       success: true,
@@ -197,56 +139,25 @@ export async function fetchStaff(
   limit = 10
 ) {
   try {
-    const from = (page - 1) * limit
-    const to = from + limit - 1
+    const { from, to } = getPaginationRange(page, limit)
+    const matchingUserIds = searchQuery ? await getMatchingUserIds(searchQuery) : []
 
-    let query = supabaseAdmin
-      .from('clinic_staff')
-      .select(`
-        id,
-        user_id,
-        clinic_id,
-        first_name,
-        last_name,
-        users ( email ),
-        clinics ( name )
-      `, { count: 'exact' })
-      .order('first_name', { ascending: false })
+    const clinicId = clinicFilter && clinicFilter !== 'all' ? parseInt(clinicFilter) : undefined
 
-    if (searchQuery) {
-      const matchingUserIds = await getMatchingUserIds(searchQuery)
-
-      if (matchingUserIds.length > 0) {
-        query = query.or(
-          `first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,user_id.in.(${matchingUserIds.join(',')})`
-        )
-      } else {
-        query = query.or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%`)
-      }
-    }
-
-    if (clinicFilter && clinicFilter !== 'all') {
-      query = query.eq('clinic_id', parseInt(clinicFilter))
-    }
-
-    query = query.range(from, to)
-
-    const { data: staffData, count, error } = await query
+    const { data: staffData, count, error } = await getStaffList({
+      matchingUserIds,
+      searchQuery,
+      clinicFilter: clinicId,
+      from,
+      to
+    })
 
     if (error) {
       console.error('Database error in fetchStaff:', error)
       throw new Error(error.message)
     }
 
-    const formattedStaff: FormattedStaff[] = (staffData as unknown as PersonnelRaw[] || []).map((staff) => ({
-      id: staff.id,
-      userId: staff.user_id,
-      clinicId: staff.clinic_id,
-      firstName: staff.first_name,
-      lastName: staff.last_name,
-      email: staff.users?.email || 'No email',
-      clinicName: staff.clinics?.name || 'Unassigned',
-    }))
+    const formattedStaff = formatStaff(staffData || [])
 
     return {
       success: true,
@@ -271,58 +182,25 @@ export async function fetchDentists(
   limit = 10
 ) {
   try {
-    const from = (page - 1) * limit
-    const to = from + limit - 1
+    const { from, to } = getPaginationRange(page, limit)
+    const matchingUserIds = searchQuery ? await getMatchingUserIds(searchQuery) : []
 
-    let query = supabaseAdmin
-      .from('dentists')
-      .select(`
-        id,
-        user_id,
-        clinic_id,
-        first_name,
-        last_name,
-        specialty,
-        users ( email ),
-        clinics ( name )
-      `, { count: 'exact' })
-      .order('first_name', { ascending: false })
+    const clinicId = clinicFilter && clinicFilter !== 'all' ? parseInt(clinicFilter) : undefined
 
-    if (searchQuery) {
-      const matchingUserIds = await getMatchingUserIds(searchQuery)
-
-      if (matchingUserIds.length > 0) {
-        query = query.or(
-          `first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,user_id.in.(${matchingUserIds.join(',')})`
-        )
-      } else {
-        query = query.or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%`)
-      }
-    }
-
-    if (clinicFilter && clinicFilter !== 'all') {
-      query = query.eq('clinic_id', parseInt(clinicFilter))
-    }
-
-    query = query.range(from, to)
-
-    const { data: dentistData, count, error } = await query
+    const { data: dentistData, count, error } = await getDentistsList({
+      matchingUserIds,
+      searchQuery,
+      clinicFilter: clinicId,
+      from,
+      to
+    })
 
     if (error) {
       console.error('Database error in fetchDentists:', error)
       throw new Error(error.message)
     }
 
-    const formattedDentists: FormattedDentist[] = (dentistData as unknown as PersonnelRaw[] || []).map((dentist) => ({
-      id: dentist.id,
-      userId: dentist.user_id,
-      clinicId: dentist.clinic_id,
-      firstName: dentist.first_name,
-      lastName: dentist.last_name,
-      specialty: dentist.specialty || '',
-      email: dentist.users?.email || 'No email',
-      clinicName: dentist.clinics?.name || 'Unassigned',
-    }))
+    const formattedDentists = formatDentists(dentistData || [])
 
     return {
       success: true,
@@ -370,10 +248,7 @@ export async function updatePersonnel(
       updatePayload.specialty = data.specialty
     }
 
-    const { error } = await supabaseAdmin
-      .from(table)
-      .update(updatePayload)
-      .eq('user_id', userId)
+    const { error } = await updatePersonnelRecord(table, userId, updatePayload)
 
     if (error) throw new Error(error.message)
 

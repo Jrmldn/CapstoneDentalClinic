@@ -1,32 +1,21 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import ClinicHeader from './_components/ClinicHeader'
-import ClinicTable from './_components/ClinicTable'
-import ClinicFormModal from './_components/ClinicFormModal'
+import ClinicHeader from '@/components/features/clinic/ClinicHeader'
+import ClinicTable from '@/components/features/clinic/ClinicTable'
+import ClinicFormModal from '@/components/features/clinic/ClinicFormModal'
+
 import ClinicFilterBar from '@/components/features/clinic/ClinicFilterBar'
 import { addClinic, updateClinic, fetchClinics } from '@/actions/clinicActions'
-import { AddClinicData } from '@/types' // FIX: Imported AddClinicData
+import { AddClinicData, Clinic } from '@/types/clinic'
 
-interface ClinicData {
-  id: number
-  name: string
-  is_active: boolean
-  email: string
-  phone: string
-  address: string
-  max_appointments_per_day: number
-  latitude?: number | null
-  longitude?: number | null
-  created_at?: string
-}
 
 const ITEMS_PER_PAGE = 10
 
 export default function ClientClinicPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [selectedClinic, setSelectedClinic] = useState<ClinicData | null>(null)
-  const [clinics, setClinics] = useState<ClinicData[]>([])
+  const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null)
+  const [clinics, setClinics] = useState<Clinic[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -104,7 +93,7 @@ export default function ClientClinicPage() {
     setSelectedClinic(null)
   }
 
-  const handleEdit = (clinic: ClinicData) => {
+  const handleEdit = (clinic: Clinic) => {
     setSelectedClinic(clinic)
     setIsModalOpen(true)
   }

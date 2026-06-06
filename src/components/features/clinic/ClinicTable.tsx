@@ -4,17 +4,8 @@ import { CheckCircle2, AlertCircle } from 'lucide-react'
 import DataTable, { type ColumnDef } from '@/components/common/DataTable'
 import { deleteClinic, updateClinicStatus } from '@/actions/clinicActions'
 
-interface Clinic {
-  id: number
-  name: string
-  is_active: boolean
-  email: string
-  phone: string
-  address: string
-  max_appointments_per_day: number
-  latitude?: number | null
-  longitude?: number | null
-}
+import { Clinic } from '@/types/clinic'
+
 
 interface ClinicTableProps {
   clinics: Clinic[]

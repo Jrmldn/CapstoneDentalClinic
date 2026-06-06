@@ -1,7 +1,22 @@
 'use server'
 
-import { supabaseAdmin } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import {
+  getAppointmentsByDateRange,
+  getClinicHoliday,
+  getClinicOperatingHours,
+  getDentistAvailability,
+  getDentistBlockedSlots,
+  getServiceById,
+  getActiveAppointmentsForSlots,
+  getClinicCapacity,
+  insertAppointment,
+  insertAppointmentLog,
+  getAppointmentStatus,
+  updateAppointmentDetails,
+  updateClinicMaxLimit
+} from '@/services/appointmentService'
+import { generateTimeSlots } from '@/utils/appointment-helpers'
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
@@ -46,18 +61,7 @@ export async function fetchAppointmentsByDate(clinicId: number, date: string) {
     const dayStart = `${date}T00:00:00+00:00`
     const dayEnd   = `${date}T23:59:59+00:00`
 
-    const { data: appointments, error } = await supabaseAdmin
-      .from('appointments')
-      .select(`
-        *,
-        patients ( id, first_name, last_name, phone, is_guest ),
-        services ( id, name, price, slot_duration_min ),
-        dentists ( id, first_name, last_name, specialty )
-      `)
-      .eq('clinic_id', clinicId)
-      .gte('scheduled_at', dayStart)
-      .lte('scheduled_at', dayEnd)
-      .order('scheduled_at', { ascending: true })
+    const { data: appointments, error } = await getAppointmentsByDateRange(clinicId, dayStart, dayEnd)
 
     if (error) throw new Error(error.message)
 
@@ -74,13 +78,6 @@ export async function fetchAppointmentsByDate(clinicId: number, date: string) {
 
 // ─────────────────────────────────────────────────────────────
 // GET AVAILABLE SLOTS
-// Logic:
-//  1. Check clinic operating hours for that weekday
-//  2. Check clinic_holidays (if closed that day)
-//  3. Check dentist_availability and dentist_blocked_slots
-//  4. Check max_appointments_per_day against existing confirmed/pending count
-//  5. Subtract already-booked appointment windows
-//  6. Generate slots based on service slot_duration_min
 // ─────────────────────────────────────────────────────────────
 
 export async function getAvailableSlots(
@@ -93,53 +90,30 @@ export async function getAvailableSlots(
     const dayOfWeek = new Date(date).getDay() // 0=Sun … 6=Sat
 
     // 1. Check for clinic holiday / closure
-    const { data: holiday } = await supabaseAdmin
-      .from('clinic_holidays')
-      .select('id, is_special_day')
-      .eq('clinic_id', clinicId)
-      .eq('date', date)
-      .maybeSingle()
+    const { data: holiday } = await getClinicHoliday(clinicId, date)
 
     if (holiday && !holiday.is_special_day) {
       return { success: true, slots: [] } // clinic is closed that day
     }
 
     // 2. Clinic operating hours for the weekday
-    const { data: opHours, error: opError } = await supabaseAdmin
-      .from('clinic_operating_hours')
-      .select('open_time, close_time, is_closed')
-      .eq('clinic_id', clinicId)
-      .eq('day_of_week', dayOfWeek)
-      .maybeSingle()
+    const { data: opHours, error: opError } = await getClinicOperatingHours(clinicId, dayOfWeek)
 
     if (opError) throw new Error(opError.message)
     if (!opHours || opHours.is_closed) return { success: true, slots: [] }
 
     // 3. Dentist availability for the weekday
-    const { data: dentistHours } = await supabaseAdmin
-      .from('dentist_availability')
-      .select('start_time, end_time')
-      .eq('dentist_id', dentistId)
-      .eq('day_of_week', dayOfWeek)
-      .maybeSingle()
+    const { data: dentistHours } = await getDentistAvailability(dentistId, dayOfWeek)
 
     // Use dentist hours if defined, otherwise fall back to clinic hours
     const windowStart = dentistHours?.start_time ?? opHours.open_time
     const windowEnd   = dentistHours?.end_time   ?? opHours.close_time
 
     // 4. Dentist blocked slots for that specific date
-    const { data: blockedSlots } = await supabaseAdmin
-      .from('dentist_blocked_slots')
-      .select('start_time, end_time')
-      .eq('dentist_id', dentistId)
-      .eq('blocked_date', date)
+    const { data: blockedSlots } = await getDentistBlockedSlots(dentistId, date)
 
     // 5. Service duration
-    const { data: service, error: serviceError } = await supabaseAdmin
-      .from('services')
-      .select('slot_duration_min')
-      .eq('id', serviceId)
-      .single()
+    const { data: service, error: serviceError } = await getServiceById(serviceId)
 
     if (serviceError || !service) throw new Error('Service not found')
     const duration = service.slot_duration_min
@@ -148,28 +122,17 @@ export async function getAvailableSlots(
     const dayStart = `${date}T00:00:00`
     const dayEnd   = `${date}T23:59:59`
 
-    const { data: existingAppts } = await supabaseAdmin
-      .from('appointments')
-      .select('scheduled_at, end_at')
-      .eq('dentist_id', dentistId)
-      .eq('clinic_id', clinicId)
-      .gte('scheduled_at', dayStart)
-      .lte('scheduled_at', dayEnd)
-      .not('status', 'in', '("cancelled","no_show")')
+    const { data: existingAppts } = await getActiveAppointmentsForSlots(clinicId, dentistId, dayStart, dayEnd)
 
     // 7. Check max appointments per day
-    const { data: clinic } = await supabaseAdmin
-      .from('clinics')
-      .select('max_appointments_per_day')
-      .eq('id', clinicId)
-      .single()
+    const { data: clinic } = await getClinicCapacity(clinicId)
 
     const maxPerDay = clinic?.max_appointments_per_day ?? Infinity
     const bookedCount = existingAppts?.length ?? 0
 
     if (bookedCount >= maxPerDay) return { success: true, slots: [] }
 
-    // 8. Generate slots
+    // 8. Generate slots using helpers
     const slots = generateTimeSlots(
       windowStart,
       windowEnd,
@@ -188,90 +151,36 @@ export async function getAvailableSlots(
   }
 }
 
-// Helper: convert "HH:mm:ss" → minutes from midnight
-function toMinutes(time: string): number {
-  const [h, m] = time.split(':').map(Number)
-  return h * 60 + m
-}
-
-// Helper: minutes → "HH:mm"
-function fromMinutes(mins: number): string {
-  const h = Math.floor(mins / 60).toString().padStart(2, '0')
-  const m = (mins % 60).toString().padStart(2, '0')
-  return `${h}:${m}`
-}
-
-function generateTimeSlots(
-  openTime: string,
-  closeTime: string,
-  durationMins: number,
-  bookedAppts: { scheduled_at: string; end_at: string }[],
-  blockedSlots: { start_time: string; end_time: string }[]
-): TimeSlot[] {
-  const start  = toMinutes(openTime)
-  const end    = toMinutes(closeTime)
-  const slots: TimeSlot[] = []
-
-  // Build blocked windows in minutes
-  const blockedWindows = [
-    ...bookedAppts.map(a => ({
-      from: toMinutes(new Date(a.scheduled_at).toTimeString().slice(0, 5)),
-      to:   toMinutes(new Date(a.end_at).toTimeString().slice(0, 5)),
-    })),
-    ...blockedSlots.map(b => ({
-      from: toMinutes(b.start_time),
-      to:   toMinutes(b.end_time),
-    })),
-  ]
-
-  for (let cursor = start; cursor + durationMins <= end; cursor += durationMins) {
-    const slotEnd = cursor + durationMins
-    const overlaps = blockedWindows.some(w => cursor < w.to && slotEnd > w.from)
-
-    slots.push({
-      start: fromMinutes(cursor),
-      end:   fromMinutes(slotEnd),
-      available: !overlaps,
-    })
-  }
-
-  return slots
-}
-
 // ─────────────────────────────────────────────────────────────
 // CREATE APPOINTMENT
 // ─────────────────────────────────────────────────────────────
 
 export async function createAppointment(data: CreateAppointmentData) {
   try {
-    const { data: appointment, error } = await supabaseAdmin
-      .from('appointments')
-      .insert([{
-        clinic_id:      data.clinic_id,
-        patient_id:     data.patient_id,
-        dentist_id:     data.dentist_id,
-        service_id:     data.service_id,
-        scheduled_at:   data.scheduled_at,
-        end_at:         data.end_at,
-        notes:          data.notes ?? null,
-        is_walk_in:     data.is_walk_in ?? false,
-        downpayment:    data.downpayment ?? 0,
-        payment_method: data.payment_method ?? null,
-        payment_status: data.downpayment && data.downpayment > 0 ? 'partial' : 'unpaid',
-        status:         'pending',
-      }])
-      .select()
-      .single()
+    const { data: appointment, error } = await insertAppointment({
+      clinic_id:      data.clinic_id,
+      patient_id:     data.patient_id,
+      dentist_id:     data.dentist_id,
+      service_id:     data.service_id,
+      scheduled_at:   data.scheduled_at,
+      end_at:         data.end_at,
+      notes:          data.notes ?? null,
+      is_walk_in:     data.is_walk_in ?? false,
+      downpayment:    data.downpayment ?? 0,
+      payment_method: data.payment_method ?? null,
+      payment_status: data.downpayment && data.downpayment > 0 ? 'partial' : 'unpaid',
+      status:         'pending',
+    })
 
     if (error) throw new Error(error.message)
 
     // Log the creation
-    await supabaseAdmin.from('appointment_logs').insert([{
+    await insertAppointmentLog({
       appointment_id: appointment.id,
       action:         'created',
       new_status:     'pending',
       notes:          data.is_walk_in ? 'Walk-in appointment' : 'Online booking',
-    }])
+    })
 
     revalidatePath('/staff-dashboard/appointments')
     return { success: true, appointment }
@@ -299,11 +208,7 @@ export async function updateAppointmentStatus(
 ) {
   try {
     // Fetch current status for the log
-    const { data: current, error: fetchError } = await supabaseAdmin
-      .from('appointments')
-      .select('status')
-      .eq('id', appointmentId)
-      .single()
+    const { data: current, error: fetchError } = await getAppointmentStatus(appointmentId)
 
     if (fetchError || !current) throw new Error('Appointment not found')
 
@@ -311,15 +216,12 @@ export async function updateAppointmentStatus(
     if (rescheduledAt) updateData.scheduled_at = rescheduledAt
     if (rescheduledEnd)  updateData.end_at      = rescheduledEnd
 
-    const { error: updateError } = await supabaseAdmin
-      .from('appointments')
-      .update(updateData)
-      .eq('id', appointmentId)
+    const { error: updateError } = await updateAppointmentDetails(appointmentId, updateData)
 
     if (updateError) throw new Error(updateError.message)
 
     // Write audit log
-    await supabaseAdmin.from('appointment_logs').insert([{
+    await insertAppointmentLog({
       appointment_id: appointmentId,
       performed_by:   performedBy,
       role,
@@ -327,7 +229,7 @@ export async function updateAppointmentStatus(
       old_status:     current.status,
       new_status:     newStatus,
       notes:          notes ?? null,
-    }])
+    })
 
     revalidatePath('/staff-dashboard/appointments')
     return { success: true }
@@ -346,10 +248,7 @@ export async function updateAppointmentStatus(
 
 export async function updateMaxAppointments(clinicId: number, max: number) {
   try {
-    const { error } = await supabaseAdmin
-      .from('clinics')
-      .update({ max_appointments_per_day: max })
-      .eq('id', clinicId)
+    const { error } = await updateClinicMaxLimit(clinicId, max)
 
     if (error) throw new Error(error.message)
 

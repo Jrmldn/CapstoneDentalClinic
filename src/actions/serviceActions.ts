@@ -30,6 +30,7 @@ export async function addService(data: ServiceData) {
     revalidatePath('/staff-dashboard/services')
     return { success: true, service: service?.[0] }
   } catch (error) {
+    console.error('Error in addService:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to add service',
@@ -50,6 +51,7 @@ export async function updateService(serviceId: number, data: Partial<ServiceData
     revalidatePath('/staff-dashboard/services')
     return { success: true, service: service?.[0] }
   } catch (error) {
+    console.error('Error in updateService:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update service',
@@ -71,6 +73,7 @@ export async function deleteService(serviceId: number) {
     revalidatePath('/staff-dashboard/services')
     return { success: true }
   } catch (error) {
+    console.error('Error in deleteService:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to delete service',
@@ -91,6 +94,7 @@ export async function fetchServices(clinicId: number) {
 
     return { success: true, services: services || [] }
   } catch (error) {
+    console.error('Error in fetchServices:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch services',
@@ -125,6 +129,7 @@ export async function addProduct(data: ProductData) {
     revalidatePath('/staff-dashboard/products')
     return { success: true, product: product?.[0] }
   } catch (error) {
+    console.error('Error in addProduct:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to add product',
@@ -145,6 +150,7 @@ export async function updateProduct(productId: number, data: Partial<ProductData
     revalidatePath('/staff-dashboard/products')
     return { success: true, product: product?.[0] }
   } catch (error) {
+    console.error('Error in updateProduct:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update product',
@@ -164,6 +170,7 @@ export async function deleteProduct(productId: number) {
     revalidatePath('/staff-dashboard/products')
     return { success: true }
   } catch (error) {
+    console.error('Error in deleteProduct:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to delete product',
@@ -184,6 +191,7 @@ export async function fetchProducts(clinicId: number) {
 
     return { success: true, products: products || [] }
   } catch (error) {
+    console.error('Error in fetchProducts:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch products',

@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { X, Calendar, User, Info, TrendingUp, TrendingDown } from 'lucide-react'
 import { fetchInventoryLogs } from '@/actions/managementActions'
-import type { InventoryItem } from './InventoryClient'
+import type { InventoryItem } from '@/components/features/inventory/InventoryClient'
+
 
 interface InventoryLogsModalProps {
   item: InventoryItem | null

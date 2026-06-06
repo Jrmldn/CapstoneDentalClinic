@@ -2,8 +2,10 @@
 
 import { useState } from 'react'
 import { Stethoscope, Package } from 'lucide-react'
-import ServicesTable from './ServicesTable'
-import ProductsTable from './ProductsTable'
+import ServicesTable from '@/components/features/clinic-services/ServicesTable'
+import ProductsTable from '@/components/features/clinic-services/ProductsTable'
+
+
 
 const TABS = [
   { key: 'services', label: 'Dental Services', icon: Stethoscope },

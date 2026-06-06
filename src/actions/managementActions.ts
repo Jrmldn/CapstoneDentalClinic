@@ -2,6 +2,24 @@
 
 import { supabaseAdmin } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import {
+  getInventoryItemById,
+  updateInventoryItemStock,
+  insertInventoryLog,
+  getInventoryItemsByClinic,
+  insertInventoryItem,
+  deleteInventoryItemById,
+  getInventoryLogsByItemId,
+  getStaffByUserIds,
+  getDentistsByUserIds
+} from '@/services/inventoryService'
+import {
+  calculateNewQuantity,
+  isStockLow,
+  filterLowStockItems,
+  formatInventoryLogs
+} from '@/utils/inventory-helpers'
+
 
 // ═══════════════════════════════════════════════════════════════
 // SECTION 1 — CALENDAR & HOLIDAYS
@@ -119,35 +137,30 @@ export async function updateInventoryStock(
 ) {
   try {
     // Get current quantity
-    const { data: item, error: fetchError } = await supabaseAdmin
-      .from('inventory_items')
-      .select('id, quantity, alert_threshold')
-      .eq('id', itemId)
-      .single()
+    const { data: item, error: fetchError } = await getInventoryItemById(itemId)
 
     if (fetchError || !item) throw new Error('Inventory item not found')
 
-    const newQty = parseFloat((Number(item.quantity) + delta).toFixed(4))
+    const newQty = calculateNewQuantity(Number(item.quantity), delta)
 
     if (newQty < 0) throw new Error('Insufficient stock — quantity cannot go below zero')
 
     // Update quantity
-    const { error: updateError } = await supabaseAdmin
-      .from('inventory_items')
-      .update({ quantity: newQty, updated_at: new Date().toISOString() })
-      .eq('id', itemId)
+    const { error: updateError } = await updateInventoryItemStock(itemId, newQty, new Date().toISOString())
 
     if (updateError) throw new Error(updateError.message)
 
     // Log the change
-    await supabaseAdmin.from('inventory_logs').insert([{
+    const { error: logError } = await insertInventoryLog({
       item_id:    itemId,
       changed_by: changedBy,
       delta,
       reason,
-    }])
+    })
 
-    const isLow = newQty <= Number(item.alert_threshold)
+    if (logError) throw new Error(logError.message)
+
+    const isLow = isStockLow(newQty, Number(item.alert_threshold))
 
     revalidatePath('/staff-dashboard/inventory')
     return { success: true, newQuantity: newQty, isLow }
@@ -163,19 +176,11 @@ export async function updateInventoryStock(
 /** Fetch all items that are at or below their alert threshold */
 export async function fetchStockAlerts(clinicId: number) {
   try {
-    const { data: items, error } = await supabaseAdmin
-      .from('inventory_items')
-      .select('*')
-      .eq('clinic_id', clinicId)
-      // quantity <= alert_threshold  — Supabase filter via lte on a column
-      // We use rpc or JS filter; here we fetch all and filter (simple approach)
-      .order('name', { ascending: true })
+    const { data: items, error } = await getInventoryItemsByClinic(clinicId)
 
     if (error) throw new Error(error.message)
 
-    const lowStock = (items ?? []).filter(
-      item => Number(item.quantity) <= Number(item.alert_threshold)
-    )
+    const lowStock = filterLowStockItems(items ?? [])
 
     return { success: true, alerts: lowStock }
   } catch (error) {
@@ -191,11 +196,7 @@ export async function fetchStockAlerts(clinicId: number) {
 /** Full inventory list for a clinic */
 export async function fetchInventory(clinicId: number) {
   try {
-    const { data: items, error } = await supabaseAdmin
-      .from('inventory_items')
-      .select('*')
-      .eq('clinic_id', clinicId)
-      .order('name', { ascending: true })
+    const { data: items, error } = await getInventoryItemsByClinic(clinicId)
 
     if (error) throw new Error(error.message)
 
@@ -220,14 +221,10 @@ export async function addInventoryItem(
   }
 ) {
   try {
-    const { data: item, error } = await supabaseAdmin
-      .from('inventory_items')
-      .insert([{
-        clinic_id: clinicId,
-        ...data
-      }])
-      .select()
-      .single()
+    const { data: item, error } = await insertInventoryItem({
+      clinic_id: clinicId,
+      ...data
+    })
 
     if (error) throw new Error(error.message)
 
@@ -244,10 +241,7 @@ export async function addInventoryItem(
 
 export async function deleteInventoryItem(itemId: number) {
   try {
-    const { error } = await supabaseAdmin
-      .from('inventory_items')
-      .delete()
-      .eq('id', itemId)
+    const { error } = await deleteInventoryItemById(itemId)
 
     if (error) throw new Error(error.message)
 
@@ -283,18 +277,7 @@ export interface FormattedInventoryLog extends InventoryLogRaw {
 /** Fetch change history for a single inventory item */
 export async function fetchInventoryLogs(itemId: number) {
   try {
-    const { data: logs, error } = await supabaseAdmin
-      .from('inventory_logs')
-      .select(`
-        *,
-        users (
-          id,
-          email,
-          role
-        )
-      `)
-      .eq('item_id', itemId)
-      .order('created_at', { ascending: false })
+    const { data: logs, error } = await getInventoryLogsByItemId(itemId)
 
     if (error) throw new Error(error.message)
 
@@ -302,8 +285,8 @@ export async function fetchInventoryLogs(itemId: number) {
     const userIds = [...new Set(rawLogs.map((l) => l.changed_by).filter(Boolean))] as string[]
     
     const [staffRes, dentistRes] = await Promise.all([
-      supabaseAdmin.from('clinic_staff').select('user_id, first_name, last_name').in('user_id', userIds),
-      supabaseAdmin.from('dentists').select('user_id, first_name, last_name').in('user_id', userIds)
+      getStaffByUserIds(userIds),
+      getDentistsByUserIds(userIds)
     ])
 
     const nameMap: Record<string, string> = {}
@@ -314,10 +297,7 @@ export async function fetchInventoryLogs(itemId: number) {
       nameMap[d.user_id] = `${d.first_name} ${d.last_name}`
     })
 
-    const formattedLogs: FormattedInventoryLog[] = rawLogs.map((l) => ({
-      ...l,
-      performer_name: nameMap[l.changed_by] || l.users?.email || 'Unknown User'
-    }))
+    const formattedLogs = formatInventoryLogs(rawLogs, nameMap)
 
     return { success: true, logs: formattedLogs }
   } catch (error) {

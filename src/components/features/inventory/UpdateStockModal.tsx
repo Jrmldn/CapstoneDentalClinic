@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { X, PlusCircle, MinusCircle } from 'lucide-react'
 import { updateInventoryStock } from '@/actions/managementActions'
-import type { InventoryItem } from './InventoryClient'
+import type { InventoryItem } from '@/components/features/inventory/InventoryClient'
+
 
 interface UpdateStockModalProps {
   item: InventoryItem | null

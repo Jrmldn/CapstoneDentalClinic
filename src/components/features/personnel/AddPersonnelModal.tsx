@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React from 'react'
 import { X } from 'lucide-react'
-import { addStaff, addDentist } from '@/actions/personnelActions'
-import { getClinics } from '@/lib/queries/clinics'
+import { useAddPersonnel } from '@/components/features/personnel/useAddPersonnel'
+
 
 interface AddPersonnelModalProps {
   isOpen: boolean
@@ -12,81 +12,32 @@ interface AddPersonnelModalProps {
   type: 'staff' | 'dentists'
 }
 
+/**
+ * AddPersonnelModal Component
+ * Renders the modal overlay form for adding new staff members or dentists.
+ * State management and submit transitions are delegated to the useAddPersonnel hook.
+ */
 export default function AddPersonnelModal({ isOpen, onClose, onSuccess, type }: AddPersonnelModalProps) {
-  const [clinics, setClinics] = useState<{ id: number; name: string }[]>([])
-  
-  // Form State
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [clinicId, setClinicId] = useState('')
-  const [specialty, setSpecialty] = useState('')
-  
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState('')
-
-  // Fetch clinics for the dropdown when the modal opens
-  useEffect(() => {
-    if (isOpen) {
-      const fetchClinics = async () => {
-        const result = await getClinics()
-        if (result.success && result.data) {
-          setClinics(result.data)
-        }
-      }
-      fetchClinics()
-    }
-  }, [isOpen])
+  const {
+    clinics,
+    firstName,
+    setFirstName,
+    lastName,
+    setLastName,
+    email,
+    setEmail,
+    password,
+    setPassword,
+    clinicId,
+    setClinicId,
+    specialty,
+    setSpecialty,
+    isSubmitting,
+    error,
+    handleSubmit,
+  } = useAddPersonnel({ isOpen, onClose, onSuccess, type })
 
   if (!isOpen) return null
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-    setError('')
-
-    if (!clinicId) {
-      setError('Please select a clinic to assign this user to.')
-      setIsSubmitting(false)
-      return
-    }
-
-    try {
-      const baseData = {
-        firstName,
-        lastName,
-        email,
-        password,
-        clinicId: parseInt(clinicId)
-      }
-
-      let result
-      if (type === 'staff') {
-        result = await addStaff(baseData)
-      } else {
-        result = await addDentist({ ...baseData, specialty })
-      }
-
-      if (result.success) {
-        // Reset form and close
-        setFirstName('')
-        setLastName('')
-        setEmail('')
-        setPassword('')
-        setClinicId('')
-        setSpecialty('')
-        onSuccess() 
-        onClose()
-      } else {
-        setError(result.error || `Failed to add ${type}`)
-      }
-    } catch (err) { // FIX: Removed any
-      setError(err instanceof Error ? err.message : 'An unknown error occurred') // FIX: Added type guard
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">

@@ -2,7 +2,8 @@
 
 import { supabaseAdmin } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { AddClinicData } from '@/types'
+import { AddClinicData } from '@/types/clinic'
+
 
 export async function addClinic(data: AddClinicData) {
   try {

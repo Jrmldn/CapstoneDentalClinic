@@ -1,0 +1,105 @@
+import React from 'react'
+import { cn } from '@/lib/utils'
+import { RATING_OPTIONS } from './constants'
+
+interface FilterSectionProps {
+  selectedSpecialty: string
+  setSelectedSpecialty: (val: string) => void
+  specialtyOptions: string[]
+  selectedHMO: string
+  setSelectedHMO: (val: string) => void
+  hmoOptions: string[]
+  minRating: number
+  setMinRating: (val: number) => void
+  showOpenOnly: boolean
+  setShowOpenOnly: (val: boolean) => void
+}
+
+/**
+ * FilterSection Component
+ * Renders the filter controls (Specialty dropdown, HMO dropdown, Rating dropdown, Open Status checkbox).
+ */
+export const FilterSection = ({
+  selectedSpecialty,
+  setSelectedSpecialty,
+  specialtyOptions,
+  selectedHMO,
+  setSelectedHMO,
+  hmoOptions,
+  minRating,
+  setMinRating,
+  showOpenOnly,
+  setShowOpenOnly,
+}: FilterSectionProps) => (
+  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+          Specialty
+        </label>
+        <select
+          value={selectedSpecialty}
+          onChange={(e) => setSelectedSpecialty(e.target.value)}
+          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+        >
+          {specialtyOptions.map((spec) => (
+            <option key={spec} value={spec}>
+              {spec}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+          HMO / Health Card
+        </label>
+        <select
+          value={selectedHMO}
+          onChange={(e) => setSelectedHMO(e.target.value)}
+          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+        >
+          {hmoOptions.map((hmo) => (
+            <option key={hmo} value={hmo}>
+              {hmo}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+          Minimum Rating
+        </label>
+        <select
+          value={minRating}
+          onChange={(e) => setMinRating(Number(e.target.value))}
+          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+        >
+          {RATING_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+          Status
+        </label>
+        <label
+          className={cn(
+            "flex items-center gap-3 px-4 h-[42px] border rounded-lg cursor-pointer transition-all",
+            showOpenOnly ? "bg-blue-50 border-blue-200" : "bg-slate-50 border-slate-200"
+          )}
+        >
+          <input
+            type="checkbox"
+            checked={showOpenOnly}
+            onChange={(e) => setShowOpenOnly(e.target.checked)}
+            className="w-4 h-4 text-blue-600 rounded"
+          />
+          <span className="text-sm font-medium text-slate-700">Open Now Only</span>
+        </label>
+      </div>
+    </div>
+  </div>
+)

@@ -3,9 +3,10 @@
 import { useState } from 'react'
 import { Plus, Package, Search, AlertTriangle, History, ArrowUpDown } from 'lucide-react'
 import { fetchInventory } from '@/actions/managementActions'
-import AddInventoryModal from './AddInventoryModal'
-import UpdateStockModal from './UpdateStockModal'
-import InventoryLogsModal from './InventoryLogsModal'
+import AddInventoryModal from '@/components/features/inventory/AddInventoryModal'
+import UpdateStockModal from '@/components/features/inventory/UpdateStockModal'
+import InventoryLogsModal from '@/components/features/inventory/InventoryLogsModal'
+
 
 export interface InventoryItem {
   id: number

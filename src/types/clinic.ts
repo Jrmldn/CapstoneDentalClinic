@@ -5,10 +5,10 @@ export interface Clinic {
   phone: string
   address: string
   max_appointments_per_day: number
-  latitude: number | null
-  longitude: number | null
+  latitude?: number | null
+  longitude?: number | null
   is_active: boolean
-  created_at: string
+  created_at?: string
 }
 
 export interface AddClinicData {
@@ -45,12 +45,4 @@ export interface FormattedStaff {
 
 export interface FormattedDentist extends FormattedStaff {
   specialty: string
-}
-
-export interface SuperadminStats {
-  totalClinics: number
-  totalStaff: number
-  totalDentists: number
-  totalPatients: number
-  recentClinics: Pick<Clinic, 'id' | 'name' | 'created_at' | 'is_active'>[]
 }
