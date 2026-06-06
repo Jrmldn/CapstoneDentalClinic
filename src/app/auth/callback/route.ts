@@ -5,7 +5,9 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') // Catches the secure PKCE redirect
+  const tokenHash = searchParams.get('token_hash') // ◄ Catch native email token hashes
+  const type = searchParams.get('type')
+  const next = searchParams.get('next')
 
   const cookieStore = await cookies()
   const supabase = createServerClient(
@@ -29,33 +31,61 @@ export async function GET(request: NextRequest) {
     }
   )
 
-  let sessionUser = null;
+  let sessionUser = null
+  let isRecoveryFlow = false
 
-  // 1. Standard Code Exchange (Handles BOTH Logins and Password Resets securely)
+  // 1. Core Authentication Layer (Supports PKCE Codes and Email Token Hashes)
   if (code) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
-    
-    if (!error) {
+
+    if (!error && data?.session) {
       sessionUser = data.user
 
-      // Intercept the Password Reset Flow
-      if (next === '/update-password') {
-        return NextResponse.redirect(new URL('/update-password', request.url))
+      // Decode JWT payload to check for native 'recovery' claims
+      try {
+        const base64Payload = data.session.access_token.split('.')[1]
+        const payload = JSON.parse(Buffer.from(base64Payload, 'base64').toString())
+
+        if (payload.amr?.includes('recovery')) {
+          isRecoveryFlow = true
+        }
+      } catch (jwtError) {
+        console.error('JWT AMR Parse Error:', jwtError)
       }
-    } else {
-      // Clean Error Code 1
-      return NextResponse.redirect(new URL('/login?error=INVALID_LINK', request.url))
     }
-  } 
-  // 2. Already logged in (e.g., coming from the Update Password page)
-  else {
+  } else if (tokenHash && type) {
+    // 🏆 Fallback: Handle direct email link hash confirmations securely
+    const { data, error } = await supabase.auth.verifyOtp({
+      token_hash: tokenHash,
+      type: type as any,
+    })
+
+    if (!error && data?.user) {
+      sessionUser = data.user
+      if (type === 'recovery') {
+        isRecoveryFlow = true
+      }
+    }
+  } else {
+    // Fallback context validation for active browser sessions
     const { data } = await supabase.auth.getUser()
     sessionUser = data.user
   }
 
-  // Gatekeeper Routing (Roles & Clinics)
+  // 2. Intercept and Route Password Resets Immediately
+  if (sessionUser && (next === '/update-password' || type === 'recovery' || isRecoveryFlow)) {
+    const updateUrl = new URL('/update-password', request.url)
+    const clinic = searchParams.get('clinic')
+
+    if (clinic) {
+      updateUrl.searchParams.set('clinic', clinic)
+    }
+
+    return NextResponse.redirect(updateUrl)
+  }
+
+  // 3. Gatekeeper Routing (Roles & Clinic Access Isolation)
   if (sessionUser) {
-    // Fetch user role from database
     const { data: userData } = await supabase
       .from('users')
       .select('role')
@@ -65,15 +95,13 @@ export async function GET(request: NextRequest) {
     const role = userData?.role
     const attemptedClinicId = searchParams.get('clinic')
 
-    // Superadmin Routing
     if (role === 'superadmin') {
       return NextResponse.redirect(new URL('/superadmin-dashboard', request.url))
-    } 
-    
-    // Staff and Dentist Routing with Cross-Clinic Check
+    }
+
     if (role === 'staff' || role === 'dentist') {
       const targetTable = role === 'staff' ? 'clinic_staff' : 'dentists'
-      
+
       const { data: personnelData } = await supabase
         .from(targetTable)
         .select('clinic_id')
@@ -82,7 +110,6 @@ export async function GET(request: NextRequest) {
 
       if (personnelData && attemptedClinicId && personnelData.clinic_id.toString() !== attemptedClinicId) {
         await supabase.auth.signOut()
-        // Clean Error Code 2
         return NextResponse.redirect(new URL(`/login?error=UNAUTHORIZED_CLINIC`, request.url))
       }
 
@@ -90,14 +117,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL(nextPath, request.url))
     }
 
-    // Patient Routing
     if (role === 'patient') {
       try {
-        const targetUrl = attemptedClinicId 
+        const targetUrl = attemptedClinicId
           ? `/patient-dashboard?clinic=${attemptedClinicId}`
           : `/patient-dashboard`
 
-        // Verify patient exists
         const { data: patientData, error: patientError } = await supabase
           .from('patients')
           .select('id')
@@ -105,7 +130,7 @@ export async function GET(request: NextRequest) {
           .maybeSingle()
 
         if (patientError || !patientData) {
-            await new Promise(resolve => setTimeout(resolve, 500)) 
+          await new Promise((resolve) => setTimeout(resolve, 500))
         }
 
         if (attemptedClinicId) {
@@ -116,15 +141,14 @@ export async function GET(request: NextRequest) {
             path: '/',
           })
         }
-        
+
         return NextResponse.redirect(new URL(targetUrl, request.url))
       } catch {
-        // Clean Error Code 3
         return NextResponse.redirect(new URL('/login?error=PATIENT_ROUTING_FAILED', request.url))
       }
     }
   }
 
-  // Clean Error Code 4 (Fallback if NO code and NO session are found)
+  // Fallback Catchall for Unauthenticated/Mismatched Actions
   return NextResponse.redirect(new URL('/login?error=NO_SESSION', request.url))
 }
