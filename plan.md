@@ -70,14 +70,14 @@ Deliverables:
 - [x] Clinic profile: services, HMO, hours, gallery; auto-close booking at daily limit
 - [x] Appointments: confirm/reschedule/status for registered, guest, walk-in
 - [x] Inventory with stock alert thresholds; billing (PhilHealth, senior/PWD, HMO)
-- [ ] Sales analytics; PDF reports (revenue, appointment summary, service frequency)
+- [x] Sales analytics; PDF reports (revenue, appointment summary, service frequency)
 - [x] Staff cannot write dental charts (enforced at route level)
 
 Deliverables:
 - [x] appointment FSM tested
 - [x] dental chart CRUD working
 - [x] staff dashboard live
-- [ ] PDF export correct
+- [x] PDF export correct
 - [x] role violations return 403
 
 ## Week 3 — Notifications, Chatbot, Hardening, Testing (Days 15–21)
@@ -85,7 +85,7 @@ Deliverables:
 **Notifications**
 - [ ] SMS + email (Twilio/SendGrid): confirmation, reschedule, day-before reminder, follow-up
 - [ ] Contact data from registration only; no ad-hoc input
-- [ ] Manual resend UI for staff; failed notifications logged with reason
+- [x] Manual resend UI for staff; failed notifications logged with reason
 
 **NLP Chatbot**
 - [ ] Dialogflow: tokenization + intent matching

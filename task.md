@@ -1,50 +1,48 @@
-# Clinic Backend & Discovery Tasks
+Act as a Senior React, TypeScript, and Supabase Developer. I have successfully updated my database schema by creating a `clinic_patients` junction table to isolate patient records per clinic while preserving a global patient directory. 
 
-## Phase 1: Clinic Profile & Operating Setup
-- `[x]` Create `updateClinicProfile` action
-- `[x]` Create `updateOperatingHours` action
-- `[x]` Create `manageClinicHMOs` action
-- `[x]` Create `manageClinicSpecialties` action
-- `[x]` Create `manageClinicGallery` action
+Act as a Senior React, TypeScript, and Supabase Developer.
 
-## Phase 2: Services & Pricing
-- `[x]` Create `addService`, `updateService`, `deleteService`, `fetchServices` actions
-- `[x]` Create `addProduct`, `updateProduct`, `deleteProduct`, `fetchProducts` actions
+### My Actual Table Structures:
 
-## Phase 3: Appointment Management
-- `[x]` Create `fetchAppointmentsByDate` action
-- `[x]` Create `getAvailableSlots` action
-- `[x]` Create `createAppointment` action
-- `[x]` Create `updateAppointmentStatus` action
-- `[x]` Create `updateMaxAppointments` action
+patients:
+- id          BIGINT (primary key)
+- user_id     UUID
+- first_name  TEXT
+- last_name   TEXT
+- phone       TEXT
+- birthdate   DATE
+- gender      TEXT
+- address     TEXT
+- is_guest    BOOLEAN
+- created_at  TIMESTAMPTZ
 
-## Phase 4: Patient Records & Walk-ins
-- `[x]` Create `registerPatient` action
-- `[x]` Create `fetchPatientRecord` action
-- `[x]` Create `fetchPatientsByClinic` action
-- `[x]` Create `addClinicalAssessment` action
-- `[x]` Create `updateDentalChart` action
+clinic_patients:
+- id          BIGINT (primary key)
+- clinic_id   BIGINT (FK → clinics.id)
+- patient_id  BIGINT (FK → patients.id)
+- is_active   BOOLEAN
+- enrolled_by UUID (FK → users.id)
+- created_at  TIMESTAMPTZ
+- UNIQUE(clinic_id, patient_id)
 
-## Phase 5: Transactions, Discounts & Billing
-- `[x]` Create `createTransaction` action
-- `[x]` Create `fetchPatientBillingHistory` action
-- `[x]` Create `processPayment` action
+The Task:
+I need you to help me refactor my frontend Next.js / React components (written in TypeScript) to safely query and write data using this new schema.
 
-## Phase 6: Calendar, Inventory, Notifications & Reports
-- `[x]` Create `manageClinicHolidays` action
-- `[x]` Create `updateInventoryStock`, `fetchStockAlerts`, `logInventoryChange` actions
-- `[x]` Create `retriggerNotification` action
-- `[x]` Create `generateSalesReport`, `generateAppointmentSummary`, `generateServiceFrequency` actions
+Please provide clean, production-ready code blocks and logical explanations for the following three implementations:
 
-## Phase 7: Clinic Discovery & Map (NEW)
-- `[x]` Implement Leaflet.js interactive map with custom dental pins
-- `[x]` Create unified `ClinicCard` with compact mode and gallery slider
-- `[x]` Build real-time filters (Specialty, HMO, Rating, Status) for map and list
-- `[x]` Implement synchronized data parity between Map Pins and Sidebar list
-- `[x]` Handle safe unmounting and asynchronous initialization to prevent navigation hangs
+The Dropdown Fetching Logic (Inner Joins):
+Write a Supabase Client query that fetches only the active patients associated with the current clinic (currentClinicId). Because Supabase returns joined data as a nested object, show me how to type the TypeScript interface for this response and how to correctly map over the data (e.g., handling item.patients.first_name) inside a standard Tailwind CSS / React select menu dropdown.
 
-## Phase 8: System Health & Security (NEW)
-- `[x]` Implement server-side `console.error` logging across all 30+ server actions
-- `[x]` Resolve "Never-Ending Loading" UI hangs using `finally` blocks in client components
-- `[x]` Transition landing page data fetching to secure standardized anon client
-- `[x]` Audit and implement missing RLS policies for joined public data
+Sequential Multi-Step Form Submission Handler:
+Write an asynchronous handleSubmit function for a "Register New Patient" form. The function must handle two sequential operations:
+
+Step 1: Insert the new profile data into the global patients table and immediately return the newly generated id.
+
+Step 2: Use that returned patient_id along with the currentClinicId and the logged-in userId (for enrolled_by) to insert a new row into the clinic_patients table.
+
+Include clear try/catch error handling to stop the operation if the global profile creation fails.
+
+Updating the Patient Directory List View:
+Provide a quick example of how to fetch and state-manage this same data for a tabular grid layout (Patient Directory page) so it properly renders the localized roster for the logged-in clinic.
+
+Please write modern, humanized React code, utilizing standard async/await syntax and clean TypeScript type definitions.

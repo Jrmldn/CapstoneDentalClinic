@@ -1,6 +1,7 @@
 'use server'
 
 import { supabaseAdmin } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/serverSSR'
 import { revalidatePath } from 'next/cache'
 
 // ─────────────────────────────────────────────────────────────
@@ -14,6 +15,7 @@ export interface RegisterPatientData {
   birthdate: string        // "YYYY-MM-DD"
   gender: string
   address: string
+  email?: string           // optional — used for merge pipeline matching
   is_guest?: boolean
   user_id?: string         // null for walk-in/guest patients
   // Medical history
@@ -24,6 +26,9 @@ export interface RegisterPatientData {
   previous_surgeries?: string
   is_pregnant?: boolean
   is_smoker?: boolean
+  // Junction mapping fields
+  clinic_id?: number
+  enrolled_by?: string
 }
 
 export interface ClinicalAssessmentData {
@@ -56,20 +61,21 @@ export async function registerPatient(data: RegisterPatientData) {
       .from('patients')
       .insert([{
         first_name: data.first_name,
-        last_name:  data.last_name,
-        phone:      data.phone,
-        birthdate:  data.birthdate,
-        gender:     data.gender,
-        address:    data.address,
-        is_guest:   data.is_guest ?? false,
-        user_id:    data.user_id ?? null,
+        last_name: data.last_name,
+        phone: data.phone,
+        birthdate: data.birthdate,
+        gender: data.gender,
+        address: data.address,
+        email: data.email ?? null,
+        is_guest: data.is_guest ?? false,
+        user_id: data.user_id ?? null,
       }])
       .select()
       .single()
 
     if (patientError) throw new Error(patientError.message)
 
-    // 2. Insert medical history if provided
+    // 2. Insert medical history if any fields are provided
     const hasMedicalData =
       data.blood_type ||
       data.allergies?.length ||
@@ -83,20 +89,54 @@ export async function registerPatient(data: RegisterPatientData) {
       const { error: medError } = await supabaseAdmin
         .from('patient_medical_history')
         .insert([{
-          patient_id:          patient.id,
-          blood_type:          data.blood_type          ?? null,
-          allergies:           data.allergies           ?? [],
+          patient_id: patient.id,
+          blood_type: data.blood_type ?? null,
+          allergies: data.allergies ?? [],
           current_medications: data.current_medications ?? [],
-          medical_conditions:  data.medical_conditions  ?? [],
-          previous_surgeries:  data.previous_surgeries  ?? null,
-          is_pregnant:         data.is_pregnant         ?? false,
-          is_smoker:           data.is_smoker           ?? false,
+          medical_conditions: data.medical_conditions ?? [],
+          previous_surgeries: data.previous_surgeries ?? null,
+          is_pregnant: data.is_pregnant ?? false,
+          is_smoker: data.is_smoker ?? false,
         }])
 
       if (medError) throw new Error(medError.message)
     }
 
+    // 3. Link patient to clinic via clinic_patients junction
+    // Uses onConflict to safely handle re-registration of an existing patient
+    // uq_clinic_patient ensures (clinic_id, patient_id) is unique
+    if (data.clinic_id) {
+      let enrolledBy: string | null = data.enrolled_by || null
+
+      if (!enrolledBy) {
+        try {
+          const supabase = await createClient()
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) enrolledBy = user.id
+        } catch (authErr) {
+          console.warn('Could not resolve enrolled_by user automatically:', authErr)
+        }
+      }
+
+      const { error: junctionError } = await supabaseAdmin
+        .from('clinic_patients')
+        .upsert(
+          [{
+            clinic_id: data.clinic_id,
+            patient_id: patient.id,
+            is_active: true,
+            enrolled_by: enrolledBy,
+          }],
+          { onConflict: 'clinic_id,patient_id', ignoreDuplicates: true }
+        )
+
+      if (junctionError) {
+        throw new Error(`Failed to link patient to clinic: ${junctionError.message}`)
+      }
+    }
+
     revalidatePath('/staff-dashboard/patients')
+    revalidatePath('/staff-dashboard/appointments')
     return { success: true, patient }
   } catch (error) {
     console.error('Error in registerPatient:', error)
@@ -116,7 +156,6 @@ export async function registerPatient(data: RegisterPatientData) {
 
 export async function fetchPatientRecord(patientId: number) {
   try {
-    // Run all queries in parallel for performance
     const [
       patientRes,
       medHistoryRes,
@@ -224,16 +263,16 @@ export async function fetchPatientRecord(patientId: number) {
     return {
       success: true,
       record: {
-        patient:            patientRes.data,
-        medicalHistory:     medHistoryRes.data,
-        dentalCharts:       dentalChartsRes.data   ?? [],
-        treatmentHistory:   treatmentHistoryRes.data ?? [],
-        assessments:        assessmentsRes.data     ?? [],
-        prescriptions:      prescriptionsRes.data   ?? [],
-        periodontalScreenings: periodontalRes.data  ?? [],
-        tmjAssessments:     tmjRes.data             ?? [],
-        oralSurgeryRecords: oralSurgeryRes.data     ?? [],
-        appointments:       appointmentsRes.data    ?? [],
+        patient: patientRes.data,
+        medicalHistory: medHistoryRes.data,
+        dentalCharts: dentalChartsRes.data ?? [],
+        treatmentHistory: treatmentHistoryRes.data ?? [],
+        assessments: assessmentsRes.data ?? [],
+        prescriptions: prescriptionsRes.data ?? [],
+        periodontalScreenings: periodontalRes.data ?? [],
+        tmjAssessments: tmjRes.data ?? [],
+        oralSurgeryRecords: oralSurgeryRes.data ?? [],
+        appointments: appointmentsRes.data ?? [],
       },
     }
   } catch (error) {
@@ -256,40 +295,52 @@ export async function fetchPatientsByClinic(
   includeGuests = true
 ) {
   try {
-    // Find unique patient IDs who have had an appointment at this clinic
-    const { data: apptPatients, error: apptError } = await supabaseAdmin
-      .from('appointments')
-      .select('patient_id')
+    let query = supabaseAdmin
+      .from('clinic_patients')
+      .select(`
+        is_active,
+        patients!inner (
+          id,
+          first_name,
+          last_name,
+          phone,
+          email,
+          birthdate,
+          gender,
+          is_guest,
+          created_at
+        )
+      `)
       .eq('clinic_id', clinicId)
 
-    if (apptError) throw new Error(apptError.message)
-
-    const patientIds = [...new Set(apptPatients?.map(a => a.patient_id) ?? [])]
-
-    if (patientIds.length === 0) return { success: true, patients: [] }
-
-    let query = supabaseAdmin
-      .from('patients')
-      .select('id, first_name, last_name, phone, birthdate, gender, is_guest, created_at')
-      .in('id', patientIds)
-      .order('last_name', { ascending: true })
-      .order('first_name', { ascending: true })
-
     if (!includeGuests) {
-      query = query.eq('is_guest', false)
+      query = query.eq('patients.is_guest', false)
     }
 
     if (search) {
+      const cleanSearch = `%${search.trim()}%`
       query = query.or(
-        `first_name.ilike.%${search}%,last_name.ilike.%${search}%,phone.ilike.%${search}%`
+        `first_name.ilike.${cleanSearch},last_name.ilike.${cleanSearch},phone.ilike.${cleanSearch}`,
+        { foreignTable: 'patients' }
       )
     }
 
-    const { data: patients, error } = await query
+    const { data, error } = await query
 
     if (error) throw new Error(error.message)
 
-    return { success: true, patients: patients ?? [] }
+    const patients = (data || [])
+      .map((item: any) => item.patients)
+      .filter((p): p is any => p !== null)
+
+    patients.sort((a: any, b: any) => {
+      const lastA = (a.last_name || '').toLowerCase()
+      const lastB = (b.last_name || '').toLowerCase()
+      if (lastA !== lastB) return lastA.localeCompare(lastB)
+      return (a.first_name || '').toLowerCase().localeCompare((b.first_name || '').toLowerCase())
+    })
+
+    return { success: true, patients }
   } catch (error) {
     console.error('Error in fetchPatientsByClinic:', error)
     return {
@@ -309,15 +360,15 @@ export async function addClinicalAssessment(data: ClinicalAssessmentData) {
     const { data: assessment, error } = await supabaseAdmin
       .from('clinical_assessments')
       .insert([{
-        patient_id:     data.patient_id,
-        clinic_id:      data.clinic_id,
-        dentist_id:     data.dentist_id,
+        patient_id: data.patient_id,
+        clinic_id: data.clinic_id,
+        dentist_id: data.dentist_id,
         appointment_id: data.appointment_id ?? null,
         chief_complaint: data.chief_complaint,
-        diagnosis:      data.diagnosis,
+        diagnosis: data.diagnosis,
         treatment_plan: data.treatment_plan,
-        notes:          data.notes ?? null,
-        assessed_at:    new Date().toISOString(),
+        notes: data.notes ?? null,
+        assessed_at: new Date().toISOString(),
       }])
       .select()
       .single()
@@ -337,8 +388,6 @@ export async function addClinicalAssessment(data: ClinicalAssessmentData) {
 
 // ─────────────────────────────────────────────────────────────
 // UPDATE DENTAL CHART  (upsert tooth conditions)
-// Creates a new chart if none exists for the patient/clinic/dentist,
-// then upserts individual tooth conditions.
 // ─────────────────────────────────────────────────────────────
 
 export async function updateDentalChart(
@@ -348,7 +397,6 @@ export async function updateDentalChart(
   toothConditions: ToothConditionData[]
 ) {
   try {
-    // Fetch or create a dental chart
     let chartId: number
 
     const { data: existing } = await supabaseAdmin
@@ -360,7 +408,6 @@ export async function updateDentalChart(
 
     if (existing) {
       chartId = existing.id
-      // Touch updated_at
       await supabaseAdmin
         .from('dental_charts')
         .update({ updated_at: new Date().toISOString() })
@@ -369,9 +416,9 @@ export async function updateDentalChart(
       const { data: newChart, error: chartError } = await supabaseAdmin
         .from('dental_charts')
         .insert([{
-          patient_id:  patientId,
-          clinic_id:   clinicId,
-          dentist_id:  dentistId,
+          patient_id: patientId,
+          clinic_id: clinicId,
+          dentist_id: dentistId,
         }])
         .select()
         .single()
@@ -380,15 +427,14 @@ export async function updateDentalChart(
       chartId = newChart.id
     }
 
-    // Insert tooth conditions (append — each visit may add conditions)
     const conditionsData = toothConditions.map(tc => ({
       dental_chart_id: chartId,
-      tooth_number:    tc.tooth_number,
-      tooth_type:      tc.tooth_type,
-      condition:       tc.condition,
-      surface:         tc.surface ?? null,
-      notes:           tc.notes ?? null,
-      recorded_at:     new Date().toISOString(),
+      tooth_number: tc.tooth_number,
+      tooth_type: tc.tooth_type,
+      condition: tc.condition,
+      surface: tc.surface ?? null,
+      notes: tc.notes ?? null,
+      recorded_at: new Date().toISOString(),
     }))
 
     const { data: conditions, error: condError } = await supabaseAdmin

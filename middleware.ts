@@ -53,7 +53,28 @@ export async function middleware(request: NextRequest) {
       const destination = userRole === 'superadmin' 
         ? '/superadmin-dashboard' 
         : (userRole === 'staff' ? '/staff-dashboard' : '/patient-dashboard')
-      return NextResponse.redirect(new URL(destination, request.url))
+      
+      const redirectUrl = new URL(destination, request.url)
+      
+      // Preserve search parameters (e.g. ?clinic=1)
+      const clinicId = request.nextUrl.searchParams.get('clinic')
+      if (clinicId) {
+        redirectUrl.searchParams.set('clinic', clinicId)
+      }
+
+      const response = NextResponse.redirect(redirectUrl)
+
+      // Automatically sync the clinic_id cookie for patient redirects
+      if (clinicId && (userRole === 'patient' || !userRole)) {
+        response.cookies.set('clinic_id', clinicId, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/',
+        })
+      }
+
+      return response
     }
   }
 
