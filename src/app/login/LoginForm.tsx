@@ -58,6 +58,10 @@ export function LoginForm() {
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback?clinic=${clinicId}`
     : `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`
 
+  const recoveryRedirectTo = clinicId
+    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback?clinic=${clinicId}&next=/update-password`
+    : `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback?next=/update-password`
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
@@ -291,7 +295,7 @@ export function LoginForm() {
                 },
               },
             }}
-            redirectTo={redirectTo}
+            redirectTo={recoveryRedirectTo}
             view="forgotten_password"
             showLinks={false}
             localization={{
