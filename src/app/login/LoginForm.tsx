@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase/client'
 import { useEffect, useState } from 'react'
 import { AUTH_ERRORS, AuthErrorCode } from '@/lib/errorMessages'
 
-type View = 'sign_in' | 'sign_up'
+type View = 'sign_in' | 'sign_up' | 'forgotten_password'
 
 interface SignUpForm {
   email: string
@@ -191,7 +191,7 @@ export function LoginForm() {
 
       {/* Sign Up Success */}
       {signUpSuccess ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
+        <div className="text-center">
           <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-4">
             <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
@@ -214,6 +214,10 @@ export function LoginForm() {
         /* SIGN IN — Supabase Auth UI                         */
         /* -------------------------------------------------- */
         <div>
+          <h1 className="text-3xl font-bold text-center text-gray-900 mb-2">
+            AppointDent
+          </h1>
+          <p className="text-center text-gray-600 mb-8">Patient Portal Login</p>
           <Auth
             supabaseClient={supabase}
             appearance={{
@@ -243,13 +247,69 @@ export function LoginForm() {
               },
             }}
           />
-          <p className="text-center text-sm text-gray-500 mt-4">
-            Don't have an account?{' '}
+          <div className="text-center text-sm text-gray-500 mt-4 space-y-2">
+            <p>
+              <button
+                onClick={() => setView('forgotten_password')}
+                className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
+              >
+                Forgot your password?
+              </button>
+            </p>
+            <p>
+              Don't have an account?{' '}
+              <button
+                onClick={() => setView('sign_up')}
+                className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
+              >
+                Sign Up
+              </button>
+            </p>
+          </div>
+        </div>
+      ) : view === 'forgotten_password' ? (
+        /* -------------------------------------------------- */
+        /* FORGOT PASSWORD — Supabase Auth UI                 */
+        /* -------------------------------------------------- */
+        <div>
+          <h1 className="text-3xl font-bold text-center text-gray-900 mb-2">
+            Reset Password
+          </h1>
+          <p className="text-center text-gray-600 mb-8">
+            Enter your email to receive a password reset link
+          </p>
+          <Auth
+            supabaseClient={supabase}
+            appearance={{
+              theme: ThemeSupa,
+              variables: {
+                default: {
+                  colors: {
+                    brand: '#2563EB',
+                    brandAccent: '#1D4ED8',
+                  },
+                },
+              },
+            }}
+            redirectTo={redirectTo}
+            view="forgotten_password"
+            showLinks={false}
+            localization={{
+              variables: {
+                forgotten_password: {
+                  email_label: 'Email',
+                  email_input_placeholder: 'name@example.com',
+                  button_label: 'Send Reset Link',
+                },
+              },
+            }}
+          />
+          <p className="text-center text-sm text-gray-500 mt-6">
             <button
-              onClick={() => setView('sign_up')}
+              onClick={() => setView('sign_in')}
               className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
             >
-              Sign Up
+              Back to Sign In
             </button>
           </p>
         </div>
@@ -257,12 +317,12 @@ export function LoginForm() {
         /* -------------------------------------------------- */
         /* SIGN UP — Custom form                              */
         /* -------------------------------------------------- */
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-1">Create an account</h2>
-          <p className="text-sm text-gray-500 mb-6">Fill in your details to get started</p>
+        <div>
+          <h2 className="text-3xl font-bold text-center text-gray-900 mb-2">Create an account</h2>
+          <p className="text-center text-gray-600 mb-8">Fill in your details to get started</p>
 
           {errors.general && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-600 text-sm">
               {errors.general}
             </div>
           )}
@@ -272,17 +332,17 @@ export function LoginForm() {
             {/* Name row */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">First Name</label>
+                <label className="block text-sm font-normal text-gray-600 mb-1">First Name</label>
                 <input
                   name="first_name"
                   type="text"
                   value={form.first_name}
                   onChange={handleChange}
                   placeholder="Juan"
-                  className={`w-full px-3 py-2 text-sm border rounded-lg outline-none transition-colors
+                  className={`w-full px-3 py-2 text-sm border rounded bg-transparent outline-none transition-colors
                     ${errors.first_name
                       ? 'border-red-400 focus:border-red-500 bg-red-50'
-                      : 'border-gray-200 focus:border-blue-500 bg-white'
+                      : 'border-gray-300 focus:border-gray-400 focus:outline-none bg-white'
                     }`}
                 />
                 {errors.first_name && (
@@ -290,17 +350,17 @@ export function LoginForm() {
                 )}
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Last Name</label>
+                <label className="block text-sm font-normal text-gray-600 mb-1">Last Name</label>
                 <input
                   name="last_name"
                   type="text"
                   value={form.last_name}
                   onChange={handleChange}
                   placeholder="dela Cruz"
-                  className={`w-full px-3 py-2 text-sm border rounded-lg outline-none transition-colors
+                  className={`w-full px-3 py-2 text-sm border rounded bg-transparent outline-none transition-colors
                     ${errors.last_name
                       ? 'border-red-400 focus:border-red-500 bg-red-50'
-                      : 'border-gray-200 focus:border-blue-500 bg-white'
+                      : 'border-gray-300 focus:border-gray-400 focus:outline-none bg-white'
                     }`}
                 />
                 {errors.last_name && (
@@ -311,17 +371,17 @@ export function LoginForm() {
 
             {/* Email */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+              <label className="block text-sm font-normal text-gray-600 mb-1">Email</label>
               <input
                 name="email"
                 type="email"
                 value={form.email}
                 onChange={handleChange}
                 placeholder="name@example.com"
-                className={`w-full px-3 py-2 text-sm border rounded-lg outline-none transition-colors
+                className={`w-full px-3 py-2 text-sm border rounded bg-transparent outline-none transition-colors
                   ${errors.email
                     ? 'border-red-400 focus:border-red-500 bg-red-50'
-                    : 'border-gray-200 focus:border-blue-500 bg-white'
+                    : 'border-gray-300 focus:border-gray-400 focus:outline-none bg-white'
                   }`}
               />
               {errors.email && (
@@ -331,17 +391,17 @@ export function LoginForm() {
 
             {/* Phone */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Phone Number</label>
+              <label className="block text-sm font-normal text-gray-600 mb-1">Phone Number</label>
               <input
                 name="phone"
                 type="tel"
                 value={form.phone}
                 onChange={handleChange}
                 placeholder="0912 345 6789"
-                className={`w-full px-3 py-2 text-sm border rounded-lg outline-none transition-colors
+                className={`w-full px-3 py-2 text-sm border rounded bg-transparent outline-none transition-colors
                   ${errors.phone
                     ? 'border-red-400 focus:border-red-500 bg-red-50'
-                    : 'border-gray-200 focus:border-blue-500 bg-white'
+                    : 'border-gray-300 focus:border-gray-400 focus:outline-none bg-white'
                   }`}
               />
               {errors.phone && (
@@ -351,17 +411,17 @@ export function LoginForm() {
 
             {/* Date of Birth */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Date of Birth</label>
+              <label className="block text-sm font-normal text-gray-600 mb-1">Date of Birth</label>
               <input
                 name="date_of_birth"
                 type="date"
                 value={form.date_of_birth}
                 onChange={handleChange}
                 max={new Date().toISOString().split('T')[0]}
-                className={`w-full px-3 py-2 text-sm border rounded-lg outline-none transition-colors
+                className={`w-full px-3 py-2 text-sm border rounded bg-transparent outline-none transition-colors
                   ${errors.date_of_birth
                     ? 'border-red-400 focus:border-red-500 bg-red-50'
-                    : 'border-gray-200 focus:border-blue-500 bg-white'
+                    : 'border-gray-300 focus:border-gray-400 focus:outline-none bg-white'
                   }`}
               />
               {errors.date_of_birth && (
@@ -371,17 +431,17 @@ export function LoginForm() {
 
             {/* Password */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Password</label>
+              <label className="block text-sm font-normal text-gray-600 mb-1">Password</label>
               <input
                 name="password"
                 type="password"
                 value={form.password}
                 onChange={handleChange}
                 placeholder="••••••••"
-                className={`w-full px-3 py-2 text-sm border rounded-lg outline-none transition-colors
+                className={`w-full px-3 py-2 text-sm border rounded bg-transparent outline-none transition-colors
                   ${errors.password
                     ? 'border-red-400 focus:border-red-500 bg-red-50'
-                    : 'border-gray-200 focus:border-blue-500 bg-white'
+                    : 'border-gray-300 focus:border-gray-400 focus:outline-none bg-white'
                   }`}
               />
               {errors.password && (
@@ -391,17 +451,17 @@ export function LoginForm() {
 
             {/* Confirm Password */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Confirm Password</label>
+              <label className="block text-sm font-normal text-gray-600 mb-1">Confirm Password</label>
               <input
                 name="confirmPassword"
                 type="password"
                 value={form.confirmPassword}
                 onChange={handleChange}
                 placeholder="••••••••"
-                className={`w-full px-3 py-2 text-sm border rounded-lg outline-none transition-colors
+                className={`w-full px-3 py-2 text-sm border rounded bg-transparent outline-none transition-colors
                   ${errors.confirmPassword
                     ? 'border-red-400 focus:border-red-500 bg-red-50'
-                    : 'border-gray-200 focus:border-blue-500 bg-white'
+                    : 'border-gray-300 focus:border-gray-400 focus:outline-none bg-white'
                   }`}
               />
               {errors.confirmPassword && (
@@ -413,8 +473,8 @@ export function LoginForm() {
             <button
               onClick={handleSignUp}
               disabled={isLoading}
-              className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400
-                text-white text-sm font-medium rounded-lg transition-colors mt-2"
+              className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400
+                text-white text-sm font-normal rounded transition-colors mt-2"
             >
               {isLoading ? 'Creating account...' : 'Create Account'}
             </button>
