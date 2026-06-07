@@ -10,7 +10,7 @@ interface StaffTopBarProps {
 
 export default function StaffTopBar({ user, clinicName, logoutAction }: StaffTopBarProps) {
   return (
-    <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-8 flex-shrink-0">
+    <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-8 flex-shrink-0 print:hidden">
       {/* Clinic context */}
       <div className="flex items-center gap-2">
         <span className="text-sm text-gray-500">Clinic:</span>

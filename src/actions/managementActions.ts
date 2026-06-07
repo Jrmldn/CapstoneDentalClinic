@@ -48,16 +48,40 @@ export async function manageClinicHolidays(
 
       if (error) throw new Error(error.message)
     } else if (action === 'add' && holidayData) {
-      const { error } = await supabaseAdmin
+      // Check if a holiday on this date already exists for this clinic
+      const { data: existing, error: fetchError } = await supabaseAdmin
         .from('clinic_holidays')
-        .upsert([{
-          clinic_id:      clinicId,
-          date:           holidayData.date,
-          description:    holidayData.description,
-          is_special_day: holidayData.is_special_day,
-        }], { onConflict: 'clinic_id,date' })
+        .select('id')
+        .eq('clinic_id', clinicId)
+        .eq('date', holidayData.date)
+        .maybeSingle()
 
-      if (error) throw new Error(error.message)
+      if (fetchError) throw new Error(fetchError.message)
+
+      if (existing) {
+        // Update the existing holiday description and type
+        const { error: updateError } = await supabaseAdmin
+          .from('clinic_holidays')
+          .update({
+            description:    holidayData.description,
+            is_special_day: holidayData.is_special_day,
+          })
+          .eq('id', existing.id)
+
+        if (updateError) throw new Error(updateError.message)
+      } else {
+        // Insert a new holiday record
+        const { error: insertError } = await supabaseAdmin
+          .from('clinic_holidays')
+          .insert([{
+            clinic_id:      clinicId,
+            date:           holidayData.date,
+            description:    holidayData.description,
+            is_special_day: holidayData.is_special_day,
+          }])
+
+        if (insertError) throw new Error(insertError.message)
+      }
     }
 
     revalidatePath('/staff-dashboard/calendar')

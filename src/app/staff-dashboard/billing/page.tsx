@@ -51,7 +51,7 @@ export default async function BillingPage() {
       .eq('is_active', true),
     supabase
       .from('products')
-      .select('id, name, price, quantity')
+      .select('id, name, price')
       .eq('clinic_id', clinicId)
       .eq('is_active', true),
     supabase

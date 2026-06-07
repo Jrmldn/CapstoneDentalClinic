@@ -34,7 +34,7 @@ export default async function StaffDashboardPage() {
   }
 
   const clinicId = staffRecord.clinic_id
-  const today = new Date().toISOString().slice(0, 10)
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
 
   // Fetch all dashboard data in parallel
   const [

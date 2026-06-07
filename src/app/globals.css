@@ -154,3 +154,38 @@
 .custom-clinic-popup .leaflet-popup-tip {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
+
+/* ───────────────────────────────────────────────────────────── */
+/* PRINT LAYOUT OVERRIDES                                         */
+/* ───────────────────────────────────────────────────────────── */
+@media print {
+  /* Hide navigation, topbar, sidebars, and elements marked print:hidden */
+  aside,
+  header,
+  nav,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Reset layout constraints so all pages render and scroll height works */
+  html,
+  body,
+  main,
+  div[class*="flex"],
+  div[class*="overflow-hidden"],
+  div[class*="h-screen"],
+  main[class*="overflow-y-auto"] {
+    height: auto !important;
+    overflow: visible !important;
+    max-height: none !important;
+    position: static !important;
+    display: block !important;
+  }
+
+  /* Full-width container content for printing */
+  main {
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}

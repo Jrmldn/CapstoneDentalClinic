@@ -42,6 +42,7 @@ const menuGroups = [
     label: 'Management',
     items: [
       { label: 'Inventory',     href: '/staff-dashboard/inventory',      icon: Package,       key: 'inventory' },
+      { label: 'Personnel',     href: '/staff-dashboard/personnel',      icon: Users,         key: 'personnel' },
       { label: 'Notifications', href: '/staff-dashboard/notifications',  icon: Bell,          key: 'notifications' },
     ],
   },
@@ -63,7 +64,7 @@ export default function StaffSidebar() {
   }
 
   return (
-    <aside className="w-60 bg-gradient-to-b from-slate-900 to-slate-800 text-white flex flex-col flex-shrink-0">
+    <aside className="w-60 bg-gradient-to-b from-slate-900 to-slate-800 text-white flex flex-col flex-shrink-0 print:hidden">
       {/* Logo */}
       <div className="p-5 border-b border-slate-700">
         <div className="flex items-center gap-3">

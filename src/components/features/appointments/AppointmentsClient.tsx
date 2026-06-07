@@ -507,7 +507,7 @@ export default function AppointmentsClient({
                             <Check className="w-4 h-4" />
                           </button>
                         )}
-                        {(appt.status === 'pending' || appt.status === 'confirmed') && (
+                        {(appt.status === 'pending' || appt.status === 'confirmed' || appt.status === 'rescheduled') && (
                           <>
                             <button
                               onClick={() => {

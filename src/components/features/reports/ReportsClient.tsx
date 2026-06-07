@@ -145,7 +145,8 @@ export default function ReportsClient({
       </div>
 
       {/* Tab content */}
-      <div className="bg-white rounded-b-xl border-x border-b border-gray-100 p-6 shadow-sm min-h-[400px]">
+      {/* Tab content */}
+      <div className="bg-white rounded-b-xl border-x border-b border-gray-100 p-6 shadow-sm min-h-[400px] print:border-none print:shadow-none print:p-0">
         {activeTab === 'financial' && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -274,7 +275,7 @@ export default function ReportsClient({
 
         {activeTab === 'services' && (
           <div className="space-y-6">
-            <div className="bg-blue-50 border border-blue-150 p-4 rounded-xl flex gap-3 text-blue-800 text-xs">
+            <div className="bg-blue-50 border border-blue-150 p-4 rounded-xl flex gap-3 text-blue-800 text-xs print:hidden">
               <Award className="w-5 h-5 text-blue-600 flex-shrink-0" />
               <div>
                 <p className="font-bold">Service Analytics Insight</p>
@@ -294,7 +295,7 @@ export default function ReportsClient({
                     <th className="px-6 py-3 text-right">Times Booked</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 text-slate-705">
+                <tbody className="divide-y divide-gray-100 text-slate-755">
                   {freqList.map((svc: any, idx: number) => (
                     <tr key={svc.id} className="hover:bg-gray-50/50">
                       <td className="px-6 py-3 font-semibold text-gray-500">#{idx + 1}</td>

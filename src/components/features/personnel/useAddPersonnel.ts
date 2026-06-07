@@ -7,13 +7,14 @@ interface UseAddPersonnelProps {
   onClose: () => void
   onSuccess: () => void
   type: 'staff' | 'dentists'
+  fixedClinicId?: number
 }
 
 /**
  * Custom Hook: useAddPersonnel
  * Manages the state, clinic list fetching, and form submission for adding new personnel.
  */
-export const useAddPersonnel = ({ isOpen, onClose, onSuccess, type }: UseAddPersonnelProps) => {
+export const useAddPersonnel = ({ isOpen, onClose, onSuccess, type, fixedClinicId }: UseAddPersonnelProps) => {
   const [clinics, setClinics] = useState<{ id: number; name: string }[]>([])
   
   // Form State
@@ -23,6 +24,13 @@ export const useAddPersonnel = ({ isOpen, onClose, onSuccess, type }: UseAddPers
   const [password, setPassword] = useState('')
   const [clinicId, setClinicId] = useState('')
   const [specialty, setSpecialty] = useState('')
+
+  // Pre-populate clinicId if fixedClinicId is provided
+  useEffect(() => {
+    if (fixedClinicId) {
+      setClinicId(fixedClinicId.toString())
+    }
+  }, [fixedClinicId, isOpen])
   
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')

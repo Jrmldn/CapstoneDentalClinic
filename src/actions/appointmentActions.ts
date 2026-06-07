@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { supabaseAdmin } from '@/lib/supabase/server'
 import {
   getAppointmentsByDateRange,
   getClinicHoliday,
@@ -182,7 +183,24 @@ export async function createAppointment(data: CreateAppointmentData) {
       notes:          data.is_walk_in ? 'Walk-in appointment' : 'Online booking',
     })
 
+    // Link patient to clinic via clinic_patients junction table if they aren't already linked
+    const { error: junctionError } = await supabaseAdmin
+      .from('clinic_patients')
+      .upsert(
+        [{
+          clinic_id: data.clinic_id,
+          patient_id: data.patient_id,
+          is_active: true,
+        }],
+        { onConflict: 'clinic_id,patient_id', ignoreDuplicates: true }
+      )
+
+    if (junctionError) {
+      console.warn('Failed to link patient to clinic on appointment creation:', junctionError.message)
+    }
+
     revalidatePath('/staff-dashboard/appointments')
+    revalidatePath('/staff-dashboard/patients')
     return { success: true, appointment }
   } catch (error) {
     console.error('Error in createAppointment:', error)

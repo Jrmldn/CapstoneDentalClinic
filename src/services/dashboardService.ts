@@ -21,16 +21,17 @@ export async function getStaffDashboardData(clinicId: number, today: string) {
       .from('appointments')
       .select('id, scheduled_at, status, patients ( first_name, last_name ), services ( name )')
       .eq('clinic_id', clinicId)
-      .gte('scheduled_at', `${today}T00:00:00`)
-      .lte('scheduled_at', `${today}T23:59:59`)
+      .gte('scheduled_at', `${today}T00:00:00+08:00`)
+      .lte('scheduled_at', `${today}T23:59:59+08:00`)
       .not('status', 'in', '(cancelled,no_show)')
       .order('scheduled_at', { ascending: true }),
 
-    // Total patients (ever had an appointment at this clinic)
+    // Total patients (registered at this clinic)
     supabaseAdmin
-      .from('appointments')
+      .from('clinic_patients')
       .select('patient_id')
-      .eq('clinic_id', clinicId),
+      .eq('clinic_id', clinicId)
+      .eq('is_active', true),
 
     // Low stock inventory items
     supabaseAdmin
@@ -44,7 +45,7 @@ export async function getStaffDashboardData(clinicId: number, today: string) {
       .select('id, total_amount')
       .eq('clinic_id', clinicId)
       .eq('payment_status', 'unpaid')
-      .gte('created_at', `${today.slice(0, 7)}-01T00:00:00`),
+      .gte('created_at', `${today.slice(0, 7)}-01T00:00:00+08:00`),
   ])
 }
 

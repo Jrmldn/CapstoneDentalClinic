@@ -6,6 +6,7 @@ import {
   generateServiceFrequency
 } from '@/actions/managementActions'
 import ReportsClient from '@/components/features/reports/ReportsClient'
+import PrintButton from './PrintButton'
 
 export const metadata = { title: 'Reports & Analytics — AppoinDent' }
 
@@ -48,12 +49,15 @@ export default async function ReportsPage() {
             Track business performance, service usage frequency, and clinic appointment rates.
           </p>
         </div>
-        <button
-          onClick={() => window.print()}
-          className="px-5 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition font-semibold text-sm shadow-sm"
-        >
-          Print / Save PDF
-        </button>
+        <PrintButton />
+      </div>
+
+      {/* Print-Only Professional Header */}
+      <div className="hidden print:block text-center border-b-2 border-slate-900 pb-4 mb-8">
+        <h1 className="text-3xl font-black text-slate-900 uppercase tracking-wider">Clinic Performance Report</h1>
+        <p className="text-sm text-slate-600 mt-1.5 font-semibold">
+          Generated: {new Date().toLocaleDateString()} &bull; Period: {thirtyDaysAgo} to {today}
+        </p>
       </div>
 
       <ReportsClient

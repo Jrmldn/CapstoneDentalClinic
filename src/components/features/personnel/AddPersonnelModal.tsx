@@ -10,6 +10,7 @@ interface AddPersonnelModalProps {
   onClose: () => void
   onSuccess: () => void
   type: 'staff' | 'dentists'
+  fixedClinicId?: number
 }
 
 /**
@@ -17,7 +18,7 @@ interface AddPersonnelModalProps {
  * Renders the modal overlay form for adding new staff members or dentists.
  * State management and submit transitions are delegated to the useAddPersonnel hook.
  */
-export default function AddPersonnelModal({ isOpen, onClose, onSuccess, type }: AddPersonnelModalProps) {
+export default function AddPersonnelModal({ isOpen, onClose, onSuccess, type, fixedClinicId }: AddPersonnelModalProps) {
   const {
     clinics,
     firstName,
@@ -35,7 +36,7 @@ export default function AddPersonnelModal({ isOpen, onClose, onSuccess, type }: 
     isSubmitting,
     error,
     handleSubmit,
-  } = useAddPersonnel({ isOpen, onClose, onSuccess, type })
+  } = useAddPersonnel({ isOpen, onClose, onSuccess, type, fixedClinicId })
 
   if (!isOpen) return null
 
@@ -105,22 +106,24 @@ export default function AddPersonnelModal({ isOpen, onClose, onSuccess, type }: 
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label className="font-medium">Assign to Clinic</label>
-            <select
-              required
-              value={clinicId}
-              onChange={(e) => setClinicId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:border-slate-900 outline-none transition bg-white"
-            >
-              <option value="">Select a clinic...</option>
-              {clinics.map(clinic => (
-                <option key={clinic.id} value={clinic.id}>
-                  {clinic.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {!fixedClinicId && (
+            <div className="space-y-1.5">
+              <label className="font-medium">Assign to Clinic</label>
+              <select
+                required
+                value={clinicId}
+                onChange={(e) => setClinicId(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:border-slate-900 outline-none transition bg-white"
+              >
+                <option value="">Select a clinic...</option>
+                {clinics.map(clinic => (
+                  <option key={clinic.id} value={clinic.id}>
+                    {clinic.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {type === 'dentists' && (
             <div className="space-y-1.5">

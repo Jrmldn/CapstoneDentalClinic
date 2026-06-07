@@ -13,6 +13,7 @@ interface EditPersonnelModalProps {
   onSuccess: () => Promise<void>
   person: FormattedStaff | FormattedDentist | null
   type: 'staff' | 'dentists'
+  fixedClinicId?: number
 }
 
 /**
@@ -25,7 +26,8 @@ export default function EditPersonnelModal({
   onClose, 
   onSuccess, 
   person, 
-  type 
+  type,
+  fixedClinicId
 }: EditPersonnelModalProps) {
   const {
     clinics,
@@ -84,17 +86,19 @@ export default function EditPersonnelModal({
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label className="font-medium">Clinic</label>
-            <select 
-              required 
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white" 
-              value={formData.clinicId} 
-              onChange={e => setFormData({...formData, clinicId: e.target.value})}
-            >
-              {clinics.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
+          {!fixedClinicId && (
+            <div className="space-y-1.5">
+              <label className="font-medium">Clinic</label>
+              <select 
+                required 
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white" 
+                value={formData.clinicId} 
+                onChange={e => setFormData({...formData, clinicId: e.target.value})}
+              >
+                {clinics.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+          )}
 
           {type === 'dentists' && (
             <div className="space-y-1.5">
