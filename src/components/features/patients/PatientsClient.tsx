@@ -62,7 +62,7 @@ export default function PatientsClient({ clinicId, initialPatients }: PatientsCl
   // View Record Handler
   const handleViewRecord = async (patientId: number) => {
     setIsLoadingRecord(true)
-    const res = await fetchPatientRecord(patientId)
+    const res = await fetchPatientRecord(patientId, clinicId)
     setIsLoadingRecord(false)
     if (res.success && res.record) {
       setSelectedPatientRecord(res.record)

@@ -169,7 +169,23 @@ export default function CalendarClient({
   const selectedDetails = selectedDate ? getDayDetails(selectedDate) : { appts: [], holiday: null }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="space-y-4">
+      {/* Legend */}
+      <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-600 bg-white border border-gray-100 rounded-xl px-4 py-2.5 shadow-sm">
+        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Legend:</span>
+        {[
+          { label: 'Appointments',  bg: 'bg-blue-100',   text: 'text-blue-700' },
+          { label: 'Special Event', bg: 'bg-amber-100',  text: 'text-amber-800' },
+          { label: 'Clinic Closed', bg: 'bg-red-100',    text: 'text-red-800' },
+        ].map(l => (
+          <span key={l.label} className="flex items-center gap-1.5">
+            <span className={`w-2.5 h-2.5 rounded-sm ${l.bg}`} />
+            <span className={l.text}>{l.label}</span>
+          </span>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Calendar Grid Section */}
       <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-4">
         {/* Calendar Header */}
@@ -429,6 +445,7 @@ export default function CalendarClient({
           </div>
         </div>
       )}
+    </div>
     </div>
   )
 }

@@ -1,5 +1,6 @@
 // src/app/page.tsx
 import { createClient } from '@/lib/supabase/serverSSR'
+import { supabaseAdmin } from '@/lib/supabase/server'
 import { MapPin } from 'lucide-react'
 
 // Import your newly migrated layout sections
@@ -59,6 +60,27 @@ export default async function Home() {
 
   const clinicsList: Clinic[] = clinics || []
 
+  // Fetch statistics from database bypass RLS (using service role)
+  // 1. Partner Clinics: count of active clinics
+  const clinicsCount = clinicsList.length
+
+  // 2. Happy Patients: total patient records count
+  const { count: patientsCountResult } = await supabaseAdmin
+    .from('patients')
+    .select('*', { count: 'exact', head: true })
+  const patientsCount = patientsCountResult || 0
+
+  // 3. Average Rating: calculate average feedback rating across all clinics
+  const { data: allFeedback } = await supabaseAdmin
+    .from('feedback')
+    .select('rating')
+
+  let averageRating = 4.9
+  if (allFeedback && allFeedback.length > 0) {
+    const sum = allFeedback.reduce((acc, f) => acc + f.rating, 0)
+    averageRating = sum / allFeedback.length
+  }
+
   // Extract unique names and filter out empty values
   const specialtyOptions = Array.from(new Set([
     ...(allSpecialties || []).map(s => s.specialty_name),
@@ -73,8 +95,12 @@ export default async function Home() {
       <Header />
       
       <main>
-        {/* 2. Brand New Hero Section (with Book Appointment buttons) */}
-        <Hero />
+        {/* 2. Brand New Hero Section (with Book Appointment buttons and real statistics) */}
+        <Hero 
+          clinicsCount={clinicsCount}
+          patientsCount={patientsCount}
+          averageRating={averageRating}
+        />
 
         {/* 2.5 Interactive Clinic Map Section */}
         <section id="clinic-map" className="py-20 bg-gradient-to-br from-blue-50 to-indigo-100 border-b">

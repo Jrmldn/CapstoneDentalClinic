@@ -2,7 +2,22 @@ import { Button } from "@/components/ui/button";
 import { Calendar, ArrowRight } from "lucide-react";
 import Image from "next/image"; // FIX: Imported next/image
 
-export function Hero() {
+export function Hero({
+  clinicsCount = 0,
+  patientsCount = 0,
+  averageRating = 4.9
+}: {
+  clinicsCount?: number
+  patientsCount?: number
+  averageRating?: number
+}) {
+  const formatCount = (count: number) => {
+    if (count >= 1000) {
+      return (count / 1000).toFixed(1).replace(/\.0$/, '') + 'K+'
+    }
+    return count > 0 ? count + '+' : '0'
+  }
+
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-cyan-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
@@ -41,15 +56,15 @@ export function Hero() {
             {/* Stats */}
             <div className="grid grid-cols-3 gap-8 pt-8 border-t border-gray-200">
               <div>
-                <div className="text-3xl font-bold text-gray-900">500+</div>
+                <div className="text-3xl font-bold text-gray-900">{formatCount(clinicsCount)}</div>
                 <div className="text-sm text-gray-600">Partner Clinics</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-gray-900">50K+</div>
+                <div className="text-3xl font-bold text-gray-900">{formatCount(patientsCount)}</div>
                 <div className="text-sm text-gray-600">Happy Patients</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-gray-900">4.9</div>
+                <div className="text-3xl font-bold text-gray-900">{averageRating.toFixed(1)}</div>
                 <div className="text-sm text-gray-600">Average Rating</div>
               </div>
             </div>
