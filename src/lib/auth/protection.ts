@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/serverSSR'
+import { cache } from 'react'
 
-export async function enforceRole(requiredRole: 'patient' | 'superadmin' | 'staff' | 'dentist') {
+export const enforceRole = cache(async (requiredRole: 'patient' | 'superadmin' | 'staff' | 'dentist') => {
   const supabase = await createClient()
 
   const {
@@ -28,4 +29,4 @@ export async function enforceRole(requiredRole: 'patient' | 'superadmin' | 'staf
   }
 
   return authUser
-}
+})

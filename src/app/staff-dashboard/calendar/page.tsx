@@ -1,5 +1,5 @@
-import { createClient } from '@/lib/supabase/serverSSR'
 import { enforceRole } from '@/lib/auth/protection'
+import { getStaffClinicId } from '@/lib/auth/getClinicId'
 import { fetchCalendarData } from '@/actions/managementActions'
 import CalendarClient from '@/components/features/calendar/CalendarClient'
 
@@ -7,16 +7,9 @@ export const metadata = { title: 'Calendar — AppoinDent' }
 
 export default async function CalendarPage() {
   const authUser = await enforceRole('staff')
-  const supabase = await createClient()
 
   // Resolve clinicId
-  const { data: staffRecord } = await supabase
-    .from('clinic_staff')
-    .select('clinic_id')
-    .eq('user_id', authUser.id)
-    .maybeSingle()
-
-  const clinicId = staffRecord?.clinic_id as number | undefined
+  const clinicId = await getStaffClinicId(authUser.id)
   if (!clinicId) {
     return (
       <div className="p-8 text-center text-gray-400">

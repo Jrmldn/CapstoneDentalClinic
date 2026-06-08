@@ -1,20 +1,21 @@
 import { supabaseAdmin } from '@/lib/supabase/server'
+import { cache } from 'react'
 
 /**
  * Fetches staff clinic assignment and name.
  */
-export async function getStaffRecordByUserId(userId: string) {
+export const getStaffRecordByUserId = cache(async (userId: string) => {
   return supabaseAdmin
     .from('clinic_staff')
     .select('clinic_id, first_name, last_name')
     .eq('user_id', userId)
     .maybeSingle()
-}
+})
 
 /**
  * Fetches data required for the staff dashboard in parallel.
  */
-export async function getStaffDashboardData(clinicId: number, today: string) {
+export const getStaffDashboardData = cache(async (clinicId: number, today: string) => {
   return Promise.all([
     // Today's appointments
     supabaseAdmin
@@ -47,12 +48,12 @@ export async function getStaffDashboardData(clinicId: number, today: string) {
       .eq('payment_status', 'unpaid')
       .gte('created_at', `${today.slice(0, 7)}-01T00:00:00+08:00`),
   ])
-}
+})
 
 /**
  * Fetches counts and recent clinics for the superadmin dashboard.
  */
-export async function getSuperadminDashboardStatsData() {
+export const getSuperadminDashboardStatsData = cache(async () => {
   return Promise.all([
     supabaseAdmin.from('clinics').select('*', { count: 'exact', head: true }),
     supabaseAdmin.from('clinic_staff').select('*', { count: 'exact', head: true }),
@@ -63,4 +64,4 @@ export async function getSuperadminDashboardStatsData() {
       .order('created_at', { ascending: false })
       .limit(5)
   ])
-}
+})

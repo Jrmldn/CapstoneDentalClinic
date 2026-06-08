@@ -32,31 +32,54 @@ export default async function Home() {
   // so public users can readJoined data like specialties and feedback.
   const supabase = await createClient()
 
-  const { data: clinics } = await supabase
-    .from('clinics')
-    .select(`
-      id, name, address, phone, manual_status, latitude, longitude,
-      clinic_hmo(hmo_name),
-      clinic_specialties(specialty_name),
-      clinic_operating_hours(day_of_week, open_time, close_time, is_closed),
-      clinic_gallery(image_url, sort_order),
-      feedback(rating)
-    `)
-    .eq('is_active', true)
+  // Run all independent public landing page database queries in parallel (Class A Optimization)
+  const [
+    clinicsRes,
+    specialtiesRes,
+    hmosRes,
+    dentistsRes,
+    patientsCountRes,
+    feedbackRes,
+  ] = await Promise.all([
+    supabase
+      .from('clinics')
+      .select(`
+        id, name, address, phone, manual_status, latitude, longitude,
+        clinic_hmo(hmo_name),
+        clinic_specialties(specialty_name),
+        clinic_operating_hours(day_of_week, open_time, close_time, is_closed),
+        clinic_gallery(image_url, sort_order),
+        feedback(rating)
+      `)
+      .eq('is_active', true),
 
-  // Fetch all unique specialties and HMOs for filters
-  const { data: allSpecialties } = await supabase
-    .from('clinic_specialties')
-    .select('specialty_name')
+    supabase
+      .from('clinic_specialties')
+      .select('specialty_name'),
 
-  const { data: allHMOs } = await supabase
-    .from('clinic_hmo')
-    .select('hmo_name')
+    supabase
+      .from('clinic_hmo')
+      .select('hmo_name'),
 
-  // Also fetch specialties from dentists table as a fallback
-  const { data: dentistSpecialties } = await supabase
-    .from('dentists')
-    .select('specialty')
+    supabase
+      .from('dentists')
+      .select('specialty'),
+
+    supabaseAdmin
+      .from('patients')
+      .select('*', { count: 'exact', head: true }),
+
+    supabaseAdmin
+      .from('feedback')
+      .select('rating')
+  ])
+
+  const clinics = clinicsRes.data
+  const allSpecialties = specialtiesRes.data
+  const allHMOs = hmosRes.data
+  const dentistSpecialties = dentistsRes.data
+  const patientsCountResult = patientsCountRes.count
+  const allFeedback = feedbackRes.data
 
   const clinicsList: Clinic[] = clinics || []
 
@@ -65,15 +88,9 @@ export default async function Home() {
   const clinicsCount = clinicsList.length
 
   // 2. Happy Patients: total patient records count
-  const { count: patientsCountResult } = await supabaseAdmin
-    .from('patients')
-    .select('*', { count: 'exact', head: true })
   const patientsCount = patientsCountResult || 0
 
   // 3. Average Rating: calculate average feedback rating across all clinics
-  const { data: allFeedback } = await supabaseAdmin
-    .from('feedback')
-    .select('rating')
 
   let averageRating = 4.9
   if (allFeedback && allFeedback.length > 0) {

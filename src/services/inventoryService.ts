@@ -1,15 +1,16 @@
 import { supabaseAdmin } from '@/lib/supabase/server'
+import { cache } from 'react'
 
 /**
  * Fetches an inventory item by its ID.
  */
-export async function getInventoryItemById(itemId: number) {
+export const getInventoryItemById = cache(async (itemId: number) => {
   return supabaseAdmin
     .from('inventory_items')
     .select('id, quantity, alert_threshold')
     .eq('id', itemId)
     .single()
-}
+})
 
 /**
  * Updates stock quantity and updated_at timestamp for a specific inventory item.
@@ -38,13 +39,13 @@ export async function insertInventoryLog(logData: {
 /**
  * Fetches all inventory items for a specific clinic.
  */
-export async function getInventoryItemsByClinic(clinicId: number) {
+export const getInventoryItemsByClinic = cache(async (clinicId: number) => {
   return supabaseAdmin
     .from('inventory_items')
     .select('*')
     .eq('clinic_id', clinicId)
     .order('name', { ascending: true })
-}
+})
 
 /**
  * Inserts a new inventory item.
@@ -76,7 +77,7 @@ export async function deleteInventoryItemById(itemId: number) {
 /**
  * Fetches change history for a single inventory item along with user profile information.
  */
-export async function getInventoryLogsByItemId(itemId: number) {
+export const getInventoryLogsByItemId = cache(async (itemId: number) => {
   return supabaseAdmin
     .from('inventory_logs')
     .select(`
@@ -89,7 +90,7 @@ export async function getInventoryLogsByItemId(itemId: number) {
     `)
     .eq('item_id', itemId)
     .order('created_at', { ascending: false })
-}
+})
 
 /**
  * Fetches name info for clinic staff from a list of user IDs.

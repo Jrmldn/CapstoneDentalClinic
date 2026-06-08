@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase/server'
+import { cache } from 'react'
 
 export interface TransactionHeaderInsertData {
   clinic_id: number
@@ -72,7 +73,7 @@ export async function syncAppointmentPaymentDetails(
 /**
  * Fetches transactions and associated items for a patient.
  */
-export async function getTransactionsByPatient(patientId: number, clinicId?: number) {
+export const getTransactionsByPatient = cache(async (patientId: number, clinicId?: number) => {
   let query = supabaseAdmin
     .from('transactions')
     .select(`
@@ -95,12 +96,12 @@ export async function getTransactionsByPatient(patientId: number, clinicId?: num
   }
 
   return query
-}
+})
 
 /**
  * Fetches treatment history for a patient.
  */
-export async function getTreatmentHistoryByPatient(patientId: number, clinicId?: number) {
+export const getTreatmentHistoryByPatient = cache(async (patientId: number, clinicId?: number) => {
   let query = supabaseAdmin
     .from('treatment_history')
     .select(`
@@ -116,7 +117,7 @@ export async function getTreatmentHistoryByPatient(patientId: number, clinicId?:
   }
 
   return query
-}
+})
 
 /**
  * Updates payment details on a transaction.
@@ -140,11 +141,11 @@ export async function updateTransactionPayment(
 /**
  * Fetches transactions for a clinic, optionally filtered by date.
  */
-export async function getTransactionsByClinic(
+export const getTransactionsByClinic = cache(async (
   clinicId: number,
   from?: string,
   to?: string
-) {
+) => {
   let query = supabaseAdmin
     .from('transactions')
     .select(`
@@ -163,4 +164,4 @@ export async function getTransactionsByClinic(
   if (to)   query = query.lte('created_at', `${to}T23:59:59`)
 
   return query
-}
+})

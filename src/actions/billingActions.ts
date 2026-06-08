@@ -115,10 +115,15 @@ export async function fetchPatientBillingHistory(
   clinicId?: number   // optional: scope to a specific clinic
 ) {
   try {
-    const { data: transactions, error } = await getTransactionsByPatient(patientId, clinicId)
+    const [txRes, treatRes] = await Promise.all([
+      getTransactionsByPatient(patientId, clinicId),
+      getTreatmentHistoryByPatient(patientId, clinicId)
+    ])
+
+    const { data: transactions, error } = txRes
     if (error) throw new Error(error.message)
 
-    const { data: treatmentHistory, error: treatError } = await getTreatmentHistoryByPatient(patientId, clinicId)
+    const { data: treatmentHistory, error: treatError } = treatRes
     if (treatError) throw new Error(treatError.message)
 
     return {

@@ -1,10 +1,11 @@
 import { supabaseAdmin } from '@/lib/supabase/server'
+import { cache } from 'react'
 
 
 /**
  * Searches for users matching email criteria and returns their IDs.
  */
-export async function getMatchingUserIds(searchQuery: string): Promise<string[]> {
+export const getMatchingUserIds = cache(async (searchQuery: string): Promise<string[]> => {
   if (!searchQuery) return []
 
   const { data: matchingUsers } = await supabaseAdmin
@@ -13,7 +14,7 @@ export async function getMatchingUserIds(searchQuery: string): Promise<string[]>
     .ilike('email', `%${searchQuery}%`)
 
   return matchingUsers?.map(u => u.id) || []
-}
+})
 
 /**
  * Invokes admin auth to create a user account.
@@ -95,7 +96,7 @@ export async function deleteUserRecord(userId: string) {
 /**
  * Fetches all staff from clinic_staff.
  */
-export async function getAllStaff() {
+export const getAllStaff = cache(async () => {
   return supabaseAdmin
     .from('clinic_staff')
     .select(`
@@ -108,12 +109,12 @@ export async function getAllStaff() {
       clinics ( name )
     `)
     .order('first_name', { ascending: true })
-}
+})
 
 /**
  * Fetches all dentists from dentists.
  */
-export async function getAllDentists() {
+export const getAllDentists = cache(async () => {
   return supabaseAdmin
     .from('dentists')
     .select(`
@@ -127,7 +128,7 @@ export async function getAllDentists() {
       clinics ( name )
     `)
     .order('first_name', { ascending: true })
-}
+})
 
 /**
  * Handles filtered and paginated staff queries.

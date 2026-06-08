@@ -1,9 +1,10 @@
 import { supabaseAdmin } from '@/lib/supabase/server'
+import { cache } from 'react'
 
 /**
  * Retrieves appointments for a given clinic and date range.
  */
-export async function getAppointmentsByDateRange(clinicId: number, start: string, end: string) {
+export const getAppointmentsByDateRange = cache(async (clinicId: number, start: string, end: string) => {
   return supabaseAdmin
     .from('appointments')
     .select(`
@@ -16,75 +17,75 @@ export async function getAppointmentsByDateRange(clinicId: number, start: string
     .gte('scheduled_at', start)
     .lte('scheduled_at', end)
     .order('scheduled_at', { ascending: true })
-}
+})
 
 /**
  * Fetches holiday configuration for a clinic on a specific date.
  */
-export async function getClinicHoliday(clinicId: number, date: string) {
+export const getClinicHoliday = cache(async (clinicId: number, date: string) => {
   return supabaseAdmin
     .from('clinic_holidays')
     .select('id, is_special_day')
     .eq('clinic_id', clinicId)
     .eq('date', date)
     .maybeSingle()
-}
+})
 
 /**
  * Fetches operating hours for a clinic on a specific weekday.
  */
-export async function getClinicOperatingHours(clinicId: number, dayOfWeek: number) {
+export const getClinicOperatingHours = cache(async (clinicId: number, dayOfWeek: number) => {
   return supabaseAdmin
     .from('clinic_operating_hours')
     .select('open_time, close_time, is_closed')
     .eq('clinic_id', clinicId)
     .eq('day_of_week', dayOfWeek)
     .maybeSingle()
-}
+})
 
 /**
  * Fetches dentist shift times for a specific weekday.
  */
-export async function getDentistAvailability(dentistId: number, dayOfWeek: number) {
+export const getDentistAvailability = cache(async (dentistId: number, dayOfWeek: number) => {
   return supabaseAdmin
     .from('dentist_availability')
     .select('start_time, end_time')
     .eq('dentist_id', dentistId)
     .eq('day_of_week', dayOfWeek)
     .maybeSingle()
-}
+})
 
 /**
  * Retrieves blocked slots for a dentist on a specific date.
  */
-export async function getDentistBlockedSlots(dentistId: number, date: string) {
+export const getDentistBlockedSlots = cache(async (dentistId: number, date: string) => {
   return supabaseAdmin
     .from('dentist_blocked_slots')
     .select('start_time, end_time')
     .eq('dentist_id', dentistId)
     .eq('blocked_date', date)
-}
+})
 
 /**
  * Fetches service details by ID.
  */
-export async function getServiceById(serviceId: number) {
+export const getServiceById = cache(async (serviceId: number) => {
   return supabaseAdmin
     .from('services')
     .select('slot_duration_min')
     .eq('id', serviceId)
     .single()
-}
+})
 
 /**
  * Retrieves active booked appointments for a dentist/clinic on a specific date.
  */
-export async function getActiveAppointmentsForSlots(
+export const getActiveAppointmentsForSlots = cache(async (
   clinicId: number,
   dentistId: number,
   start: string,
   end: string
-) {
+) => {
   return supabaseAdmin
     .from('appointments')
     .select('scheduled_at, end_at')
@@ -93,18 +94,18 @@ export async function getActiveAppointmentsForSlots(
     .gte('scheduled_at', start)
     .lte('scheduled_at', end)
     .not('status', 'in', '("cancelled","no_show")')
-}
+})
 
 /**
  * Fetches clinic capacity configuration.
  */
-export async function getClinicCapacity(clinicId: number) {
+export const getClinicCapacity = cache(async (clinicId: number) => {
   return supabaseAdmin
     .from('clinics')
     .select('max_appointments_per_day')
     .eq('id', clinicId)
     .single()
-}
+})
 
 export interface CreateAppointmentInsertData {
   clinic_id: number
@@ -154,13 +155,13 @@ export async function insertAppointmentLog(logData: AppointmentLogInsertData) {
 /**
  * Fetches an appointment's current status.
  */
-export async function getAppointmentStatus(appointmentId: number) {
+export const getAppointmentStatus = cache(async (appointmentId: number) => {
   return supabaseAdmin
     .from('appointments')
     .select('status')
     .eq('id', appointmentId)
     .single()
-}
+})
 
 /**
  * Updates status and rescheduling details for an appointment.

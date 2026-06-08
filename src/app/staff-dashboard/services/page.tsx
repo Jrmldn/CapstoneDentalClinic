@@ -1,5 +1,5 @@
-import { createClient } from '@/lib/supabase/serverSSR'
 import { enforceRole } from '@/lib/auth/protection'
+import { getStaffClinicId } from '@/lib/auth/getClinicId'
 import { supabaseAdmin } from '@/lib/supabase/server'
 import ServicesTabs from '@/components/features/clinic-services/ServicesTabs'
 
@@ -10,16 +10,8 @@ export const metadata = { title: 'Services & Products — AppoinDent' }
 export default async function ServicesPage() {
   const authUser = await enforceRole('staff')
 
-  const supabase = await createClient()
-
   // Resolve clinic_id
-  const { data: staffRecord } = await supabase
-    .from('clinic_staff')
-    .select('clinic_id')
-    .eq('user_id', authUser.id)
-    .maybeSingle()
-
-  const clinicId = staffRecord?.clinic_id as number | undefined
+  const clinicId = await getStaffClinicId(authUser.id)
   if (!clinicId) {
     return (
       <div className="p-8 text-center text-gray-400">

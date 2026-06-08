@@ -27,22 +27,27 @@ export default async function BookPage() {
   }
 
   const clinicIdNum = parseInt(clinicId, 10)
-  const patientDetails = await fetchPatientRecord(patientRecord.id, clinicIdNum, {})
+
+  // Fetch patient details, dentists, and services in parallel (Class A Optimization)
+  const [patientDetails, dentistsRes, servicesRes] = await Promise.all([
+    fetchPatientRecord(patientRecord.id, clinicIdNum, {}),
+    supabaseAdmin
+      .from('dentists')
+      .select('id, first_name, last_name, specialty')
+      .eq('clinic_id', clinicIdNum),
+    supabaseAdmin
+      .from('services')
+      .select('id, name, price, slot_duration_min')
+      .eq('clinic_id', clinicIdNum)
+      .eq('is_active', true)
+  ])
+
   if (!patientDetails.success || !patientDetails.record) {
     redirect('/')
   }
 
-  // Fetch dentists and services
-  const { data: dentists } = await supabaseAdmin
-    .from('dentists')
-    .select('id, first_name, last_name, specialty')
-    .eq('clinic_id', clinicIdNum)
-
-  const { data: services } = await supabaseAdmin
-    .from('services')
-    .select('id, name, price, slot_duration_min')
-    .eq('clinic_id', clinicIdNum)
-    .eq('is_active', true)
+  const dentists = dentistsRes.data
+  const services = servicesRes.data
 
   return (
     <BookingTab

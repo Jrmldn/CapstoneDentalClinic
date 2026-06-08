@@ -371,28 +371,21 @@ export async function fetchNotifications(
   status?: 'pending' | 'sent' | 'failed'
 ) {
   try {
-    // Get appointment IDs for this clinic
-    const { data: apptIds } = await supabaseAdmin
-      .from('appointments')
-      .select('id')
-      .eq('clinic_id', clinicId)
-
-    const ids = apptIds?.map(a => a.id) ?? []
-    if (ids.length === 0) return { success: true, notifications: [] }
-
+    // Single Query Join Filter (Class G/B/A optimization)
     const baseQuery = supabaseAdmin
       .from('notifications')
       .select(`
         *,
         patients ( id, first_name, last_name, phone ),
-        appointments ( id, scheduled_at )
+        appointments!inner ( id, scheduled_at, clinic_id )
       `)
-      .in('appointment_id', ids)
+      .eq('appointments.clinic_id', clinicId)
       .order('created_at', { ascending: false })
 
     const { data: notifications, error } = status
       ? await baseQuery.eq('status', status)
       : await baseQuery
+
     if (error) throw new Error(error.message)
 
     return { success: true, notifications: notifications ?? [] }

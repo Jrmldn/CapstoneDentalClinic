@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/serverSSR'
 import { enforceRole } from '@/lib/auth/protection'
+import { getStaffClinicId } from '@/lib/auth/getClinicId'
 import { fetchClinicTransactions } from '@/actions/billingActions'
 import BillingClient from '@/components/features/billing/BillingClient'
 
@@ -10,13 +11,7 @@ export default async function BillingPage() {
   const supabase = await createClient()
 
   // Resolve clinicId
-  const { data: staffRecord } = await supabase
-    .from('clinic_staff')
-    .select('clinic_id')
-    .eq('user_id', authUser.id)
-    .maybeSingle()
-
-  const clinicId = staffRecord?.clinic_id as number | undefined
+  const clinicId = await getStaffClinicId(authUser.id)
   if (!clinicId) {
     return (
       <div className="p-8 text-center text-gray-400">
@@ -25,12 +20,9 @@ export default async function BillingPage() {
     )
   }
 
-  // Fetch initial clinic transactions
-  const txRes = await fetchClinicTransactions(clinicId)
-  const initialTransactions = txRes.transactions || []
-
-  // Fetch appointments, services, products, and patients for billing creation
-  const [appointmentsRes, servicesRes, productsRes, patientsRes] = await Promise.all([
+  // Fetch initial clinic transactions, appointments, services, products, and patients for billing creation in parallel (Class A Optimization)
+  const [txRes, appointmentsRes, servicesRes, productsRes, patientsRes] = await Promise.all([
+    fetchClinicTransactions(clinicId),
     supabase
       .from('appointments')
       .select(`
@@ -67,6 +59,8 @@ export default async function BillingPage() {
       .eq('clinic_id', clinicId)
       .eq('is_active', true)
   ])
+
+  const initialTransactions = txRes.transactions || []
 
   // Map and flatten active patients
   const activePatients = (patientsRes.data || [])
