@@ -1,7 +1,8 @@
 'use server'
 
 import { supabaseAdmin } from '@/lib/supabase/server'
-import { Clinic } from '@/types'
+import { Clinic } from '@/types/clinic'
+
 
 export async function getClinics(): Promise<{ success: boolean; data: Pick<Clinic, 'id' | 'name'>[] }> {
   try {

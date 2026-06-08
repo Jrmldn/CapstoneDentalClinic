@@ -14,11 +14,10 @@ export default function Pagination({
   currentPage,
   totalPages,
   totalCount,
-  itemsPerPage,
   onPageChange,
   showingCount,
   selectedCount = 0,
-}: PaginationProps) {
+}: Omit<PaginationProps, 'itemsPerPage'>) { // FIX: Removed unused itemsPerPage
   const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1)
 
   return (

@@ -1,22 +1,25 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import PersonnelTabs from './_components/PersonnelTabs'
-import StaffTable, { StaffMember } from './_components/StaffTable'
-import DentistTable, { Dentist } from './_components/DentistTable'
-import AddPersonnelModal from './_components/AddPersonnelModal'
-import EditPersonnelModal from './_components/EditPersonnelModal'
+import PersonnelTabs from '@/components/features/personnel/PersonnelTabs'
+import StaffTable from '@/components/features/personnel/StaffTable'
+import DentistTable from '@/components/features/personnel/DentistTable'
+import AddPersonnelModal from '@/components/features/personnel/AddPersonnelModal'
+import EditPersonnelModal from '@/components/features/personnel/EditPersonnelModal'
+
 import { Plus } from 'lucide-react'
 import PersonnelFilterBar from '@/components/features/personnel/PersonnelFilterBar'
-import { fetchPersonnel, fetchStaff, fetchDentists } from '@/actions/personnelActions'
+import { fetchStaff, fetchDentists } from '@/actions/personnelActions' // FIX: Removed unused fetchPersonnel
 import { getClinics } from '@/lib/queries/clinics'
+import { FormattedStaff, FormattedDentist } from '@/types/clinic'
+
 
 const ITEMS_PER_PAGE = 10
 
 export default function PersonnelPage() {
   const [activeTab, setActiveTab] = useState<'staff' | 'dentists'>('staff')
-  const [staffData, setStaffData] = useState<StaffMember[]>([])
-  const [dentistData, setDentistData] = useState<Dentist[]>([])
+  const [staffData, setStaffData] = useState<FormattedStaff[]>([])
+  const [dentistData, setDentistData] = useState<FormattedDentist[]>([])
   const [clinics, setClinics] = useState<{ id: number; name: string }[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -31,53 +34,67 @@ export default function PersonnelPage() {
   // Modal States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const [selectedPerson, setSelectedPerson] = useState<StaffMember | Dentist | null>(null)
+  const [selectedPerson, setSelectedPerson] = useState<FormattedStaff | FormattedDentist | null>(null)
 
   // Ref to track if it's the first time the component is rendering
   const isFirstRender = useRef(true)
 
-  const loadClinics = async () => {
+  const loadClinics = useCallback(async () => { // FIX: Wrapped in useCallback
     const result = await getClinics()
     if (result.success) {
       setClinics(result.data || [])
     }
-  }
+  }, [])
 
   const loadPersonnelData = useCallback(
     async (showLoadingScreen = true) => {
       if (showLoadingScreen) setIsLoading(true)
 
-      if (activeTab === 'staff') {
-        const result = await fetchStaff(searchQuery, clinicFilter, currentPage, ITEMS_PER_PAGE)
-        if (result.success) {
-          setStaffData(result.staff)
-          setTotalCount(result.totalCount || 0)
+      try {
+        if (activeTab === 'staff') {
+          const result = await fetchStaff(searchQuery, clinicFilter, currentPage, ITEMS_PER_PAGE)
+          if (result.success) {
+            setStaffData(result.staff)
+            setTotalCount(result.totalCount || 0)
+          } else {
+            console.error('Failed to fetch staff:', result.error)
+            alert('Failed to load staff: ' + result.error)
+          }
+        } else {
+          const result = await fetchDentists(searchQuery, clinicFilter, currentPage, ITEMS_PER_PAGE)
+          if (result.success) {
+            setDentistData(result.dentists)
+            setTotalCount(result.totalCount || 0)
+          } else {
+            console.error('Failed to fetch dentists:', result.error)
+            alert('Failed to load dentists: ' + result.error)
+          }
         }
-      } else {
-        const result = await fetchDentists(searchQuery, clinicFilter, currentPage, ITEMS_PER_PAGE)
-        if (result.success) {
-          setDentistData(result.dentists)
-          setTotalCount(result.totalCount || 0)
-        }
+      } catch (err) {
+        console.error('Unexpected error loading personnel:', err)
+      } finally {
+        setIsLoading(false)
       }
-
-      if (showLoadingScreen) setIsLoading(false)
     },
     [searchQuery, clinicFilter, activeTab, currentPage]
   )
 
   // Initial page load - fetch clinics and load personnel
   useEffect(() => {
-    loadClinics()
-    loadPersonnelData(true)
-    isFirstRender.current = false
-  }, [])
+    // FIX: Deferring calls to avoid synchronous setState warning in effect body
+    const timer = setTimeout(() => {
+      loadClinics()
+      loadPersonnelData(false)
+      isFirstRender.current = false
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [loadClinics, loadPersonnelData]) // FIX: Added dependencies
 
   // Refetch data whenever the page number changes
   useEffect(() => {
     if (isFirstRender.current) return
     loadPersonnelData(false)
-  }, [currentPage])
+  }, [currentPage, loadPersonnelData]) // FIX: Added dependencies
 
   // Debounced effect for Search & Filter
   useEffect(() => {
@@ -89,13 +106,13 @@ export default function PersonnelPage() {
     }, 300)
 
     return () => clearTimeout(delayDebounceFn)
-  }, [searchQuery, clinicFilter, activeTab])
+  }, [searchQuery, clinicFilter, activeTab, loadPersonnelData]) // FIX: Added dependencies
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => { // FIX: Wrapped in useCallback
     await loadPersonnelData(false)
-  }
+  }, [loadPersonnelData])
 
-  const handleEdit = (person: StaffMember | Dentist) => {
+  const handleEdit = (person: FormattedStaff | FormattedDentist) => {
     setSelectedPerson(person)
     setIsEditModalOpen(true)
   }

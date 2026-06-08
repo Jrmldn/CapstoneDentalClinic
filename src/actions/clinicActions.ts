@@ -2,7 +2,8 @@
 
 import { supabaseAdmin } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { AddClinicData } from '@/types'
+import { AddClinicData } from '@/types/clinic'
+
 
 export async function addClinic(data: AddClinicData) {
   try {
@@ -22,13 +23,12 @@ export async function addClinic(data: AddClinicData) {
       ])
       .select()
 
-    if (error) {
-      throw new Error(error.message)
-    }
+    if (error) throw new Error(error.message)
 
     revalidatePath('/superadmin-dashboard/clinic')
     return { success: true, clinic: clinic?.[0] }
   } catch (error) {
+    console.error('Error in addClinic:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to add clinic',
@@ -65,6 +65,7 @@ export async function fetchClinics(
     const { data: clinics, count, error } = await query
 
     if (error) {
+      console.error('Database error in fetchClinics:', error)
       throw new Error(error.message)
     }
 
@@ -74,6 +75,7 @@ export async function fetchClinics(
       totalCount: count || 0,
     }
   } catch (error) {
+    console.error('Error in fetchClinics:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch clinics',
@@ -90,13 +92,12 @@ export async function deleteClinic(clinicId: number) {
       .delete()
       .eq('id', clinicId)
 
-    if (error) {
-      throw new Error(error.message)
-    }
+    if (error) throw new Error(error.message)
 
     revalidatePath('/superadmin-dashboard/clinic')
     return { success: true }
   } catch (error) {
+    console.error('Error in deleteClinic:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to delete clinic',
@@ -111,13 +112,12 @@ export async function updateClinicStatus(clinicId: number, isActive: boolean) {
       .update({ is_active: isActive })
       .eq('id', clinicId)
 
-    if (error) {
-      throw new Error(error.message)
-    }
+    if (error) throw new Error(error.message)
 
     revalidatePath('/superadmin-dashboard/clinic')
     return { success: true }
   } catch (error) {
+    console.error('Error in updateClinicStatus:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update clinic status',
@@ -141,13 +141,12 @@ export async function updateClinic(clinicId: number, data: AddClinicData) {
       .eq('id', clinicId)
       .select()
 
-    if (error) {
-      throw new Error(error.message)
-    }
+    if (error) throw new Error(error.message)
 
     revalidatePath('/superadmin-dashboard/clinic')
     return { success: true, clinic: clinic?.[0] }
   } catch (error) {
+    console.error('Error in updateClinic:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update clinic',

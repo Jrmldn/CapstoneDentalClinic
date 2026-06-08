@@ -4,12 +4,14 @@ import { Edit2, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 
 export type ColumnDef<T> = {
-  key: keyof T
-  label: string
-  render?: (value: any, item: T) => React.ReactNode
-  width?: string
-  align?: 'left' | 'right' | 'center'
-}
+  [K in keyof T]: {
+    key: K
+    label: string
+    render?: (value: T[K], item: T) => React.ReactNode
+    width?: string
+    align?: 'left' | 'right' | 'center'
+  }
+}[keyof T]
 
 export type RowAction<T> = {
   icon: React.ReactNode
@@ -25,7 +27,7 @@ interface DataTableProps<T> {
   columns: ColumnDef<T>[]
   getRowKey: (item: T) => string | number
   onEdit?: (item: T) => void
-  onDelete?: (item: T) => any
+  onDelete?: (item: T) => void | Promise<void> | unknown
   currentPage: number
   totalCount: number
   itemsPerPage: number
@@ -36,7 +38,7 @@ interface DataTableProps<T> {
   selectableRows?: boolean
 }
 
-export default function DataTable<T extends Record<string, any>>({
+export default function DataTable<T extends object>({
   data,
   columns,
   getRowKey,
@@ -153,7 +155,7 @@ export default function DataTable<T extends Record<string, any>>({
                   )}
                   {columns.map((col) => {
                     const value = item[col.key]
-                    const rendered = col.render ? col.render(value, item) : value
+                    const rendered = col.render ? col.render(value, item) : (value as React.ReactNode)
 
                     return (
                       <td
