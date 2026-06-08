@@ -27,8 +27,8 @@ export default function ImageSlider({
 
   return (
     <div className={cn(
-      "w-full relative overflow-hidden bg-slate-100 rounded-lg",
-      compact ? "h-28" : "h-40"
+      "w-full relative overflow-hidden bg-slate-100",
+      compact ? "h-28 rounded-t-lg" : "h-40 rounded-t-lg"
     )}>
       <img 
         src={images[currentImgIndex].image_url} 

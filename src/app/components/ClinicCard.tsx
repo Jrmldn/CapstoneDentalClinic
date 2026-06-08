@@ -21,6 +21,7 @@ export interface ClinicCardProps {
   operatingHours?: { day_of_week: number; open_time: string; close_time: string; is_closed: boolean }[]
   className?: string
   compact?: boolean
+  onClick?: () => void
 }
 
 /**
@@ -30,7 +31,7 @@ export interface ClinicCardProps {
  */
 export function ClinicCard({ 
   id, name, address, phone, specialties, gallery, 
-  feedback, isOpen, hmos, operatingHours, className, compact 
+  feedback, isOpen, hmos, operatingHours, className, compact, onClick 
 }: ClinicCardProps) {
   const {
     images,
@@ -42,11 +43,15 @@ export function ClinicCard({
   } = useClinicCard({ gallery, feedback, operatingHours })
 
   return (
-    <div className={cn(
-      "bg-white rounded-lg transition-all duration-300 overflow-hidden border border-slate-200 flex flex-col group",
-      compact ? "shadow-none border-none w-[240px] p-2.5" : "shadow-md hover:shadow-lg",
-      className
-    )}>
+    <div
+      className={cn(
+        "bg-white rounded-lg transition-all duration-300 overflow-hidden border border-slate-200 flex flex-col group",
+        compact ? "shadow-none border-none w-[240px] p-2.5" : "shadow-md hover:shadow-lg",
+        onClick ? "cursor-pointer" : "",
+        className
+      )}
+      onClick={onClick}
+    >
       {/* Image Slider */}
       <ImageSlider
         images={images}

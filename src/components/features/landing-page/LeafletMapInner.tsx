@@ -157,9 +157,12 @@ const LeafletMapInner = ({ clinics, onMapReady, activeClinicId, onMarkerClick }:
         .bindPopup(container, {
           maxWidth: 280,
           minWidth: 240,
-          className: 'custom-clinic-popup'
+          className: 'custom-clinic-popup',
+          autoPan: true,
+          autoPanPaddingTopLeft: L.point(20, 90),
+          autoPanPaddingBottomRight: L.point(20, 20)
         })
-        .on('click', () => onMarkerClick(clinic.id))
+        .on('click', function (this: L.Marker) { onMarkerClick(clinic.id); this.openPopup() })
 
       markersRef.current[clinic.id] = marker
       bounds.extend([clinic.latitude, clinic.longitude])
@@ -176,14 +179,15 @@ const LeafletMapInner = ({ clinics, onMapReady, activeClinicId, onMarkerClick }:
 
   }, [clinics, dentalIcon, onMarkerClick])
 
-  // Sync active marker selection
+  // Sidebar click: fly smoothly to the marker — popup is NOT opened here.
+  // Popup only opens when the marker itself is clicked (handled in the click handler above).
   useEffect(() => {
-    if (activeClinicId && markersRef.current[activeClinicId]) {
+    if (activeClinicId && markersRef.current[activeClinicId] && mapRef.current) {
       const marker = markersRef.current[activeClinicId]
-      marker.openPopup()
-      if (mapRef.current) {
-        mapRef.current.panTo(marker.getLatLng(), { animate: true })
-      }
+      mapRef.current.flyTo(marker.getLatLng(), mapRef.current.getZoom(), {
+        animate: true,
+        duration: 0.6,
+      })
     }
   }, [activeClinicId])
 

@@ -1,6 +1,4 @@
-Act as an Expert React & TypeScript Developer.
-
-I need you to refactor the following monolithic React component. Your goal is to make it highly modular, clean, DRY, and performant while strictly adhering to the architectural practices and rules below.
+Refactor the following monolithic React component. Make it highly modular, clean, DRY, and performant while strictly adhering to the architectural practices and rules below.
 
 1. Architecture & Maintainability
 Separation of Concerns: Keep UI, logic, and data handling in distinct layers. Extract all business logic, data fetching, and side effects (like useEffect) into custom hooks. The main component should only be responsible for rendering the UI.

@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useRef, useEffect } from 'react'
 import { MapPin, Navigation } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from '@/lib/utils'
@@ -43,8 +43,20 @@ export const ClinicMap = ({ clinics, availableSpecialties, availableHMOs }: Clin
     handleMapReady,
   } = useClinicFilters({ clinics, availableSpecialties, availableHMOs })
 
+  // Refs for sidebar scroll-into-view behaviour
+  const sidebarRef = useRef<HTMLDivElement>(null)
+  const cardRefs = useRef<{ [id: string]: HTMLDivElement | null }>({})
+
+  // When a map marker is clicked the activeClinicId changes — scroll the sidebar to that card
+  useEffect(() => {
+    if (activeClinicId && cardRefs.current[activeClinicId]) {
+      cardRefs.current[activeClinicId]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [activeClinicId])
+
   return (
     <div className="space-y-6">
+      <style>{`.no-scrollbar::-webkit-scrollbar { display: none; }`}</style>
       <FilterSection
         selectedSpecialty={selectedSpecialty}
         setSelectedSpecialty={setSelectedSpecialty}
@@ -92,26 +104,37 @@ export const ClinicMap = ({ clinics, availableSpecialties, availableHMOs }: Clin
           />
         </div>
 
-        {/* Sidebar Clinic List */}
-        <div className="flex flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar">
+        {/* Sidebar Clinic List — scrollable but scrollbar hidden */}
+        <div
+          ref={sidebarRef}
+          className="flex flex-col gap-4 overflow-y-auto no-scrollbar px-1.5 py-1.5"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
           {filteredClinics.map((clinic) => (
-            <ClinicCard
+            <div
               key={clinic.id}
-              id={clinic.id}
-              name={clinic.name}
-              address={clinic.address}
-              phone={clinic.phone}
-              specialties={clinic.clinic_specialties}
-              gallery={clinic.clinic_gallery}
-              feedback={clinic.feedback}
-              isOpen={getEffectiveClinicStatus(clinic.manual_status, clinic.clinic_operating_hours) === 'open'}
-              hmos={clinic.clinic_hmo}
-              operatingHours={clinic.clinic_operating_hours}
-              className={cn(
-                "shrink-0",
-                activeClinicId === clinic.id ? "ring-2 ring-blue-500 shadow-md" : ""
-              )}
-            />
+              ref={(el) => { cardRefs.current[clinic.id] = el }}
+            >
+              <ClinicCard
+                id={clinic.id}
+                name={clinic.name}
+                address={clinic.address}
+                phone={clinic.phone}
+                specialties={clinic.clinic_specialties}
+                gallery={clinic.clinic_gallery}
+                feedback={clinic.feedback}
+                isOpen={getEffectiveClinicStatus(clinic.manual_status, clinic.clinic_operating_hours) === 'open'}
+                hmos={clinic.clinic_hmo}
+                operatingHours={clinic.clinic_operating_hours}
+                onClick={() => setActiveClinicId(clinic.id)}
+                className={cn(
+                  "shrink-0 transition-all duration-150",
+                  activeClinicId === clinic.id
+                    ? "ring-[2.5px] ring-blue-600 shadow-md"
+                    : "hover:ring-2 hover:ring-blue-200 hover:shadow-md"
+                )}
+              />
+            </div>
           ))}
           {filteredClinics.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2 bg-white rounded-xl border border-slate-100">

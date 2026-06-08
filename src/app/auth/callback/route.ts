@@ -8,7 +8,6 @@ export async function GET(request: NextRequest) {
   const tokenHash = searchParams.get('token_hash') // ◄ Catch native email token hashes
   const type = searchParams.get('type')
   const next = searchParams.get('next')
-
   const cookieStore = await cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
