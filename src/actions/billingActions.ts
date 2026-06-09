@@ -72,14 +72,14 @@ export async function createTransaction(data: CreateTransactionData) {
     if (txError) throw new Error(txError.message)
 
     // Insert line items
-    const itemsData = data.items.map(item => ({
+    const itemsData = data.items.map(lineItem => ({
       transaction_id: transaction.id,
-      service_id:     item.service_id  ?? null,
-      product_id:     item.product_id  ?? null,
-      description:    item.description,
-      quantity:       item.quantity,
-      unit_price:     item.unit_price,
-      total_price:    parseFloat((item.unit_price * item.quantity).toFixed(2)),
+      service_id:     lineItem.service_id  ?? null,
+      product_id:     lineItem.product_id  ?? null,
+      description:    lineItem.description,
+      quantity:       lineItem.quantity,
+      unit_price:     lineItem.unit_price,
+      total_price:    parseFloat((lineItem.unit_price * lineItem.quantity).toFixed(2)),
     }))
 
     const { error: itemsError } = await insertTransactionItems(itemsData)
@@ -115,16 +115,16 @@ export async function fetchPatientBillingHistory(
   clinicId?: number   // optional: scope to a specific clinic
 ) {
   try {
-    const [txRes, treatRes] = await Promise.all([
+    const [transactionsResult, treatmentHistoryResult] = await Promise.all([
       getTransactionsByPatient(patientId, clinicId),
       getTreatmentHistoryByPatient(patientId, clinicId)
     ])
 
-    const { data: transactions, error } = txRes
-    if (error) throw new Error(error.message)
+    const { data: transactions, error: transactionsError } = transactionsResult
+    if (transactionsError) throw new Error(transactionsError.message)
 
-    const { data: treatmentHistory, error: treatError } = treatRes
-    if (treatError) throw new Error(treatError.message)
+    const { data: treatmentHistory, error: treatmentError } = treatmentHistoryResult
+    if (treatmentError) throw new Error(treatmentError.message)
 
     return {
       success: true,

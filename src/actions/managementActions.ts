@@ -313,15 +313,15 @@ export async function fetchInventoryLogs(itemId: number) {
       getDentistsByUserIds(userIds)
     ])
 
-    const nameMap: Record<string, string> = {}
-    staffRes.data?.forEach(s => {
-      nameMap[s.user_id] = `${s.first_name} ${s.last_name}`
+    const performerNameByUserId: Record<string, string> = {}
+    staffRes.data?.forEach(staffMember => {
+      performerNameByUserId[staffMember.user_id] = `${staffMember.first_name} ${staffMember.last_name}`
     })
-    dentistRes.data?.forEach(d => {
-      nameMap[d.user_id] = `${d.first_name} ${d.last_name}`
+    dentistRes.data?.forEach(dentistMember => {
+      performerNameByUserId[dentistMember.user_id] = `${dentistMember.first_name} ${dentistMember.last_name}`
     })
 
-    const formattedLogs = formatInventoryLogs(rawLogs, nameMap)
+    const formattedLogs = formatInventoryLogs(rawLogs, performerNameByUserId)
 
     return { success: true, logs: formattedLogs }
   } catch (error) {
@@ -547,7 +547,7 @@ export async function generateServiceFrequency(
     }
 
     const serviceFrequency = Array.from(freq.entries())
-      .map(([id, data]) => ({ id, ...data }))
+      .map(([id, serviceStats]) => ({ id, ...serviceStats }))
       .sort((a, b) => b.count - a.count)   // most popular first
 
     return { success: true, from, to, serviceFrequency }

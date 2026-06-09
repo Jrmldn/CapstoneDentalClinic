@@ -26,14 +26,14 @@ interface Appointment {
   scheduled_at: string
   end_at: string
   status: string
-  patients: { id: number; first_name: string; last_name: string } | null
-  services: { id: number; name: string } | null
+  patients: { id: number; first_name: string; last_name: string } | { id: number; first_name: string; last_name: string }[] | null
+  services: { id: number; name: string } | { id: number; name: string }[] | null
 }
 
 interface CalendarClientProps {
   clinicId: number
   initialHolidays: Holiday[]
-  initialAppointments: any[]
+  initialAppointments: Appointment[]
   currentYear: number
   currentMonth: number
 }
@@ -66,15 +66,15 @@ export default function CalendarClient({
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Fetch data when year/month changes
-  const loadMonthData = async (y: number, m: number) => {
+  const loadMonthData = async (targetYear: number, targetMonth: number) => {
     setIsLoading(true)
-    const res = await fetchCalendarData(clinicId, y, m)
+    const calendarResult = await fetchCalendarData(clinicId, targetYear, targetMonth)
     setIsLoading(false)
-    if (res.success) {
-      setHolidays(res.holidays as Holiday[])
-      setAppointments(res.appointments as Appointment[])
+    if (calendarResult.success) {
+      setHolidays(calendarResult.holidays as Holiday[])
+      setAppointments(calendarResult.appointments as Appointment[])
     }
-  };
+  }
 
   const handlePrevMonth = () => {
     let newMonth = month - 1
@@ -106,14 +106,14 @@ export default function CalendarClient({
     if (!holidayDate || !holidayDesc) return
     setIsSubmitting(true)
 
-    const res = await manageClinicHolidays(clinicId, 'add', {
+    const addHolidayResult = await manageClinicHolidays(clinicId, 'add', {
       date: holidayDate,
       description: holidayDesc,
       is_special_day: isSpecialDay
     })
 
     setIsSubmitting(false)
-    if (res.success) {
+    if (addHolidayResult.success) {
       alert('Holiday/Closure added successfully!')
       setIsHolidayModalOpen(false)
       setHolidayDate('')
@@ -121,18 +121,18 @@ export default function CalendarClient({
       setIsSpecialDay(false)
       loadMonthData(year, month)
     } else {
-      alert(res.error || 'Failed to add holiday')
+      alert(addHolidayResult.error || 'Failed to add holiday')
     }
   }
 
   const handleDeleteHoliday = async (holidayId: number) => {
     if (!confirm('Are you sure you want to remove this holiday/closure?')) return
-    const res = await manageClinicHolidays(clinicId, 'remove', undefined, holidayId)
-    if (res.success) {
+    const removeHolidayResult = await manageClinicHolidays(clinicId, 'remove', undefined, holidayId)
+    if (removeHolidayResult.success) {
       alert('Holiday removed!')
       loadMonthData(year, month)
     } else {
-      alert(res.error || 'Failed to remove holiday')
+      alert(removeHolidayResult.error || 'Failed to remove holiday')
     }
   }
 
@@ -349,11 +349,13 @@ export default function CalendarClient({
                       minute: '2-digit',
                       hour12: true
                     })
+                    const patientObj = Array.isArray(appt.patients) ? appt.patients[0] : appt.patients
+                    const serviceObj = Array.isArray(appt.services) ? appt.services[0] : appt.services
                     return (
                       <div key={appt.id} className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-1.5">
                         <div className="flex justify-between items-center">
                           <span className="font-semibold text-slate-800 text-sm">
-                            {appt.patients ? `${appt.patients.first_name} ${appt.patients.last_name}` : 'Unknown'}
+                            {patientObj ? `${patientObj.first_name} ${patientObj.last_name}` : 'Unknown'}
                           </span>
                           <span className="text-[10px] font-bold bg-blue-50 text-blue-700 px-2 py-0.5 rounded capitalize">
                             {appt.status}
@@ -364,7 +366,7 @@ export default function CalendarClient({
                             <Clock className="w-3.5 h-3.5 text-gray-400" />
                             {time}
                           </span>
-                          <span className="font-semibold text-slate-700">{appt.services?.name ?? '—'}</span>
+                          <span className="font-semibold text-slate-700">{serviceObj?.name ?? '—'}</span>
                         </div>
                       </div>
                     )

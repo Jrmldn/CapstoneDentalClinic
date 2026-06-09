@@ -33,13 +33,13 @@ export function generateTimeSlots(
 
   // Build blocked windows in minutes
   const blockedWindows = [
-    ...bookedAppts.map(a => ({
-      from: toMinutes(new Date(a.scheduled_at).toTimeString().slice(0, 5)),
-      to:   toMinutes(new Date(a.end_at).toTimeString().slice(0, 5)),
+    ...bookedAppts.map(bookedAppt => ({
+      from: toMinutes(new Date(bookedAppt.scheduled_at).toTimeString().slice(0, 5)),
+      to:   toMinutes(new Date(bookedAppt.end_at).toTimeString().slice(0, 5)),
     })),
-    ...blockedSlots.map(b => ({
-      from: toMinutes(b.start_time),
-      to:   toMinutes(b.end_time),
+    ...blockedSlots.map(blockedSlot => ({
+      from: toMinutes(blockedSlot.start_time),
+      to:   toMinutes(blockedSlot.end_time),
     })),
   ]
 
