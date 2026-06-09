@@ -33,6 +33,15 @@ export default async function ProfilePage() {
     redirect('/')
   }
 
+  // Auto-sync email from Auth if the patient record email is empty
+  if (!patientDetails.record.patient.email && authUser.email) {
+    await supabase
+      .from('patients')
+      .update({ email: authUser.email })
+      .eq('id', patientRecord.id)
+    patientDetails.record.patient.email = authUser.email
+  }
+
   return (
     <ProfileTab record={patientDetails.record as any} />
   )
