@@ -41,22 +41,22 @@ export default function NotificationsClient({
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const refreshLogs = async () => {
-    const res = await fetchNotifications(clinicId)
-    if (res.success) {
-      setNotifications(res.notifications as Notification[])
+    const notificationsResult = await fetchNotifications(clinicId)
+    if (notificationsResult.success) {
+      setNotifications(notificationsResult.notifications as Notification[])
     }
   }
 
   const handleRetrigger = async (notificationId: number) => {
     setIsSubmitting(true)
-    const res = await retriggerNotification(notificationId)
+    const retriggerResult = await retriggerNotification(notificationId)
     setIsSubmitting(false)
 
-    if (res.success) {
+    if (retriggerResult.success) {
       alert('Notification marked as pending and queued for resend!')
       refreshLogs()
     } else {
-      alert(res.error || 'Failed to retrigger notification')
+      alert(retriggerResult.error || 'Failed to retrigger notification')
     }
   }
 

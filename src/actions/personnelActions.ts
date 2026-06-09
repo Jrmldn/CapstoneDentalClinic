@@ -22,6 +22,13 @@ import {
   formatDentists
 } from '@/utils/personnel-helpers'
 
+interface PersonnelUpdatePayload {
+  first_name: string
+  last_name: string
+  clinic_id: number
+  specialty?: string
+}
+
 export async function addStaff(data: StaffData) {
   try {
     const { data: authData, error: authError } = await createAuthUser({
@@ -110,16 +117,16 @@ export async function deletePersonnel(userId: string) {
 
 export async function fetchPersonnel() {
   try {
-    const { data: staffData, error: staffError } = await getAllStaff()
+    const { data: rawStaff, error: staffError } = await getAllStaff()
 
     if (staffError) throw new Error(staffError.message)
 
-    const { data: dentistData, error: dentistError } = await getAllDentists()
+    const { data: rawDentists, error: dentistError } = await getAllDentists()
 
     if (dentistError) throw new Error(dentistError.message)
 
-    const formattedStaff = formatStaff(staffData || [])
-    const formattedDentists = formatDentists(dentistData || [])
+    const formattedStaff = formatStaff(rawStaff || [])
+    const formattedDentists = formatDentists(rawDentists || [])
 
     return {
       success: true,
@@ -231,14 +238,7 @@ export async function updatePersonnel(
   try {
     const table = type === 'staff' ? 'clinic_staff' : 'dentists'
 
-    interface UpdatePayload {
-      first_name: string
-      last_name: string
-      clinic_id: number
-      specialty?: string
-    }
-
-    const updatePayload: UpdatePayload = {
+    const updatePayload: PersonnelUpdatePayload = {
       first_name: data.firstName,
       last_name: data.lastName,
       clinic_id: data.clinicId,

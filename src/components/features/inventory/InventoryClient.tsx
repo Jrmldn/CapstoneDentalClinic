@@ -31,15 +31,17 @@ export default function InventoryClient({ clinicId, initialItems, userId }: Inve
   const [loggingItem, setLoggingItem] = useState<InventoryItem | null>(null)
 
   const refreshInventory = async () => {
-    const res = await fetchInventory(clinicId)
-    if (res.success) setItems(res.items as InventoryItem[])
+    const inventoryResult = await fetchInventory(clinicId)
+    if (inventoryResult.success) setItems(inventoryResult.items as InventoryItem[])
   }
 
   const filteredItems = items.filter(item =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const lowStockCount = items.filter(i => Number(i.quantity) <= Number(i.alert_threshold)).length
+  const lowStockCount = items.filter(inventoryItem =>
+    Number(inventoryItem.quantity) <= Number(inventoryItem.alert_threshold)
+  ).length
 
   return (
     <div className="space-y-6">

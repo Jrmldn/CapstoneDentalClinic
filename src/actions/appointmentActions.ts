@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/serverSSR'
 import {
   getAppointmentsByDateRange,
   getClinicHoliday,
@@ -200,6 +201,15 @@ export async function createAppointment(data: CreateAppointmentData) {
     })
 
     // Link patient to clinic via clinic_patients junction table if they aren't already linked
+    let enrolledByUserId: string | null = null
+    try {
+      const supabase = await createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) enrolledByUserId = user.id
+    } catch (authErr) {
+      console.warn('Could not resolve enrolled_by user automatically in createAppointment:', authErr)
+    }
+
     const { error: junctionError } = await supabaseAdmin
       .from('clinic_patients')
       .upsert(
@@ -207,6 +217,7 @@ export async function createAppointment(data: CreateAppointmentData) {
           clinic_id: data.clinic_id,
           patient_id: data.patient_id,
           is_active: true,
+          enrolled_by: enrolledByUserId,
         }],
         { onConflict: 'clinic_id,patient_id', ignoreDuplicates: true }
       )

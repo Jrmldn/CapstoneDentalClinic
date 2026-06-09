@@ -50,13 +50,29 @@ export interface ToothConditionData {
   notes?: string
 }
 
+type PatientSummary = {
+  id: number
+  first_name: string
+  last_name: string
+  phone: string
+  email: string | null
+  birthdate: string
+  gender: string
+  is_guest: boolean
+  created_at: string
+}
+
+type ClinicPatientRow = {
+  is_active: boolean
+  patients: PatientSummary | PatientSummary[] | null
+}
+
 // ─────────────────────────────────────────────────────────────
 // REGISTER PATIENT  (walk-in / guest / full user)
 // ─────────────────────────────────────────────────────────────
 
 export async function registerPatient(data: RegisterPatientData) {
   try {
-    // 1. Insert into patients table
     const { data: patient, error: patientError } = await supabaseAdmin
       .from('patients')
       .insert([{
@@ -75,7 +91,6 @@ export async function registerPatient(data: RegisterPatientData) {
 
     if (patientError) throw new Error(patientError.message)
 
-    // 2. Insert medical history if any fields are provided
     const hasMedicalData =
       data.blood_type ||
       data.allergies?.length ||
@@ -102,17 +117,16 @@ export async function registerPatient(data: RegisterPatientData) {
       if (medError) throw new Error(medError.message)
     }
 
-    // 3. Link patient to clinic via clinic_patients junction
     // Uses onConflict to safely handle re-registration of an existing patient
     // uq_clinic_patient ensures (clinic_id, patient_id) is unique
     if (data.clinic_id) {
-      let enrolledBy: string | null = data.enrolled_by || null
+      let enrolledByUserId: string | null = data.enrolled_by || null
 
-      if (!enrolledBy) {
+      if (!enrolledByUserId) {
         try {
           const supabase = await createClient()
           const { data: { user } } = await supabase.auth.getUser()
-          if (user) enrolledBy = user.id
+          if (user) enrolledByUserId = user.id
         } catch (authErr) {
           console.warn('Could not resolve enrolled_by user automatically:', authErr)
         }
@@ -125,7 +139,7 @@ export async function registerPatient(data: RegisterPatientData) {
             clinic_id: data.clinic_id,
             patient_id: patient.id,
             is_active: true,
-            enrolled_by: enrolledBy,
+            enrolled_by: enrolledByUserId,
           }],
           { onConflict: 'clinic_id,patient_id', ignoreDuplicates: true }
         )
@@ -395,11 +409,14 @@ export async function fetchPatientsByClinic(
 
     if (error) throw new Error(error.message)
 
-    const patients = (data || [])
-      .map((item: any) => item.patients)
-      .filter((p): p is any => p !== null)
+    const patients = ((data || []) as ClinicPatientRow[])
+      .map((row) => {
+        const p = row.patients
+        return Array.isArray(p) ? p[0] : p
+      })
+      .filter((patient): patient is PatientSummary => patient !== null && patient !== undefined)
 
-    patients.sort((a: any, b: any) => {
+    patients.sort((a: PatientSummary, b: PatientSummary) => {
       const lastA = (a.last_name || '').toLowerCase()
       const lastB = (b.last_name || '').toLowerCase()
       if (lastA !== lastB) return lastA.localeCompare(lastB)

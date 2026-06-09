@@ -16,12 +16,16 @@ export function ProfileTab({ record }: ProfileTabProps) {
   const [profileStatus, setProfileStatus] = useState<{ success?: boolean; error?: string; loading?: boolean }>({})
 
   // Profile Form State
-  const [profileFirst, setProfileFirst] = useState(record.patient.first_name)
-  const [profileLast, setProfileLast] = useState(record.patient.last_name)
-  const [profilePhone, setProfilePhone] = useState(record.patient.phone)
-  const [profileBirthdate, setProfileBirthdate] = useState(record.patient.birthdate)
-  const [profileGender, setProfileGender] = useState(record.patient.gender)
-  const [profileAddress, setProfileAddress] = useState(record.patient.address)
+  const [profileFirst, setProfileFirst] = useState(record.patient.first_name || '')
+  const [profileLast, setProfileLast] = useState(record.patient.last_name || '')
+  const [profilePhone, setProfilePhone] = useState(
+    record.patient.phone && !record.patient.phone.startsWith('Update required')
+      ? record.patient.phone
+      : ''
+  )
+  const [profileBirthdate, setProfileBirthdate] = useState(record.patient.birthdate || '')
+  const [profileGender, setProfileGender] = useState(record.patient.gender || 'male')
+  const [profileAddress, setProfileAddress] = useState(record.patient.address || '')
 
   // Handle Profile Update
   const handleProfileSubmit = async (e: React.FormEvent) => {
@@ -94,6 +98,18 @@ export function ProfileTab({ record }: ProfileTabProps) {
               </div>
             </div>
 
+            <div>
+              <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">Email Address</label>
+              <input
+                type="email"
+                value={record.patient.email || ''}
+                readOnly
+                disabled
+                className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-slate-400 cursor-not-allowed"
+              />
+              <p className="text-xs text-slate-400 mt-1">Your email is managed by your account sign-in method and cannot be edited.</p>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">Phone Number</label>
@@ -101,9 +117,17 @@ export function ProfileTab({ record }: ProfileTabProps) {
                   type="text"
                   value={profilePhone}
                   onChange={(e) => setProfilePhone(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="09XXXXXXXXX"
+                  className={`w-full border rounded-lg p-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    !profilePhone
+                      ? 'border-red-300 placeholder:text-slate-400'
+                      : 'border-slate-200'
+                  }`}
                   required
                 />
+                {!profilePhone && (
+                  <p className="text-[10px] text-red-500 mt-1 uppercase">Update Required</p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">Birth Date</label>

@@ -16,16 +16,16 @@ export function calculateStaffDashboardStats(
   allInventory: Array<{ id: number; name: string; quantity: number; alert_threshold: number }>,
   pendingTx: Array<{ total_amount: number }>
 ): StaffDashboardStats {
-  const uniquePatients = new Set(patientsAppts.map((a) => a.patient_id)).size
+  const uniquePatients = new Set(patientsAppts.map((appt) => appt.patient_id)).size
   
   const lowStockItems = allInventory.filter(
     (item) => Number(item.quantity) <= Number(item.alert_threshold)
   )
   
-  const unpaidTotal = pendingTx.reduce((sum, tx) => sum + Number(tx.total_amount), 0)
+  const unpaidTotal = pendingTx.reduce((sum, transaction) => sum + Number(transaction.total_amount), 0)
   
-  const confirmedToday = todayAppts.filter((a) => a.status === 'confirmed').length
-  const pendingToday = todayAppts.filter((a) => a.status === 'pending').length
+  const confirmedToday = todayAppts.filter((appt) => appt.status === 'confirmed').length
+  const pendingToday = todayAppts.filter((appt) => appt.status === 'pending').length
 
   return {
     uniquePatients,
