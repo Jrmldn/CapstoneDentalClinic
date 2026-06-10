@@ -1,0 +1,22 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Interpolate variables from the environment/env-file at build time
+        # This is needed because Next.js bakes NEXT_PUBLIC_* variables during the build stage.
+        - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    image: capstone-dental-clinic:latest
+    container_name: capstone-dental-clinic
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+    # Load environment variables at runtime from your local environment file
+    env_file:
+      - .env.local
