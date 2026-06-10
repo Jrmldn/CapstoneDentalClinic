@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { fetchPatientRecord } from '@/actions/patientActions'
 import { createClient } from '@/lib/supabase/serverSSR'
 import { ProfileTab } from '../_components/ProfileTab'
+import { PatientRecord } from '../_components/types'
 
 export default async function ProfilePage() {
   const authUser = await enforceRole('patient')
@@ -43,6 +44,6 @@ export default async function ProfilePage() {
   }
 
   return (
-    <ProfileTab record={patientDetails.record as any} />
+    <ProfileTab record={patientDetails.record as unknown as PatientRecord} />
   )
 }

@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { fetchPatientRecord } from '@/actions/patientActions'
 import { createClient } from '@/lib/supabase/serverSSR'
 import { MedicalTab } from '../_components/MedicalTab'
+import { PatientRecord } from '../_components/types'
 
 export default async function MedicalPage() {
   const authUser = await enforceRole('patient')
@@ -36,6 +37,6 @@ export default async function MedicalPage() {
   }
 
   return (
-    <MedicalTab record={patientDetails.record as any} />
+    <MedicalTab record={patientDetails.record as unknown as PatientRecord} />
   )
 }

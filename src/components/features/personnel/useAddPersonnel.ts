@@ -22,15 +22,15 @@ export const useAddPersonnel = ({ isOpen, onClose, onSuccess, type, fixedClinicI
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [clinicId, setClinicId] = useState('')
+  const [clinicId, setClinicId] = useState(fixedClinicId ? fixedClinicId.toString() : '')
   const [specialty, setSpecialty] = useState('')
+  const [prevFixedClinicId, setPrevFixedClinicId] = useState(fixedClinicId)
 
-  // Pre-populate clinicId if fixedClinicId is provided
-  useEffect(() => {
-    if (fixedClinicId) {
-      setClinicId(fixedClinicId.toString())
-    }
-  }, [fixedClinicId, isOpen])
+  // Derived state adjustment during render to avoid useEffect cascading renders
+  if (fixedClinicId !== prevFixedClinicId) {
+    setPrevFixedClinicId(fixedClinicId)
+    setClinicId(fixedClinicId ? fixedClinicId.toString() : '')
+  }
   
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')

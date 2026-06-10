@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { fetchPatientRecord } from '@/actions/patientActions'
 import { createClient } from '@/lib/supabase/serverSSR'
 import { CalendarTab } from '../_components/CalendarTab'
+import { PatientRecord } from '../_components/types'
 
 export default async function CalendarPage() {
   const authUser = await enforceRole('patient')
@@ -34,6 +35,6 @@ export default async function CalendarPage() {
   }
 
   return (
-    <CalendarTab record={patientDetails.record as any} />
+    <CalendarTab record={patientDetails.record as unknown as PatientRecord} />
   )
 }

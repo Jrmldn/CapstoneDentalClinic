@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { fetchPatientRecord } from '@/actions/patientActions'
 import { createClient } from '@/lib/supabase/serverSSR'
 import { OverviewTab } from '../_components/OverviewTab'
+import { PatientRecord } from '../_components/types'
 
 export default async function DashboardPage() {
   const authUser = await enforceRole('patient')
@@ -36,7 +37,7 @@ export default async function DashboardPage() {
 
   return (
     <OverviewTab
-      record={patientDetails.record as any}
+      record={patientDetails.record as unknown as PatientRecord}
       authUserId={authUser.id}
     />
   )
