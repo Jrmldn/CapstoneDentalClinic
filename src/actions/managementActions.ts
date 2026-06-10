@@ -313,13 +313,13 @@ export async function fetchInventoryLogs(itemId: number) {
       getDentistsByUserIds(userIds)
     ])
 
-    const performerNameByUserId: Record<string, string> = {}
-    staffRes.data?.forEach(staffMember => {
+    const performerNameByUserId: Record<string, string> = {};
+    (staffRes.data as { user_id: string; first_name: string; last_name: string }[] | null)?.forEach(staffMember => {
       performerNameByUserId[staffMember.user_id] = `${staffMember.first_name} ${staffMember.last_name}`
-    })
-    dentistRes.data?.forEach(dentistMember => {
+    });
+    (dentistRes.data as { user_id: string; first_name: string; last_name: string }[] | null)?.forEach(dentistMember => {
       performerNameByUserId[dentistMember.user_id] = `${dentistMember.first_name} ${dentistMember.last_name}`
-    })
+    });
 
     const formattedLogs = formatInventoryLogs(rawLogs, performerNameByUserId)
 
@@ -430,7 +430,15 @@ export async function generateSalesReport(
 
     if (error) throw new Error(error.message)
 
-    const txList = transactions ?? []
+    interface TransactionItem {
+      total_amount: number | string | null
+      subtotal: number | string | null
+      discount_amount: number | string | null
+      hmo_coverage: number | string | null
+      philhealth_coverage: number | string | null
+    }
+
+    const txList = (transactions ?? []) as unknown as TransactionItem[]
 
     // Aggregate totals
     const totalRevenue    = txList.reduce((s, t) => s + Number(t.total_amount), 0)
@@ -483,7 +491,12 @@ export async function generateAppointmentSummary(
 
     if (error) throw new Error(error.message)
 
-    const apptList = appointments ?? []
+    interface AppointmentItem {
+      status: string
+      is_walk_in: boolean
+    }
+
+    const apptList = (appointments ?? []) as unknown as AppointmentItem[]
 
     // Count by status
     const countByStatus = apptList.reduce<Record<string, number>>((acc, a) => {

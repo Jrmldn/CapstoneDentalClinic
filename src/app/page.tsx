@@ -79,7 +79,7 @@ export default async function Home() {
   const allHMOs = hmosRes.data
   const dentistSpecialties = dentistsRes.data
   const patientsCountResult = patientsCountRes.count
-  const allFeedback = feedbackRes.data
+  const allFeedback = feedbackRes.data as { rating: number }[] | null
 
   const clinicsList: Clinic[] = clinics || []
 

@@ -4,6 +4,8 @@ import { enforceRole } from '@/lib/auth/protection'
 import { getStaffClinicId } from '@/lib/auth/getClinicId'
 import AppointmentsClient from '@/components/features/appointments/AppointmentsClient'
 
+import { Appointment, Patient } from '@/components/features/appointments/AppointmentTypes'
+
 export const metadata = { title: 'Appointments — AppoinDent' }
 export const dynamic = 'force-dynamic'
 export default async function AppointmentsPage() {
@@ -36,20 +38,48 @@ export default async function AppointmentsPage() {
       payment_status,
       patients ( id, first_name, last_name, phone ),
       services ( id, name, price, slot_duration_min ),
-      dentists ( id, first_name, last_name )
+      dentists ( id, first_name, last_name, specialty )
     `)
     .eq('clinic_id', clinicId)
     .order('scheduled_at', { ascending: false })
 
-  const mappedAppointments = (appointments ?? []).map((appt: any) => {
+  const mappedAppointments: Appointment[] = (appointments || []).map((appt) => {
     const rawPatient = appt.patients
     const rawService = appt.services
     const rawDentist = appt.dentists
+
+    const patientObj = Array.isArray(rawPatient) ? rawPatient[0] : rawPatient
+    const serviceObj = Array.isArray(rawService) ? rawService[0] : rawService
+    const dentistObj = Array.isArray(rawDentist) ? rawDentist[0] : rawDentist
+
     return {
-      ...appt,
-      patients: Array.isArray(rawPatient) ? rawPatient[0] : rawPatient,
-      services: Array.isArray(rawService) ? rawService[0] : rawService,
-      dentists: Array.isArray(rawDentist) ? rawDentist[0] : rawDentist,
+      id: appt.id,
+      scheduled_at: appt.scheduled_at,
+      end_at: appt.end_at,
+      status: appt.status,
+      notes: appt.notes,
+      is_walk_in: appt.is_walk_in,
+      downpayment: appt.downpayment,
+      payment_method: appt.payment_method,
+      payment_status: appt.payment_status,
+      patients: patientObj ? {
+        id: patientObj.id,
+        first_name: patientObj.first_name,
+        last_name: patientObj.last_name,
+        phone: patientObj.phone ?? ''
+      } : null,
+      services: serviceObj ? {
+        id: serviceObj.id,
+        name: serviceObj.name,
+        price: serviceObj.price,
+        slot_duration_min: serviceObj.slot_duration_min
+      } : null,
+      dentists: dentistObj ? {
+        id: dentistObj.id,
+        first_name: dentistObj.first_name,
+        last_name: dentistObj.last_name,
+        specialty: dentistObj.specialty ?? ''
+      } : null,
     }
   })
 
@@ -82,12 +112,26 @@ export default async function AppointmentsPage() {
   ])
 
   // Map and flatten nested items
-  const activePatients = (patientsRes.data || [])
-    .map((item: any) => item.patients)
-    .filter((p): p is any => p !== null)
+  const patientsData = (patientsRes.data || []) as unknown as {
+    patients: {
+      id: number
+      first_name: string
+      last_name: string
+      phone: string | null
+    } | null
+  }[]
+  const activePatients: Patient[] = patientsData
+    .map((item) => item.patients)
+    .filter((p): p is NonNullable<typeof p> => p !== null)
+    .map((p) => ({
+      id: p.id,
+      first_name: p.first_name,
+      last_name: p.last_name,
+      phone: p.phone ?? '',
+    }))
 
   // Sort by last name and then first name
-  activePatients.sort((a: any, b: any) => {
+  activePatients.sort((a, b) => {
     const lastA = (a.last_name || '').toLowerCase()
     const lastB = (b.last_name || '').toLowerCase()
     if (lastA !== lastB) return lastA.localeCompare(lastB)

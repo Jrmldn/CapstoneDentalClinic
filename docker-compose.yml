@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      network: host
       args:
         # Interpolate variables from the environment/env-file at build time
         # This is needed because Next.js bakes NEXT_PUBLIC_* variables during the build stage.

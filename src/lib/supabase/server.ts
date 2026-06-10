@@ -1,10 +1,24 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseSecretKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+let supabaseAdminInstance: ReturnType<typeof createClient> | null = null
 
-export const supabaseAdmin = createClient(supabaseUrl, supabaseSecretKey, {
-  auth: {
-    persistSession: false,
+export function getSupabaseAdmin() {
+  if (!supabaseAdminInstance) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseSecretKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+    supabaseAdminInstance = createClient(supabaseUrl, supabaseSecretKey, {
+      auth: {
+        persistSession: false,
+      }
+    })
+  }
+  return supabaseAdminInstance
+}
+
+// Backward compatibility: lazy-loaded proxy
+export const supabaseAdmin = new Proxy({} as any, {
+  get: (target, prop) => {
+    return getSupabaseAdmin()[prop as keyof typeof supabaseAdminInstance]
   }
 })

@@ -24,8 +24,12 @@ export default async function ReportsPage() {
   }
 
   // Load last 30 days reports by default
-  const today = new Date().toISOString().slice(0, 10)
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const todayObj = new Date()
+  const today = todayObj.toISOString().slice(0, 10)
+  
+  const thirtyDaysAgoObj = new Date()
+  thirtyDaysAgoObj.setDate(thirtyDaysAgoObj.getDate() - 30)
+  const thirtyDaysAgo = thirtyDaysAgoObj.toISOString().slice(0, 10)
 
   const [salesRes, apptRes, freqRes] = await Promise.all([
     generateSalesReport(clinicId, thirtyDaysAgo, today),

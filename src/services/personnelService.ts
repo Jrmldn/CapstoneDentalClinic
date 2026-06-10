@@ -13,7 +13,7 @@ export const getMatchingUserIds = cache(async (searchQuery: string): Promise<str
     .select('id')
     .ilike('email', `%${searchQuery}%`)
 
-  return matchingUsers?.map(u => u.id) || []
+  return (matchingUsers as { id: string }[] | null)?.map(u => u.id) || []
 })
 
 /**
