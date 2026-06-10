@@ -8,7 +8,7 @@ Clone the repository:
 ```bash
 git clone <your-repo-url>
 cd capstone-dental-clinic
-
+```
 ### 3. Configuration
 Create .env.local with required variables:
 
