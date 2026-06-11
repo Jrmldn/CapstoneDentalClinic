@@ -65,3 +65,49 @@ export const getSuperadminDashboardStatsData = cache(async () => {
       .limit(5)
   ])
 })
+
+/**
+ * Fetches dentist details by userId.
+ */
+export const getDentistRecordByUserId = cache(async (userId: string) => {
+  return supabaseAdmin
+    .from('dentists')
+    .select('id, clinic_id, first_name, last_name, specialty')
+    .eq('user_id', userId)
+    .maybeSingle()
+})
+
+/**
+ * Fetches dashboard data for a dentist in parallel.
+ */
+export const getDentistDashboardData = cache(async (dentistId: number, clinicId: number, today: string) => {
+  return Promise.all([
+    // Today's appointments for this dentist
+    supabaseAdmin
+      .from('appointments')
+      .select('id, scheduled_at, status, patients ( id, first_name, last_name, phone ), services ( name )')
+      .eq('dentist_id', dentistId)
+      .eq('clinic_id', clinicId)
+      .gte('scheduled_at', `${today}T00:00:00+08:00`)
+      .lte('scheduled_at', `${today}T23:59:59+08:00`)
+      .order('scheduled_at', { ascending: true }),
+
+    // Upcoming appointments for this dentist
+    supabaseAdmin
+      .from('appointments')
+      .select('id, scheduled_at, status, patients ( id, first_name, last_name, phone ), services ( name )')
+      .eq('dentist_id', dentistId)
+      .eq('clinic_id', clinicId)
+      .gt('scheduled_at', `${today}T23:59:59+08:00`)
+      .order('scheduled_at', { ascending: true })
+      .limit(5),
+
+    // Total unique patients treated or scheduled with this dentist
+    supabaseAdmin
+      .from('appointments')
+      .select('patient_id')
+      .eq('dentist_id', dentistId)
+      .eq('clinic_id', clinicId)
+  ])
+})
+

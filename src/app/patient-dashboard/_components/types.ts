@@ -25,6 +25,8 @@ export interface PatientRecord {
   }
   medicalHistory: {
     blood_type: string | null
+    blood_pressure: string | null
+    medical_flags: string | null
     allergies: string[]
     current_medications: string[]
     medical_conditions: string[]

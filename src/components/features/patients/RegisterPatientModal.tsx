@@ -23,7 +23,9 @@ const EMPTY_FORM = {
   bloodType: '',
   allergies: '',
   medications: '',
-  conditions: ''
+  conditions: '',
+  isPregnant: false,
+  isSmoker: false
 }
 
 export default function RegisterPatientModal({ isOpen, onClose, clinicId, onSuccess }: RegisterPatientModalProps) {
@@ -58,6 +60,8 @@ export default function RegisterPatientModal({ isOpen, onClose, clinicId, onSucc
       allergies: allergiesArr.length > 0 ? allergiesArr : undefined,
       current_medications: medsArr.length > 0 ? medsArr : undefined,
       medical_conditions: condsArr.length > 0 ? condsArr : undefined,
+      is_pregnant: formData.isPregnant,
+      is_smoker: formData.isSmoker,
       is_guest: false,
       clinic_id: clinicId
     })
@@ -164,7 +168,14 @@ export default function RegisterPatientModal({ isOpen, onClose, clinicId, onSucc
                 <select
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white outline-none"
                   value={formData.gender}
-                  onChange={e => setFormData({ ...formData, gender: e.target.value })}
+                  onChange={e => {
+                    const newGender = e.target.value
+                    setFormData({
+                      ...formData,
+                      gender: newGender,
+                      isPregnant: newGender === 'female' ? formData.isPregnant : false
+                    })
+                  }}
                 >
                   <option value="male">Male</option>
                   <option value="female">Female</option>
@@ -226,6 +237,28 @@ export default function RegisterPatientModal({ isOpen, onClose, clinicId, onSucc
                   value={formData.conditions}
                   onChange={e => setFormData({ ...formData, conditions: e.target.value })}
                 />
+              </div>
+              <div className="col-span-2 flex gap-6 pt-2">
+                {formData.gender === 'female' && (
+                  <label className="flex items-center gap-2.5 text-sm text-slate-700 font-semibold cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300 focus:ring-slate-900 w-4.5 h-4.5"
+                      checked={formData.isPregnant}
+                      onChange={e => setFormData({ ...formData, isPregnant: e.target.checked })}
+                    />
+                    Patient is Pregnant
+                  </label>
+                )}
+                <label className="flex items-center gap-2.5 text-sm text-slate-700 font-semibold cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300 focus:ring-slate-900 w-4.5 h-4.5"
+                    checked={formData.isSmoker}
+                    onChange={e => setFormData({ ...formData, isSmoker: e.target.checked })}
+                  />
+                  Patient is an Active Smoker
+                </label>
               </div>
             </div>
           </div>

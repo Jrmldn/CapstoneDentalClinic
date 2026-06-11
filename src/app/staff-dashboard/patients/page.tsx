@@ -36,6 +36,7 @@ export default async function PatientsPage() {
       <PatientsClient
         clinicId={clinicId}
         initialPatients={initialPatients}
+        viewerRole="staff"
       />
     </div>
   )

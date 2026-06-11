@@ -29,7 +29,13 @@ export default function AppointmentsClient({
   // Filters
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [dateFilter, setDateFilter] = useState('')
+  const [dateFilter, setDateFilter] = useState(() => {
+    const localDate = new Date()
+    const year = localDate.getFullYear()
+    const month = String(localDate.getMonth() + 1).padStart(2, '0')
+    const day = String(localDate.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  })
 
   // Modals state
   const [isBookModalOpen, setIsBookModalOpen] = useState(false)

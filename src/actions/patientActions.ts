@@ -250,7 +250,7 @@ export async function fetchPatientRecord(
     let appointmentsQuery = supabaseAdmin
       .from('appointments')
       .select(`
-        id, scheduled_at, end_at, status, is_walk_in, downpayment, payment_status,
+        id, scheduled_at, end_at, status, is_walk_in, downpayment, payment_status, notes,
         services ( id, name, price ),
         dentists ( id, first_name, last_name )
       `)
@@ -577,6 +577,228 @@ export async function updatePatientProfile(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update profile',
+    }
+  }
+}
+
+export interface PatientMedicalHistoryData {
+  blood_type?: string | null
+  blood_pressure?: string | null
+  medical_flags?: string | null
+  allergies?: string[]
+  current_medications?: string[]
+  medical_conditions?: string[]
+  previous_surgeries?: string | null
+  is_pregnant?: boolean
+  is_smoker?: boolean
+}
+
+export async function updatePatientMedicalHistory(
+  patientId: number,
+  data: PatientMedicalHistoryData
+) {
+  try {
+    const { data: updated, error } = await supabaseAdmin
+      .from('patient_medical_history')
+      .upsert(
+        {
+          patient_id: patientId,
+          blood_type: data.blood_type ?? null,
+          blood_pressure: data.blood_pressure ?? null,
+          medical_flags: data.medical_flags ?? null,
+          allergies: data.allergies ?? [],
+          current_medications: data.current_medications ?? [],
+          medical_conditions: data.medical_conditions ?? [],
+          previous_surgeries: data.previous_surgeries ?? null,
+          is_pregnant: data.is_pregnant ?? false,
+          is_smoker: data.is_smoker ?? false,
+        },
+        { onConflict: 'patient_id' }
+      )
+      .select()
+      .single()
+
+    if (error) throw new Error(error.message)
+
+    revalidatePath('/patient-dashboard')
+    revalidatePath('/patient-dashboard/profile')
+    revalidatePath('/staff-dashboard/patients')
+    revalidatePath('/dentist-dashboard/patients')
+    return { success: true, medicalHistory: updated }
+  } catch (error) {
+    console.error('Error in updatePatientMedicalHistory:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update medical history',
+    }
+  }
+}
+
+export interface TreatmentRecordData {
+  patient_id: number
+  clinic_id: number
+  dentist_id: number
+  appointment_id?: number | null
+  service_id?: number | null
+  tooth_number?: number | null
+  treatment: string
+  notes?: string
+  performed_at?: string
+}
+
+export async function addTreatmentRecord(data: TreatmentRecordData) {
+  try {
+    const { data: record, error } = await supabaseAdmin
+      .from('treatment_history')
+      .insert([{
+        patient_id: data.patient_id,
+        clinic_id: data.clinic_id,
+        dentist_id: data.dentist_id,
+        appointment_id: data.appointment_id ?? null,
+        service_id: data.service_id ?? null,
+        tooth_number: data.tooth_number ?? null,
+        treatment: data.treatment,
+        notes: data.notes ?? null,
+        performed_at: data.performed_at ?? new Date().toISOString(),
+      }])
+      .select()
+      .single()
+
+    if (error) throw new Error(error.message)
+
+    revalidatePath('/staff-dashboard/patients')
+    revalidatePath('/dentist-dashboard/patients')
+    return { success: true, record }
+  } catch (error) {
+    console.error('Error in addTreatmentRecord:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to add treatment record',
+    }
+  }
+}
+
+export interface PrescriptionData {
+  patient_id: number
+  clinic_id: number
+  dentist_id: number
+  appointment_id?: number | null
+  medication: string
+  dosage: string
+  frequency: string
+  duration?: string | null
+  notes?: string | null
+}
+
+export async function addPrescription(data: PrescriptionData) {
+  try {
+    const { data: prescription, error } = await supabaseAdmin
+      .from('prescriptions')
+      .insert([{
+        patient_id: data.patient_id,
+        clinic_id: data.clinic_id,
+        dentist_id: data.dentist_id,
+        appointment_id: data.appointment_id ?? null,
+        medication: data.medication,
+        dosage: data.dosage,
+        frequency: data.frequency,
+        duration: data.duration ?? null,
+        notes: data.notes ?? null,
+        prescribed_at: new Date().toISOString(),
+      }])
+      .select()
+      .single()
+
+    if (error) throw new Error(error.message)
+
+    revalidatePath('/staff-dashboard/patients')
+    revalidatePath('/dentist-dashboard/patients')
+    return { success: true, prescription }
+  } catch (error) {
+    console.error('Error in addPrescription:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to add prescription',
+    }
+  }
+}
+
+export interface PeriodontalScreeningData {
+  patient_id: number
+  clinic_id: number
+  dentist_id: number
+  appointment_id?: number | null
+  pocket_depths: any
+  bleeding_points: any
+  findings?: string | null
+}
+
+export async function addPeriodontalScreening(data: PeriodontalScreeningData) {
+  try {
+    const { data: screening, error } = await supabaseAdmin
+      .from('periodontal_screenings')
+      .insert([{
+        patient_id: data.patient_id,
+        clinic_id: data.clinic_id,
+        dentist_id: data.dentist_id,
+        appointment_id: data.appointment_id ?? null,
+        pocket_depths: data.pocket_depths,
+        bleeding_points: data.bleeding_points,
+        findings: data.findings ?? null,
+        screened_at: new Date().toISOString(),
+      }])
+      .select()
+      .single()
+
+    if (error) throw new Error(error.message)
+
+    revalidatePath('/staff-dashboard/patients')
+    revalidatePath('/dentist-dashboard/patients')
+    return { success: true, screening }
+  } catch (error) {
+    console.error('Error in addPeriodontalScreening:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to add periodontal screening',
+    }
+  }
+}
+
+export interface TmjAssessmentData {
+  patient_id: number
+  clinic_id: number
+  dentist_id: number
+  appointment_id?: number | null
+  findings?: string | null
+  pain_scale?: number | null
+}
+
+export async function addTmjAssessment(data: TmjAssessmentData) {
+  try {
+    const { data: assessment, error } = await supabaseAdmin
+      .from('tmj_assessments')
+      .insert([{
+        patient_id: data.patient_id,
+        clinic_id: data.clinic_id,
+        dentist_id: data.dentist_id,
+        appointment_id: data.appointment_id ?? null,
+        findings: data.findings ?? null,
+        pain_scale: data.pain_scale ?? null,
+        assessed_at: new Date().toISOString(),
+      }])
+      .select()
+      .single()
+
+    if (error) throw new Error(error.message)
+
+    revalidatePath('/staff-dashboard/patients')
+    revalidatePath('/dentist-dashboard/patients')
+    return { success: true, assessment }
+  } catch (error) {
+    console.error('Error in addTmjAssessment:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to add TMJ assessment',
     }
   }
 }

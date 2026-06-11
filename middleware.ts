@@ -52,7 +52,11 @@ export async function middleware(request: NextRequest) {
     if (pathname === '/login' || pathname === '/superadmin-login') {
       const destination = userRole === 'superadmin' 
         ? '/superadmin-dashboard' 
-        : (userRole === 'staff' ? '/staff-dashboard' : '/patient-dashboard')
+        : userRole === 'staff' 
+        ? '/staff-dashboard' 
+        : userRole === 'dentist'
+        ? '/dentist-dashboard'
+        : '/patient-dashboard'
       
       const redirectUrl = new URL(destination, request.url)
       

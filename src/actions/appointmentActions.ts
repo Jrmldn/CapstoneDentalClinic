@@ -228,6 +228,10 @@ export async function createAppointment(data: CreateAppointmentData) {
 
     revalidatePath('/staff-dashboard/appointments')
     revalidatePath('/staff-dashboard/patients')
+    revalidatePath('/patient-dashboard/appointments')
+    revalidatePath('/patient-dashboard/booking')
+    revalidatePath('/patient-dashboard/dashboard')
+    revalidatePath('/patient-dashboard/calendar')
     return { success: true, appointment }
   } catch (error) {
     console.error('Error in createAppointment:', error)
@@ -277,6 +281,10 @@ export async function updateAppointmentStatus(
     })
 
     revalidatePath('/staff-dashboard/appointments')
+    revalidatePath('/patient-dashboard/appointments')
+    revalidatePath('/patient-dashboard/dashboard')
+    revalidatePath('/patient-dashboard/calendar')
+    revalidatePath('/dentist-dashboard')
     return { success: true }
   } catch (error) {
     console.error('Error in updateAppointmentStatus:', error)
@@ -304,6 +312,187 @@ export async function updateMaxAppointments(clinicId: number, max: number) {
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update max appointments',
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// DENTIST BLOCKED SLOTS ACTIONS
+// ─────────────────────────────────────────────────────────────
+
+export async function addBlockedSlot(
+  dentistId: number,
+  blockedDate: string,
+  startTime: string | null,
+  endTime: string | null,
+  reason: string | null
+) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('dentist_blocked_slots')
+      .insert([{
+        dentist_id: dentistId,
+        blocked_date: blockedDate,
+        start_time: startTime || null,
+        end_time: endTime || null,
+        reason: reason || 'Blocked',
+      }])
+      .select()
+      .single()
+
+    if (error) throw new Error(error.message)
+
+    revalidatePath('/dentist-dashboard/availability')
+    return { success: true, blockedSlot: data }
+  } catch (error) {
+    console.error('Error in addBlockedSlot:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to add blocked slot',
+    }
+  }
+}
+
+export async function deleteBlockedSlot(blockedSlotId: number) {
+  try {
+    const { error } = await supabaseAdmin
+      .from('dentist_blocked_slots')
+      .delete()
+      .eq('id', blockedSlotId)
+
+    if (error) throw new Error(error.message)
+
+    revalidatePath('/dentist-dashboard/availability')
+    return { success: true }
+  } catch (error) {
+    console.error('Error in deleteBlockedSlot:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to delete blocked slot',
+    }
+  }
+}
+
+export async function fetchBlockedSlots(dentistId: number) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('dentist_blocked_slots')
+      .select('*')
+      .eq('dentist_id', dentistId)
+
+    if (error) throw new Error(error.message)
+
+    return { success: true, blockedSlots: data || [] }
+  } catch (error) {
+    console.error('Error in fetchBlockedSlots:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch blocked slots',
+      blockedSlots: [],
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// DENTIST WORKING HOURS ACTIONS
+// ─────────────────────────────────────────────────────────────
+
+export interface DentistAvailabilityInput {
+  day_of_week: number
+  start_time: string
+  end_time: string
+}
+
+export async function updateDentistWorkingHours(
+  dentistId: number,
+  availabilities: DentistAvailabilityInput[]
+) {
+  try {
+    // Delete existing availability for dentist
+    const { error: deleteErr } = await supabaseAdmin
+      .from('dentist_availability')
+      .delete()
+      .eq('dentist_id', dentistId)
+
+    if (deleteErr) throw new Error(deleteErr.message)
+
+    // Insert new availability
+    if (availabilities.length > 0) {
+      const insertData = availabilities.map(av => ({
+        dentist_id: dentistId,
+        day_of_week: av.day_of_week,
+        start_time: av.start_time,
+        end_time: av.end_time,
+      }))
+
+      const { error: insertErr } = await supabaseAdmin
+        .from('dentist_availability')
+        .insert(insertData)
+
+      if (insertErr) throw new Error(insertErr.message)
+    }
+
+    revalidatePath('/dentist-dashboard/settings')
+    return { success: true }
+  } catch (error) {
+    console.error('Error in updateDentistWorkingHours:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update working hours',
+    }
+  }
+}
+
+export async function fetchDentistWorkingHours(dentistId: number) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('dentist_availability')
+      .select('*')
+      .eq('dentist_id', dentistId)
+      .order('day_of_week', { ascending: true })
+
+    if (error) throw new Error(error.message)
+
+    return { success: true, workingHours: data || [] }
+  } catch (error) {
+    console.error('Error in fetchDentistWorkingHours:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch working hours',
+      workingHours: [],
+    }
+  }
+}
+
+export async function updateDentistProfile(
+  dentistId: number,
+  data: {
+    first_name: string
+    last_name: string
+    specialty?: string | null
+    license_no?: string | null
+  }
+) {
+  try {
+    const { error } = await supabaseAdmin
+      .from('dentists')
+      .update({
+        first_name: data.first_name,
+        last_name: data.last_name,
+        specialty: data.specialty,
+        license_no: data.license_no,
+      })
+      .eq('id', dentistId)
+
+    if (error) throw new Error(error.message)
+
+    revalidatePath('/dentist-dashboard/settings')
+    return { success: true }
+  } catch (error) {
+    console.error('Error in updateDentistProfile:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update profile',
     }
   }
 }

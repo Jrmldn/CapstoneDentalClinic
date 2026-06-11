@@ -28,8 +28,8 @@ export default async function BookPage() {
 
   const clinicIdNum = parseInt(clinicId, 10)
 
-  // Fetch patient details, dentists, and services in parallel (Class A Optimization)
-  const [patientDetails, dentistsRes, servicesRes] = await Promise.all([
+  // Fetch patient details, dentists, services, and clinic settings in parallel (Class A Optimization)
+  const [patientDetails, dentistsRes, servicesRes, clinicRes] = await Promise.all([
     fetchPatientRecord(patientRecord.id, clinicIdNum, {}),
     supabaseAdmin
       .from('dentists')
@@ -39,7 +39,12 @@ export default async function BookPage() {
       .from('services')
       .select('id, name, price, slot_duration_min')
       .eq('clinic_id', clinicIdNum)
-      .eq('is_active', true)
+      .eq('is_active', true),
+    supabaseAdmin
+      .from('clinics')
+      .select('default_downpayment_amount')
+      .eq('id', clinicIdNum)
+      .single()
   ])
 
   if (!patientDetails.success || !patientDetails.record) {
@@ -48,6 +53,7 @@ export default async function BookPage() {
 
   const dentists = dentistsRes.data
   const services = servicesRes.data
+  const defaultDownpaymentAmount = clinicRes.data?.default_downpayment_amount ?? 0
 
   return (
     <BookingTab
@@ -55,6 +61,7 @@ export default async function BookPage() {
       record={patientDetails.record as any}
       dentists={(dentists || []) as any}
       services={(services || []) as any}
+      defaultDownpaymentAmount={defaultDownpaymentAmount}
     />
   )
 }

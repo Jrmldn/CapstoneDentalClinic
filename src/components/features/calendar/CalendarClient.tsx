@@ -36,6 +36,7 @@ interface CalendarClientProps {
   initialAppointments: Appointment[]
   currentYear: number
   currentMonth: number
+  canManageHolidays?: boolean
 }
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -49,7 +50,8 @@ export default function CalendarClient({
   initialHolidays,
   initialAppointments,
   currentYear,
-  currentMonth
+  currentMonth,
+  canManageHolidays = true
 }: CalendarClientProps) {
   const [year, setYear] = useState(currentYear)
   const [month, setMonth] = useState(currentMonth)
@@ -209,12 +211,14 @@ export default function CalendarClient({
             >
               <ChevronRight className="w-5 h-5 text-gray-650" />
             </button>
-            <button
-              onClick={() => setIsHolidayModalOpen(true)}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded-lg hover:bg-slate-800 transition shadow-sm ml-2"
-            >
-              <Plus className="w-3.5 h-3.5" /> Set Closure
-            </button>
+            {canManageHolidays && (
+              <button
+                onClick={() => setIsHolidayModalOpen(true)}
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded-lg hover:bg-slate-800 transition shadow-sm ml-2"
+              >
+                <Plus className="w-3.5 h-3.5" /> Set Closure
+              </button>
+            )}
           </div>
         </div>
 
@@ -323,13 +327,15 @@ export default function CalendarClient({
                     </h4>
                     <p className="text-sm font-semibold mt-1">{selectedDetails.holiday.description}</p>
                   </div>
-                  <button
-                    onClick={() => handleDeleteHoliday(selectedDetails.holiday!.id)}
-                    className="p-1 hover:bg-black/5 rounded text-red-650"
-                    title="Remove Holiday"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {canManageHolidays && (
+                    <button
+                      onClick={() => handleDeleteHoliday(selectedDetails.holiday!.id)}
+                      className="p-1 hover:bg-black/5 rounded text-red-650"
+                      title="Remove Holiday"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               )}
 
