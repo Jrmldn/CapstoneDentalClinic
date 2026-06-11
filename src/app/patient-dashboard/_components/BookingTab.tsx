@@ -19,6 +19,7 @@ interface BookingTabProps {
   record: PatientRecord
   dentists: Dentist[]
   services: Service[]
+  defaultDownpaymentAmount?: number
 }
 
 export function BookingTab({
@@ -26,6 +27,7 @@ export function BookingTab({
   record,
   dentists,
   services,
+  defaultDownpaymentAmount = 0,
 }: BookingTabProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -33,12 +35,23 @@ export function BookingTab({
 
   const [bookingStatus, setBookingStatus] = useState<{ success?: boolean; error?: string; loading?: boolean }>({})
   const [bookingDentist, setBookingDentist] = useState<string>('')
-  const [bookingService, setBookingService] = useState<string>('')
+  
+  // Filter only consultation services
+  const consultationServices = services.filter(s =>
+    s.name.toLowerCase().includes('consultation')
+  )
+
+  const [bookingService, setBookingService] = useState<string>(() => {
+    return consultationServices.length > 0 ? String(consultationServices[0].id) : ''
+  })
+  
   const [bookingDate, setBookingDate] = useState<string>(urlDate)
   const [availableTimeSlots, setAvailableTimeSlots] = useState<TimeSlot[]>([])
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null)
   const [bookingNotes, setBookingNotes] = useState<string>('')
   const [slotsLoading, setSlotsLoading] = useState(false)
+  const [paymentType, setPaymentType] = useState<'downpayment' | 'full'>('downpayment')
+  const [paymentMethod, setPaymentMethod] = useState<'gcash' | 'paymaya' | 'credit_card'>('gcash')
 
   // Triggered when clinicId, dentist, service, or date changes
   const handleDateOrDentistChange = async (dateVal: string, dentistVal: string, serviceVal: string) => {
@@ -81,6 +94,10 @@ export function BookingTab({
     const selectedServiceObj = services.find(s => s.id === parseInt(bookingService, 10))
     if (!selectedServiceObj) return
 
+    const servicePrice = selectedServiceObj.price
+    const downpaymentAmount = Math.min(defaultDownpaymentAmount, servicePrice) || servicePrice
+    const finalDownpayment = paymentType === 'full' ? servicePrice : downpaymentAmount
+
     // Convert date + HH:mm to ISO strings
     const scheduledAtStr = `${bookingDate}T${selectedTimeSlot.start}:00`
     const endAtStr = `${bookingDate}T${selectedTimeSlot.end}:00`
@@ -93,7 +110,9 @@ export function BookingTab({
         service_id: parseInt(bookingService, 10),
         scheduled_at: new Date(scheduledAtStr).toISOString(),
         end_at: new Date(endAtStr).toISOString(),
-        notes: bookingNotes
+        notes: bookingNotes,
+        downpayment: finalDownpayment,
+        payment_method: paymentMethod
       })
 
       if (res.success) {
@@ -106,12 +125,9 @@ export function BookingTab({
         setSelectedTimeSlot(null)
         setBookingNotes('')
         
-        // Remove date parameters from url if any and redirect
+        // Redirect to appointments page (revalidation is handled server-side)
         setTimeout(() => {
-          router.replace('/patient-dashboard/booking')
           router.push('/patient-dashboard/appointments')
-          router.refresh()
-          setBookingStatus({})
         }, 1500)
       } else {
         setBookingStatus({ error: res.error || 'Failed to schedule appointment.' })
@@ -146,21 +162,33 @@ export function BookingTab({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">Select Service</label>
-              <select
-                value={bookingService}
-                onChange={(e) => {
-                  setBookingService(e.target.value)
-                  handleDateOrDentistChange(bookingDate, bookingDentist, e.target.value)
-                }}
-                className="w-full border border-slate-200 rounded-lg p-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value="">-- Choose Service --</option>
-                {services.map(s => (
-                  <option key={s.id} value={s.id}>{s.name} (PHP {s.price})</option>
-                ))}
-              </select>
+              <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">Service</label>
+              {consultationServices.length === 0 ? (
+                <div className="w-full border border-red-200 text-red-650 rounded-lg p-2.5 bg-red-50 text-sm font-semibold">
+                  No consultation services available.
+                </div>
+              ) : consultationServices.length === 1 ? (
+                <div className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 font-semibold text-slate-700 flex items-center justify-between">
+                  <span>{consultationServices[0].name}</span>
+                  <span className="text-xs text-blue-600 font-bold">PHP {consultationServices[0].price.toLocaleString()}</span>
+                </div>
+              ) : (
+                <select
+                  value={bookingService}
+                  onChange={(e) => {
+                    setBookingService(e.target.value)
+                    handleDateOrDentistChange(bookingDate, bookingDentist, e.target.value)
+                  }}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-slate-700"
+                  required
+                >
+                  {consultationServices.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} (PHP {s.price.toLocaleString()})
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div>
@@ -232,6 +260,91 @@ export function BookingTab({
                 </div>
               )}
             </div>
+          )}
+
+          {/* Payment Options */}
+          {bookingService && (
+            (() => {
+              const activeService = services.find(s => s.id === parseInt(bookingService, 10))
+              if (!activeService) return null
+              const servicePrice = activeService.price
+              const downpaymentAmount = Math.min(defaultDownpaymentAmount, servicePrice) || servicePrice
+              
+              return (
+                <div className="space-y-3 border-t border-slate-100 pt-4">
+                  <label className="block text-xs font-bold uppercase text-slate-500">
+                    Choose Payment Option
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Downpayment Card */}
+                    <button
+                      type="button"
+                      onClick={() => setPaymentType('downpayment')}
+                      className={cn(
+                        "p-4 rounded-xl border text-left transition-all duration-205 flex flex-col justify-between h-24 relative overflow-hidden group cursor-pointer",
+                        paymentType === 'downpayment'
+                          ? "border-blue-600 bg-blue-50/50 shadow-sm ring-1 ring-blue-500"
+                          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/30"
+                      )}
+                    >
+                      <div>
+                        <span className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Downpayment</span>
+                        <span className="block text-xl font-black text-slate-900 mt-1">
+                          ₱{downpaymentAmount.toLocaleString()}
+                        </span>
+                      </div>
+                      <span className="text-xs text-slate-500 font-medium">Pay partial amount to reserve slot</span>
+                      {paymentType === 'downpayment' && (
+                        <div className="absolute right-2.5 top-2.5 bg-blue-600 text-white rounded-full p-0.5">
+                          <CheckCircle2 className="w-4 h-4" />
+                        </div>
+                      )}
+                    </button>
+
+                    {/* Full Payment Card */}
+                    <button
+                      type="button"
+                      onClick={() => setPaymentType('full')}
+                      className={cn(
+                        "p-4 rounded-xl border text-left transition-all duration-205 flex flex-col justify-between h-24 relative overflow-hidden group cursor-pointer",
+                        paymentType === 'full'
+                          ? "border-blue-600 bg-blue-50/50 shadow-sm ring-1 ring-blue-500"
+                          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/30"
+                      )}
+                    >
+                      <div>
+                        <span className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Full Payment</span>
+                        <span className="block text-xl font-black text-slate-900 mt-1">
+                          ₱{servicePrice.toLocaleString()}
+                        </span>
+                      </div>
+                      <span className="text-xs text-slate-500 font-medium">Pay full price of consultation</span>
+                      {paymentType === 'full' && (
+                        <div className="absolute right-2.5 top-2.5 bg-blue-600 text-white rounded-full p-0.5">
+                          <CheckCircle2 className="w-4 h-4" />
+                        </div>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Payment Methods */}
+                  <div className="mt-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                    <label className="block text-xs font-bold uppercase text-slate-500">
+                      Select Payment Method
+                    </label>
+                    <select
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value as any)}
+                      className="w-full border border-slate-200 rounded-lg p-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-slate-700 text-sm cursor-pointer"
+                    >
+                      <option value="gcash">GCash</option>
+                      <option value="paymaya">Maya</option>
+                      <option value="credit_card">Card</option>
+                    </select>
+                  </div>
+                </div>
+              )
+            })()
           )}
 
           <div>

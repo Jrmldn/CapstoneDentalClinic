@@ -62,9 +62,9 @@ function StatCard({
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    confirmed: 'bg-blue-50 text-blue-700',
+    confirmed: 'bg-emerald-50 text-emerald-700',
     pending: 'bg-amber-50 text-amber-700',
-    completed: 'bg-emerald-50 text-emerald-700',
+    completed: 'bg-slate-100 text-slate-600',
     rescheduled: 'bg-purple-50 text-purple-700',
     cancelled: 'bg-red-50 text-red-600',
     no_show: 'bg-gray-100 text-gray-500',

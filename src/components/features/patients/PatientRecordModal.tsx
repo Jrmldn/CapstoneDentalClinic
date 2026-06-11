@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   User,
   Activity,
@@ -8,11 +8,21 @@ import {
   FileText,
   ClipboardList,
   HeartPulse,
-  X
+  X,
+  Plus,
+  RefreshCw,
+  AlertCircle,
+  Calendar
 } from 'lucide-react'
 import type { PatientSummary } from './PatientsClient'
+import { fetchPatientRecord, addClinicalAssessment, updatePatientMedicalHistory } from '@/actions/patientActions'
+import DentalChartTab from './DentalChartTab'
+import TreatmentTab from './TreatmentTab'
+import PrescriptionsTab from './PrescriptionsTab'
+import PeriodontalTab, { PeriodontalScreening, TmjAssessment } from './PeriodontalTab'
+import FollowupsTab from './FollowupsTab'
 
-export type RecordTab = 'info' | 'chart' | 'treatments' | 'assessments' | 'appts'
+export type RecordTab = 'chart' | 'treatments' | 'prescriptions' | 'info' | 'periodontal' | 'followups'
 
 export interface FullPatientDetail extends PatientSummary {
   address: string | null
@@ -26,6 +36,8 @@ export interface MedicalHistory {
   previous_surgeries: string | null
   is_pregnant: boolean
   is_smoker: boolean
+  blood_pressure: string | null
+  medical_flags: string | null
 }
 
 export interface ToothCondition {
@@ -45,8 +57,12 @@ export interface DentalChart {
 
 export interface TreatmentHistory {
   id: number
-  performed_at: string
-  services: { name: string } | { name: string }[] | null
+  performed_at: string | null
+  treatment: string
+  notes: string | null
+  tooth_number: number | null
+  service_id: number | null
+  services: { id: number; name: string } | { id: number; name: string }[] | null
   dentists: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null
 }
 
@@ -62,11 +78,12 @@ export interface Assessment {
 
 export interface Prescription {
   id: number
-  prescribed_at: string
-  medication_name: string
+  prescribed_at: string | null
+  medication: string
   dosage: string
   frequency: string
-  duration: string
+  duration: string | null
+  notes?: string | null
   dentists: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null
 }
 
@@ -74,6 +91,7 @@ export interface AppointmentRecord {
   id: number
   scheduled_at: string
   status: string
+  notes: string | null
   services: { name: string } | { name: string }[] | null
   dentists: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null
 }
@@ -85,8 +103,8 @@ export interface PatientRecord {
   treatmentHistory: TreatmentHistory[]
   assessments: Assessment[]
   prescriptions: Prescription[]
-  periodontalScreenings: unknown[]
-  tmjAssessments: unknown[]
+  periodontalScreenings: PeriodontalScreening[]
+  tmjAssessments: TmjAssessment[]
   oralSurgeryRecords: unknown[]
   appointments: AppointmentRecord[]
 }
@@ -94,20 +112,135 @@ export interface PatientRecord {
 interface PatientRecordModalProps {
   record: PatientRecord | null
   onClose: () => void
+  dentistId?: number
+  clinicId?: number
+  viewerRole?: 'dentist' | 'staff'
 }
 
-export default function PatientRecordModal({ record, onClose }: PatientRecordModalProps) {
-  const [activeRecordTab, setActiveRecordTab] = useState<RecordTab>('info')
+export default function PatientRecordModal({ record, onClose, dentistId, clinicId, viewerRole = 'dentist' }: PatientRecordModalProps) {
+  const [activeRecordTab, setActiveRecordTab] = useState<RecordTab>('chart')
+  const [localRecord, setLocalRecord] = useState<PatientRecord | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
-  if (!record) return null
+  // Clinical Assessment Form State
+  const [showAssessmentForm, setShowAssessmentForm] = useState(false)
+  const [chiefComplaint, setChiefComplaint] = useState('')
+  const [diagnosis, setDiagnosis] = useState('')
+  const [treatmentPlan, setTreatmentPlan] = useState('')
+  const [assessmentNotes, setAssessmentNotes] = useState('')
+  const [isSubmittingAssessment, setIsSubmittingAssessment] = useState(false)
+
+  // Medical History inline edit state
+  const [editBloodType, setEditBloodType] = useState('')
+  const [editBloodPressure, setEditBloodPressure] = useState('')
+  const [editMedicalFlags, setEditMedicalFlags] = useState('')
+  const [editAllergies, setEditAllergies] = useState('')
+  const [editCurrentMeds, setEditCurrentMeds] = useState('')
+  const [editMedConditions, setEditMedConditions] = useState('')
+  const [editIsPregnant, setEditIsPregnant] = useState(false)
+  const [editIsSmoker, setEditIsSmoker] = useState(false)
+  const [isSavingMedHistory, setIsSavingMedHistory] = useState(false)
+
+  useEffect(() => {
+    setLocalRecord(record)
+    const mh = record?.medicalHistory
+    setEditBloodType(mh?.blood_type || '')
+    setEditBloodPressure(mh?.blood_pressure || '')
+    setEditMedicalFlags(mh?.medical_flags || '')
+    setEditAllergies(mh?.allergies?.join(', ') || '')
+    setEditCurrentMeds(mh?.current_medications?.join(', ') || '')
+    setEditMedConditions(mh?.medical_conditions?.join(', ') || '')
+    setEditIsPregnant(mh?.is_pregnant || false)
+    setEditIsSmoker(mh?.is_smoker || false)
+  }, [record])
+
+  const handleSaveMedicalHistory = async () => {
+    if (!localRecord) return
+    setIsSavingMedHistory(true)
+    const res = await updatePatientMedicalHistory(localRecord.patient.id, {
+      blood_type: editBloodType || null,
+      blood_pressure: editBloodPressure || null,
+      medical_flags: editMedicalFlags || null,
+      allergies: editAllergies ? editAllergies.split(',').map(s => s.trim()).filter(Boolean) : [],
+      current_medications: editCurrentMeds ? editCurrentMeds.split(',').map(s => s.trim()).filter(Boolean) : [],
+      medical_conditions: editMedConditions ? editMedConditions.split(',').map(s => s.trim()).filter(Boolean) : [],
+      is_pregnant: editIsPregnant,
+      is_smoker: editIsSmoker,
+    })
+    setIsSavingMedHistory(false)
+    if (res.success) {
+      await handleRefreshRecord()
+    } else {
+      alert(res.error || 'Failed to save')
+    }
+  }
+
+  if (!localRecord) return null
+
+  const lastVisitDate = (() => {
+    if (!localRecord.appointments || localRecord.appointments.length === 0) return 'No visits recorded'
+    const completedAppts = localRecord.appointments
+      .filter(appt => appt.status === 'completed')
+      .map(appt => new Date(appt.scheduled_at))
+      .sort((a, b) => b.getTime() - a.getTime())
+
+    if (completedAppts.length === 0) return 'No visits recorded'
+    return completedAppts[0].toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    })
+  })()
+
 
   const tabs: Array<{ id: RecordTab; label: string; icon: React.ComponentType<{ className?: string }> }> = [
-    { id: 'info', label: 'EHR Summary & Medicals', icon: User },
-    { id: 'chart', label: 'Dental Tooth Conditions', icon: Activity },
-    { id: 'treatments', label: 'Treatment History', icon: History },
-    { id: 'assessments', label: 'Assessments', icon: FileText },
-    { id: 'appts', label: 'Appointments', icon: ClipboardList }
+    { id: 'chart', label: 'Dental Chart', icon: Activity },
+    { id: 'treatments', label: 'Treatment', icon: History },
+    { id: 'prescriptions', label: 'Prescriptions', icon: ClipboardList },
+    { id: 'info', label: 'Medical History', icon: User },
+    { id: 'periodontal', label: 'Periodontal', icon: HeartPulse },
+    { id: 'followups', label: 'Follow-ups', icon: Calendar }
   ]
+
+  const handleRefreshRecord = async () => {
+    setIsRefreshing(true)
+    const res = await fetchPatientRecord(localRecord.patient.id, clinicId)
+    setIsRefreshing(false)
+    if (res.success && res.record) {
+      setLocalRecord(res.record as PatientRecord)
+    }
+  }
+
+  const handleAddAssessmentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!chiefComplaint || !diagnosis || !treatmentPlan) {
+      alert('Please fill out all required fields.')
+      return
+    }
+    setIsSubmittingAssessment(true)
+    const res = await addClinicalAssessment({
+      patient_id: localRecord.patient.id,
+      clinic_id: clinicId ?? 0,
+      dentist_id: dentistId!,
+      chief_complaint: chiefComplaint,
+      diagnosis,
+      treatment_plan: treatmentPlan,
+      notes: assessmentNotes || undefined
+    })
+    setIsSubmittingAssessment(false)
+    if (res.success) {
+      alert('Clinical assessment added successfully!')
+      setChiefComplaint('')
+      setDiagnosis('')
+      setTreatmentPlan('')
+      setAssessmentNotes('')
+      setShowAssessmentForm(false)
+      handleRefreshRecord()
+    } else {
+      alert(res.error || 'Failed to add clinical assessment')
+    }
+  }
+
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-in fade-in duration-200">
@@ -119,14 +252,17 @@ export default function PatientRecordModal({ record, onClose }: PatientRecordMod
             </div>
             <div>
               <h3 className="font-bold text-slate-900 text-lg">
-                {record.patient.first_name} {record.patient.last_name}
+                {localRecord.patient.first_name} {localRecord.patient.last_name}
               </h3>
               <p className="text-xs text-gray-500">Clinical Chart &amp; Health Record</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 hover:bg-gray-200 rounded-full transition">
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
+          <div className="flex items-center gap-3">
+            {isRefreshing && <RefreshCw className="w-4 h-4 text-blue-600 animate-spin" />}
+            <button onClick={onClose} className="p-1 hover:bg-gray-200 rounded-full transition">
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -159,25 +295,29 @@ export default function PatientRecordModal({ record, onClose }: PatientRecordMod
                 </div>
                 <div>
                   <span className="text-[10px] text-gray-400 block font-semibold">GENDER</span>
-                  <span className="text-sm font-medium capitalize text-slate-800">{record.patient.gender}</span>
+                  <span className="text-sm font-medium capitalize text-slate-800">{localRecord.patient.gender}</span>
                 </div>
                 <div>
                   <span className="text-[10px] text-gray-400 block font-semibold">BIRTHDATE</span>
-                  <span className="text-sm font-medium text-slate-800">{record.patient.birthdate}</span>
+                  <span className="text-sm font-medium text-slate-800">{localRecord.patient.birthdate}</span>
                 </div>
                 <div>
                   <span className="text-[10px] text-gray-400 block font-semibold">PHONE</span>
-                  <span className="text-sm font-medium text-slate-800">{record.patient.phone}</span>
+                  <span className="text-sm font-medium text-slate-800">{localRecord.patient.phone}</span>
                 </div>
-                {record.patient.email && (
+                {localRecord.patient.email && (
                   <div>
                     <span className="text-[10px] text-gray-400 block font-semibold">EMAIL</span>
-                    <span className="text-sm font-medium text-slate-800">{record.patient.email}</span>
+                    <span className="text-sm font-medium text-slate-800">{localRecord.patient.email}</span>
                   </div>
                 )}
+                <div>
+                  <span className="text-[10px] text-gray-400 block font-semibold">LAST VISIT</span>
+                  <span className="text-sm font-semibold text-blue-600">{lastVisitDate}</span>
+                </div>
                 <div className="col-span-3">
                   <span className="text-[10px] text-gray-400 block font-semibold">ADDRESS</span>
-                  <span className="text-sm font-medium text-slate-800">{record.patient.address || '—'}</span>
+                  <span className="text-sm font-medium text-slate-800">{localRecord.patient.address || '—'}</span>
                 </div>
               </div>
 
@@ -185,69 +325,186 @@ export default function PatientRecordModal({ record, onClose }: PatientRecordMod
                 <div className="col-span-2">
                   <h4 className="font-bold text-slate-900 text-sm border-b border-gray-100 pb-1 mb-2">Medical History Summary</h4>
                 </div>
-                {record.medicalHistory ? (
+                {localRecord.medicalHistory ? (
                   <>
+                    {/* Left column */}
                     <div className="space-y-4">
+                      {/* Blood Type */}
                       <div>
                         <span className="text-[10px] text-gray-400 block font-semibold">BLOOD TYPE</span>
-                        <span className="text-sm font-semibold bg-red-50 text-red-600 px-2 py-0.5 rounded-md inline-block mt-0.5">
-                          {record.medicalHistory.blood_type || 'Unknown'}
-                        </span>
+                        {viewerRole === 'staff' ? (
+                          <span className="text-sm font-semibold text-slate-800 mt-0.5 block">
+                            {localRecord.medicalHistory.blood_type || 'Unknown'}
+                          </span>
+                        ) : (
+                          <select
+                            value={editBloodType}
+                            onChange={e => setEditBloodType(e.target.value)}
+                            className="mt-0.5 w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800"
+                          >
+                            <option value="">Unknown</option>
+                            {['A+','A-','B+','B-','AB+','AB-','O+','O-'].map(bt => (
+                              <option key={bt} value={bt}>{bt}</option>
+                            ))}
+                          </select>
+                        )}
                       </div>
+
+                      {/* Blood Pressure */}
+                      <div>
+                        <span className="text-[10px] text-gray-400 block font-semibold">BLOOD PRESSURE</span>
+                        {viewerRole === 'staff' ? (
+                          <span className="text-sm font-semibold text-slate-800 mt-0.5 block">
+                            {localRecord.medicalHistory.blood_pressure || '—'}
+                          </span>
+                        ) : (
+                          <input
+                            type="text"
+                            placeholder="e.g. 120/80 mmHg"
+                            value={editBloodPressure}
+                            onChange={e => setEditBloodPressure(e.target.value)}
+                            className="mt-0.5 w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800"
+                          />
+                        )}
+                      </div>
+
+                      {/* Pregnancy Status */}
+                      {localRecord.patient.gender === 'female' && (
+                        <div>
+                          <span className="text-[10px] text-gray-400 block font-semibold">PREGNANCY STATUS</span>
+                          {viewerRole === 'staff' ? (
+                            <span className="text-sm font-semibold text-slate-800 mt-0.5 block">
+                              {localRecord.medicalHistory.is_pregnant ? 'Pregnant' : 'Not Pregnant'}
+                            </span>
+                          ) : (
+                            <label className="flex items-center gap-2 mt-1 cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                checked={editIsPregnant}
+                                onChange={e => setEditIsPregnant(e.target.checked)}
+                                className="w-4 h-4 rounded border-gray-300 text-blue-600"
+                              />
+                              <span className="text-xs font-semibold text-slate-700">Currently Pregnant</span>
+                            </label>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Smoking Status */}
+                      <div>
+                        <span className="text-[10px] text-gray-400 block font-semibold">SMOKING STATUS</span>
+                        {viewerRole === 'staff' ? (
+                          <span className="text-sm font-semibold text-slate-800 mt-0.5 block">
+                            {localRecord.medicalHistory.is_smoker ? 'Smoker' : 'Non-smoker'}
+                          </span>
+                        ) : (
+                          <label className="flex items-center gap-2 mt-1 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={editIsSmoker}
+                              onChange={e => setEditIsSmoker(e.target.checked)}
+                              className="w-4 h-4 rounded border-gray-300 text-blue-600"
+                            />
+                            <span className="text-xs font-semibold text-slate-700">Active Smoker</span>
+                          </label>
+                        )}
+                      </div>
+
+                      {/* Allergies */}
                       <div>
                         <span className="text-[10px] text-gray-400 block font-semibold">ALLERGIES</span>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {record.medicalHistory.allergies?.length > 0 ? (
-                            record.medicalHistory.allergies.map((a: string) => (
-                              <span
-                                key={a}
-                                className="bg-amber-50 text-amber-700 border border-amber-200 text-xs px-2 py-0.5 rounded-full font-medium"
-                              >
-                                {a}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-xs text-gray-500">No allergies listed</span>
-                          )}
-                        </div>
+                        {viewerRole === 'staff' ? (
+                          <span className="text-sm font-semibold text-slate-800 mt-0.5 block">
+                            {localRecord.medicalHistory.allergies?.length > 0
+                              ? localRecord.medicalHistory.allergies.join(', ')
+                              : 'No allergies listed'}
+                          </span>
+                        ) : (
+                          <input
+                            type="text"
+                            placeholder="e.g. Penicillin, Peanuts (comma-separated)"
+                            value={editAllergies}
+                            onChange={e => setEditAllergies(e.target.value)}
+                            className="mt-0.5 w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800"
+                          />
+                        )}
                       </div>
                     </div>
+
+                    {/* Right column */}
                     <div className="space-y-4">
+                      {/* Medical Flags */}
+                      <div>
+                        <span className="text-[10px] text-gray-400 block font-semibold">MEDICAL FLAGS</span>
+                        {viewerRole === 'staff' ? (
+                          <span className={`text-sm font-bold mt-0.5 block ${localRecord.medicalHistory.medical_flags ? 'text-red-650' : 'text-slate-800'}`}>
+                            {localRecord.medicalHistory.medical_flags || 'None'}
+                          </span>
+                        ) : (
+                          <input
+                            type="text"
+                            placeholder="e.g. Penicillin allergy, Latex"
+                            value={editMedicalFlags}
+                            onChange={e => setEditMedicalFlags(e.target.value)}
+                            className="mt-0.5 w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-red-400 outline-none font-semibold text-red-650 placeholder:text-gray-300"
+                          />
+                        )}
+                      </div>
+
+                      {/* Current Medications */}
                       <div>
                         <span className="text-[10px] text-gray-400 block font-semibold">CURRENT MEDICATIONS</span>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {record.medicalHistory.current_medications?.length > 0 ? (
-                            record.medicalHistory.current_medications.map((m: string) => (
-                              <span
-                                key={m}
-                                className="bg-blue-50 text-blue-700 border border-blue-200 text-xs px-2 py-0.5 rounded-full font-medium"
-                              >
-                                {m}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-xs text-gray-500">None listed</span>
-                          )}
-                        </div>
+                        {viewerRole === 'staff' ? (
+                          <span className="text-sm font-semibold text-slate-800 mt-0.5 block">
+                            {localRecord.medicalHistory.current_medications?.length > 0
+                              ? localRecord.medicalHistory.current_medications.join(', ')
+                              : 'None listed'}
+                          </span>
+                        ) : (
+                          <input
+                            type="text"
+                            placeholder="e.g. Insulin, Metformin (comma-separated)"
+                            value={editCurrentMeds}
+                            onChange={e => setEditCurrentMeds(e.target.value)}
+                            className="mt-0.5 w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800"
+                          />
+                        )}
                       </div>
+
+                      {/* Medical Conditions */}
                       <div>
                         <span className="text-[10px] text-gray-400 block font-semibold">MEDICAL CONDITIONS</span>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {record.medicalHistory.medical_conditions?.length > 0 ? (
-                            record.medicalHistory.medical_conditions.map((c: string) => (
-                              <span
-                                key={c}
-                                className="bg-red-50 text-red-700 border border-red-200 text-xs px-2 py-0.5 rounded-full font-medium"
-                              >
-                                {c}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-xs text-gray-500">None listed</span>
-                          )}
-                        </div>
+                        {viewerRole === 'staff' ? (
+                          <span className="text-sm font-semibold text-slate-800 mt-0.5 block">
+                            {localRecord.medicalHistory.medical_conditions?.length > 0
+                              ? localRecord.medicalHistory.medical_conditions.join(', ')
+                              : 'None listed'}
+                          </span>
+                        ) : (
+                          <input
+                            type="text"
+                            placeholder="e.g. Diabetes, Hypertension (comma-separated)"
+                            value={editMedConditions}
+                            onChange={e => setEditMedConditions(e.target.value)}
+                            className="mt-0.5 w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800"
+                          />
+                        )}
                       </div>
                     </div>
+
+                    {/* Save button — dentist only */}
+                    {viewerRole !== 'staff' && (
+                      <div className="col-span-2 flex justify-end pt-2">
+                        <button
+                          onClick={handleSaveMedicalHistory}
+                          disabled={isSavingMedHistory}
+                          className="flex items-center gap-1.5 px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold shadow-xs transition disabled:opacity-50"
+                        >
+                          {isSavingMedHistory ? <RefreshCw className="w-3 h-3 animate-spin" /> : null}
+                          Save Changes
+                        </button>
+                      </div>
+                    )}
                   </>
                 ) : (
                   <div className="col-span-2 text-center py-6 text-gray-400 text-sm">
@@ -257,173 +514,55 @@ export default function PatientRecordModal({ record, onClose }: PatientRecordMod
               </div>
             </div>
           )}
-
           {activeRecordTab === 'chart' && (
-            <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-xs">
-              <h4 className="font-bold text-slate-900 text-sm border-b border-gray-100 pb-1 mb-4">Dental Chart Conditions</h4>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="bg-gray-50 text-slate-500 font-bold border-b border-gray-100">
-                      <th className="px-4 py-2">Date Recorded</th>
-                      <th className="px-4 py-2">Tooth Number</th>
-                      <th className="px-4 py-2">Tooth Type</th>
-                      <th className="px-4 py-2">Condition</th>
-                      <th className="px-4 py-2">Surface</th>
-                      <th className="px-4 py-2">Notes</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50 text-slate-700">
-                    {record.dentalCharts?.flatMap((chart: DentalChart) =>
-                      chart.tooth_conditions?.map((cond: ToothCondition) => (
-                        <tr key={cond.id} className="hover:bg-gray-50/50">
-                          <td className="px-4 py-3 font-semibold text-gray-500">
-                            {new Date(cond.recorded_at).toLocaleDateString()}
-                          </td>
-                          <td className="px-4 py-3 font-bold text-slate-900">Tooth #{cond.tooth_number}</td>
-                          <td className="px-4 py-3 capitalize">{cond.tooth_type}</td>
-                          <td className="px-4 py-3">
-                            <span className="px-2 py-0.5 rounded font-bold uppercase text-[9px] bg-amber-50 text-amber-700 border border-amber-200">
-                              {cond.condition.replace('_', ' ')}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 uppercase font-medium">{cond.surface || '—'}</td>
-                          <td className="px-4 py-3 text-gray-500">{cond.notes || '—'}</td>
-                        </tr>
-                      ))
-                    )}
-                    {record.dentalCharts?.flatMap((c: DentalChart) => c.tooth_conditions ?? []).length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="text-center py-8 text-gray-400">
-                          No tooth conditions recorded yet.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <DentalChartTab
+              patientId={localRecord.patient.id}
+              clinicId={clinicId ?? 0}
+              dentalCharts={localRecord.dentalCharts}
+              dentistId={dentistId}
+              onRefresh={handleRefreshRecord}
+            />
           )}
 
           {activeRecordTab === 'treatments' && (
-            <div className="space-y-6">
-              <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-xs">
-                <h4 className="font-bold text-slate-900 text-sm border-b border-gray-100 pb-1 mb-4">Treatment History</h4>
-                <div className="divide-y divide-gray-100">
-                  {record.treatmentHistory?.length > 0 ? (
-                    record.treatmentHistory.map((treat: TreatmentHistory) => {
-                      const serviceObj = Array.isArray(treat.services) ? treat.services[0] : treat.services
-                      const dentistObj = Array.isArray(treat.dentists) ? treat.dentists[0] : treat.dentists
-                      return (
-                        <div key={treat.id} className="py-3 flex justify-between items-start">
-                          <div>
-                            <p className="font-semibold text-slate-850 text-sm">{serviceObj?.name}</p>
-                            <p className="text-xs text-gray-400">
-                              Performed by: Dr. {dentistObj ? `${dentistObj.first_name} ${dentistObj.last_name}` : 'Unknown'}
-                            </p>
-                          </div>
-                          <span className="text-xs text-gray-500 font-semibold">
-                            {new Date(treat.performed_at).toLocaleDateString()}
-                          </span>
-                        </div>
-                      )
-                    })
-                  ) : (
-                    <p className="text-center py-6 text-gray-400 text-xs">No treatments recorded.</p>
-                  )}
-                </div>
-              </div>
-              <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-xs">
-                <h4 className="font-bold text-slate-900 text-sm border-b border-gray-100 pb-1 mb-4">Prescriptions</h4>
-                <div className="divide-y divide-gray-100">
-                  {record.prescriptions?.length > 0 ? (
-                    record.prescriptions.map((pres: Prescription) => {
-                      const dentistObj = Array.isArray(pres.dentists) ? pres.dentists[0] : pres.dentists
-                      return (
-                        <div key={pres.id} className="py-3 flex justify-between items-start">
-                          <div>
-                            <p className="font-semibold text-slate-850 text-sm">{pres.medication_name}</p>
-                            <p className="text-xs text-slate-600">
-                              Dosage: {pres.dosage} | Frequency: {pres.frequency} | Duration: {pres.duration}
-                            </p>
-                            <p className="text-[10px] text-gray-450 mt-1">
-                              Prescribed by Dr. {dentistObj ? `${dentistObj.first_name} ${dentistObj.last_name}` : 'Unknown'}
-                            </p>
-                          </div>
-                          <span className="text-xs text-gray-500 font-semibold">
-                            {new Date(pres.prescribed_at).toLocaleDateString()}
-                          </span>
-                        </div>
-                      )
-                    })
-                  ) : (
-                    <p className="text-center py-6 text-gray-400 text-xs">No prescriptions recorded.</p>
-                  )}
-                </div>
-              </div>
-            </div>
+            <TreatmentTab
+              patientId={localRecord.patient.id}
+              clinicId={clinicId ?? 0}
+              dentistId={dentistId}
+              treatments={localRecord.treatmentHistory || []}
+              onRefresh={handleRefreshRecord}
+            />
           )}
 
-          {activeRecordTab === 'assessments' && (
-            <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-xs">
-              <h4 className="font-bold text-slate-900 text-sm border-b border-gray-100 pb-1 mb-4">Clinical Assessments</h4>
-              <div className="space-y-4">
-                {record.assessments?.length > 0 ? (
-                  record.assessments.map((ass: Assessment) => {
-                    const dentistObj = Array.isArray(ass.dentists) ? ass.dentists[0] : ass.dentists
-                    return (
-                      <div key={ass.id} className="p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-2 text-xs">
-                        <div className="flex justify-between items-center border-b border-gray-200 pb-1.5 mb-1.5">
-                          <span className="font-bold text-slate-700">
-                            Assessment by Dr. {dentistObj ? `${dentistObj.first_name} ${dentistObj.last_name}` : 'Unknown'}
-                          </span>
-                          <span className="text-gray-500 font-semibold">{new Date(ass.assessed_at).toLocaleDateString()}</span>
-                        </div>
-                        <p><strong>Chief Complaint:</strong> {ass.chief_complaint}</p>
-                        <p><strong>Diagnosis:</strong> {ass.diagnosis}</p>
-                        <p><strong>Treatment Plan:</strong> {ass.treatment_plan}</p>
-                        {ass.notes && <p className="text-gray-500 italic"><strong>Notes:</strong> {ass.notes}</p>}
-                      </div>
-                    )
-                  })
-                ) : (
-                  <p className="text-center py-6 text-gray-400 text-xs">No clinical assessments recorded.</p>
-                )}
-              </div>
-            </div>
+          {activeRecordTab === 'prescriptions' && (
+            <PrescriptionsTab
+              patientId={localRecord.patient.id}
+              clinicId={clinicId ?? 0}
+              dentistId={dentistId}
+              prescriptions={localRecord.prescriptions || []}
+              onRefresh={handleRefreshRecord}
+            />
           )}
 
-          {activeRecordTab === 'appts' && (
-            <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-xs">
-              <h4 className="font-bold text-slate-900 text-sm border-b border-gray-100 pb-1 mb-4">Appointment History</h4>
-              <div className="divide-y divide-gray-100">
-                {record.appointments?.length > 0 ? (
-                  record.appointments.map((appt: AppointmentRecord) => {
-                    const serviceObj = Array.isArray(appt.services) ? appt.services[0] : appt.services
-                    const dentistObj = Array.isArray(appt.dentists) ? appt.dentists[0] : appt.dentists
-                    return (
-                      <div key={appt.id} className="py-3 flex justify-between items-center text-xs">
-                        <div>
-                          <p className="font-semibold text-slate-800 text-sm">{serviceObj?.name}</p>
-                          <p className="text-gray-500">
-                            Dr. {dentistObj ? `${dentistObj.first_name} ${dentistObj.last_name}` : 'TBD'} | Status:{' '}
-                            <span className="capitalize">{appt.status}</span>
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">{new Date(appt.scheduled_at).toLocaleDateString()}</p>
-                          <p className="text-gray-500">
-                            {new Date(appt.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                        </div>
-                      </div>
-                    )
-                  })
-                ) : (
-                  <p className="text-center py-6 text-gray-400 text-xs">No appointments recorded.</p>
-                )}
-              </div>
-            </div>
+          {activeRecordTab === 'periodontal' && (
+            <PeriodontalTab
+              patientId={localRecord.patient.id}
+              clinicId={clinicId ?? 0}
+              dentistId={dentistId}
+              screenings={localRecord.periodontalScreenings || []}
+              tmjAssessments={localRecord.tmjAssessments || []}
+              onRefresh={handleRefreshRecord}
+            />
+          )}
+
+          {activeRecordTab === 'followups' && (
+            <FollowupsTab
+              patientId={localRecord.patient.id}
+              clinicId={clinicId ?? 0}
+              dentistId={dentistId}
+              appointments={localRecord.appointments || []}
+              onRefresh={handleRefreshRecord}
+            />
           )}
         </div>
 

@@ -99,12 +99,30 @@ export async function manageClinicHolidays(
 export async function fetchCalendarData(
   clinicId: number,
   year: number,
-  month: number    // 1-indexed
+  month: number,    // 1-indexed
+  dentistId?: number
 ) {
   try {
     const monthStr   = String(month).padStart(2, '0')
     const firstDay   = `${year}-${monthStr}-01`
     const lastDay    = new Date(year, month, 0).toISOString().slice(0, 10)
+
+    let appointmentsQuery = supabaseAdmin
+      .from('appointments')
+      .select(`
+        id, scheduled_at, end_at, status,
+        patients ( id, first_name, last_name ),
+        services ( id, name )
+      `)
+      .eq('clinic_id', clinicId)
+      .gte('scheduled_at', `${firstDay}T00:00:00`)
+      .lte('scheduled_at', `${lastDay}T23:59:59`)
+      .not('status', 'in', '(cancelled,no_show)')
+      .order('scheduled_at', { ascending: true })
+
+    if (dentistId) {
+      appointmentsQuery = appointmentsQuery.eq('dentist_id', dentistId)
+    }
 
     const [holidaysRes, appointmentsRes] = await Promise.all([
       supabaseAdmin
@@ -115,18 +133,7 @@ export async function fetchCalendarData(
         .lte('date', lastDay)
         .order('date', { ascending: true }),
 
-      supabaseAdmin
-        .from('appointments')
-        .select(`
-          id, scheduled_at, end_at, status,
-          patients ( id, first_name, last_name ),
-          services ( id, name )
-        `)
-        .eq('clinic_id', clinicId)
-        .gte('scheduled_at', `${firstDay}T00:00:00`)
-        .lte('scheduled_at', `${lastDay}T23:59:59`)
-        .not('status', 'in', '(cancelled,no_show)')
-        .order('scheduled_at', { ascending: true }),
+      appointmentsQuery,
     ])
 
     if (holidaysRes.error)     throw new Error(holidaysRes.error.message)

@@ -22,9 +22,11 @@ export interface PatientSummary {
 interface PatientsClientProps {
   clinicId: number
   initialPatients: PatientSummary[]
+  dentistId?: number
+  viewerRole?: 'dentist' | 'staff'
 }
 
-export default function PatientsClient({ clinicId, initialPatients }: PatientsClientProps) {
+export default function PatientsClient({ clinicId, initialPatients, dentistId, viewerRole = 'staff' }: PatientsClientProps) {
   const [patients, setPatients] = useState<PatientSummary[]>(initialPatients)
   const [searchTerm, setSearchTerm] = useState('')
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false)
@@ -124,6 +126,9 @@ export default function PatientsClient({ clinicId, initialPatients }: PatientsCl
       <PatientRecordModal
         record={selectedPatientRecord}
         onClose={() => setSelectedPatientRecord(null)}
+        dentistId={dentistId}
+        clinicId={clinicId}
+        viewerRole={viewerRole}
       />
     </div>
   )
