@@ -14,7 +14,7 @@ export function Header() {
           {/* Logo */}
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg"></div>
-            <span className="text-xl font-bold text-gray-900">AppoinDent</span>
+            <span className="text-xl font-bold text-gray-900">AppointDent</span>
           </div>
 
           {/* Desktop Navigation */}

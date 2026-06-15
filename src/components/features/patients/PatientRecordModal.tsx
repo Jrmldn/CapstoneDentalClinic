@@ -541,6 +541,12 @@ export default function PatientRecordModal({ record, onClose, dentistId, clinicI
               dentistId={dentistId}
               prescriptions={localRecord.prescriptions || []}
               onRefresh={handleRefreshRecord}
+              patient={{
+                first_name: localRecord.patient.first_name,
+                last_name: localRecord.patient.last_name,
+                birthdate: localRecord.patient.birthdate,
+                gender: localRecord.patient.gender,
+              }}
             />
           )}
 

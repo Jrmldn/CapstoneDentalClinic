@@ -207,3 +207,28 @@
     margin: 0 !important;
   }
 }
+
+/* ───────────────────────────────────────────────────────────── */
+/* PRESCRIPTION PRINT AREA (portal — direct child of body)        */
+/* ───────────────────────────────────────────────────────────── */
+@media print {
+  /* Hide every direct body child except the print portal */
+  body:has(.rx-print-area) > *:not(.rx-print-area) {
+    display: none !important;
+  }
+  /* Reveal the portal and all its children */
+  .rx-print-area {
+    position: static !important;
+    visibility: visible !important;
+    width: 100% !important;
+    max-width: 720px !important;
+    margin: 0 auto !important;
+    padding: 40px !important;
+    background: #fff !important;
+  }
+  .rx-print-area * {
+    visibility: visible !important;
+  }
+  /* margin: 0 removes browser-added header (URL, date/time) and footer (page number) */
+  @page { margin: 0; }
+}
