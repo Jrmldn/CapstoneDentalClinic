@@ -1,5 +1,5 @@
 "use client";
-import {Mail, Phone, MapPin } from "lucide-react";
+import { Mail, Phone, MapPin } from "lucide-react";
 
 export function Footer() {
   return (
@@ -55,7 +55,7 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="h-5 w-5 text-blue-400 flex-shrink-0" />
-                <span>appointdent@dentalcare.ph</span>
+                <span>appointdent@gmail.com</span>
               </li>
             </ul>
           </div>

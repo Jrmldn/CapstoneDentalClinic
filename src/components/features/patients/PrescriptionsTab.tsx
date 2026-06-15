@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { Plus, X, ClipboardCheck, Pill } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import { Plus, X, ClipboardCheck, Pill, Printer } from 'lucide-react'
 import { addPrescription } from '@/actions/patientActions'
 
 export interface Prescription {
@@ -15,12 +16,20 @@ export interface Prescription {
   dentists: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null
 }
 
+export interface PatientInfo {
+  first_name: string
+  last_name: string
+  birthdate?: string
+  gender?: string
+}
+
 interface PrescriptionsTabProps {
   patientId: number
   clinicId: number
   dentistId?: number
   prescriptions: Prescription[]
   onRefresh: () => Promise<void>
+  patient?: PatientInfo
 }
 
 export default function PrescriptionsTab({
@@ -29,6 +38,7 @@ export default function PrescriptionsTab({
   dentistId,
   prescriptions,
   onRefresh,
+  patient,
 }: PrescriptionsTabProps) {
   const [showForm, setShowForm] = useState(false)
   const [medication, setMedication] = useState('')
@@ -37,6 +47,9 @@ export default function PrescriptionsTab({
   const [duration, setDuration] = useState('')
   const [notes, setNotes] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => { setMounted(true) }, [])
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -71,23 +84,131 @@ export default function PrescriptionsTab({
     }
   }
 
+  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  const patientName = patient ? `${patient.first_name} ${patient.last_name}` : 'Patient'
+
+  const printContent = (
+    <div
+      className="rx-print-area"
+      aria-hidden="true"
+      style={{
+        position: 'fixed',
+        top: '-9999px',
+        left: '-9999px',
+        visibility: 'hidden',
+        pointerEvents: 'none',
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '13px',
+        color: '#1e293b',
+      }}
+    >
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '3px solid #1d4ed8', paddingBottom: '18px', marginBottom: '24px' }}>
+          <div>
+            <div style={{ fontSize: '22px', fontWeight: 700, color: '#1d4ed8' }}>Dental Clinic</div>
+            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Patient Prescription Record</div>
+          </div>
+          <div style={{ fontSize: '11px', color: '#64748b', textAlign: 'right' }}>
+            <strong>Date:</strong> {today}
+          </div>
+        </div>
+
+        {/* Patient banner */}
+        <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '14px 18px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: '17px', fontWeight: 700, color: '#1e40af' }}>{patientName}</div>
+            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+              {patient?.birthdate ? `DOB: ${patient.birthdate}` : ''}
+              {patient?.gender ? ` · ${patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1)}` : ''}
+            </div>
+          </div>
+          <div style={{ background: '#1d4ed8', color: '#fff', borderRadius: '20px', padding: '4px 14px', fontSize: '11px', fontWeight: 700 }}>
+            {prescriptions.length} Prescription{prescriptions.length !== 1 ? 's' : ''}
+          </div>
+        </div>
+
+        {/* Section label */}
+        <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '1.2px', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '12px' }}>
+          Medications
+        </div>
+
+        {/* Rx cards */}
+        {prescriptions.map((pres, i) => {
+          const dentist = Array.isArray(pres.dentists) ? pres.dentists[0] : pres.dentists
+          const date = pres.prescribed_at
+            ? new Date(pres.prescribed_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+            : '—'
+          return (
+            <div key={pres.id} style={{ display: 'flex', gap: '14px', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px', marginBottom: '12px', pageBreakInside: 'avoid' }}>
+              <div style={{ width: '26px', height: '26px', background: '#dbeafe', color: '#1d4ed8', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, flexShrink: 0, marginTop: '2px' }}>
+                {i + 1}
+              </div>
+              <div style={{ display: 'flex', gap: '12px', flex: 1 }}>
+                <div style={{ fontSize: '28px', color: '#1d4ed8', fontWeight: 300, lineHeight: 1, flexShrink: 0 }}>℞</div>
+                <div>
+                  <p style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a', marginBottom: '5px' }}>{pres.medication}</p>
+                  <p style={{ fontSize: '12px', color: '#334155', marginBottom: '3px' }}><strong>Sig:</strong> {pres.dosage}</p>
+                  <p style={{ fontSize: '12px', color: '#334155', marginBottom: '3px' }}>
+                    <strong>Frequency:</strong> {pres.frequency}
+                    {pres.duration ? <> &nbsp;·&nbsp; <strong>Duration:</strong> {pres.duration}</> : null}
+                  </p>
+                  {pres.notes && (
+                    <p style={{ fontSize: '11px', color: '#64748b', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '4px 8px', margin: '6px 0 4px' }}>
+                      <em>Note: {pres.notes}</em>
+                    </p>
+                  )}
+                  <p style={{ fontSize: '10px', color: '#94a3b8', marginTop: '6px' }}>
+                    Prescribed: {date}
+                    {dentist ? ` · Dr. ${dentist.first_name} ${dentist.last_name}` : ''}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+
+        {/* Footer */}
+        <div style={{ marginTop: '36px', paddingTop: '14px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+          <div style={{ fontSize: '10px', color: '#94a3b8', maxWidth: '340px' }}>
+            Generated from the clinic&apos;s electronic health record system. Follow the prescribed dosage and consult your dentist with any questions.
+          </div>
+          <div>
+            <div style={{ width: '180px', borderTop: '1.5px solid #334155', marginBottom: '4px' }} />
+            <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 600, textAlign: 'center' }}>Dentist&apos;s Signature</div>
+          </div>
+        </div>
+      </div>
+  )
+
   return (
     <div className="space-y-6">
-      {/* Tab Header */}
+      {/* Portal: renders rx-print-area as direct body child for clean print isolation */}
+      {mounted && createPortal(printContent, document.body)}
       <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-150 shadow-xs">
         <div>
           <h4 className="font-bold text-slate-800 text-sm">Prescriptions</h4>
           <p className="text-xs text-gray-500 mt-0.5">Manage medications and dosage schedules for this patient.</p>
         </div>
-        {dentistId && (
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition"
-          >
-            {showForm ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-            {showForm ? 'Cancel' : 'New Prescription'}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {prescriptions.length > 0 && (
+            <button
+              onClick={() => window.print()}
+              className="px-5 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition font-semibold text-sm shadow-sm flex items-center gap-2"
+            >
+              <Printer className="w-4 h-4" />
+              Print / Save PDF
+            </button>
+          )}
+          {dentistId && (
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition"
+            >
+              {showForm ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+              {showForm ? 'Cancel' : 'New Prescription'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* New Prescription Form */}
