@@ -30,7 +30,7 @@ export default async function BookPage() {
 
   // Fetch patient details, dentists, services, and clinic settings in parallel (Class A Optimization)
   const [patientDetails, dentistsRes, servicesRes, clinicRes] = await Promise.all([
-    fetchPatientRecord(patientRecord.id, clinicIdNum, {}),
+    fetchPatientRecord(patientRecord.id, clinicIdNum, { includeAppointments: true }),
     supabaseAdmin
       .from('dentists')
       .select('id, first_name, last_name, specialty')
@@ -62,6 +62,7 @@ export default async function BookPage() {
       dentists={(dentists || []) as any}
       services={(services || []) as any}
       defaultDownpaymentAmount={defaultDownpaymentAmount}
+      authUserId={authUser.id}
     />
   )
 }

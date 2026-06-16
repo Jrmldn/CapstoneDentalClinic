@@ -11,7 +11,7 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { createAppointment, getAvailableSlots, TimeSlot } from '@/actions/appointmentActions'
+import { createAppointment, getAvailableSlots, updateAppointmentStatus, TimeSlot } from '@/actions/appointmentActions'
 import { Dentist, Service, PatientRecord } from './types'
 
 interface BookingTabProps {
@@ -20,6 +20,7 @@ interface BookingTabProps {
   dentists: Dentist[]
   services: Service[]
   defaultDownpaymentAmount?: number
+  authUserId: string
 }
 
 export function BookingTab({
@@ -28,10 +29,17 @@ export function BookingTab({
   dentists,
   services,
   defaultDownpaymentAmount = 0,
+  authUserId,
 }: BookingTabProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const urlDate = searchParams.get('date') || ''
+
+  const rescheduleMode = searchParams.get('reschedule') === 'true'
+  const rescheduleApptId = searchParams.get('apptId') ? parseInt(searchParams.get('apptId')!, 10) : null
+  const existingAppt = rescheduleMode && rescheduleApptId
+    ? record.appointments.find(a => a.id === rescheduleApptId)
+    : null
 
   const [bookingStatus, setBookingStatus] = useState<{ success?: boolean; error?: string; loading?: boolean }>({})
   const [bookingDentist, setBookingDentist] = useState<string>('')
@@ -74,14 +82,31 @@ export function BookingTab({
 
   // Handle shortcut date selection from the calendar tab URL query parameter
   useEffect(() => {
-    if (urlDate) {
+    if (urlDate && !rescheduleMode) {
       setBookingDate(urlDate)
       // If dentist and service are already selected, fetch slots
       if (bookingDentist && bookingService) {
         handleDateOrDentistChange(urlDate, bookingDentist, bookingService)
       }
     }
-  }, [urlDate])
+  }, [urlDate, rescheduleMode])
+
+  // Pre-fill fields for reschedule mode
+  useEffect(() => {
+    if (rescheduleMode && existingAppt) {
+      const dId = String(existingAppt.dentists?.id || '')
+      const sId = String(existingAppt.services?.id || '')
+      setBookingDentist(dId)
+      setBookingService(sId)
+      if (existingAppt.scheduled_at) {
+        const datePart = new Date(existingAppt.scheduled_at).toISOString().slice(0, 10)
+        setBookingDate(datePart)
+        if (dId && sId) {
+          handleDateOrDentistChange(datePart, dId, sId)
+        }
+      }
+    }
+  }, [rescheduleMode, existingAppt])
 
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -91,16 +116,42 @@ export function BookingTab({
     }
 
     setBookingStatus({ loading: true })
+
+    const scheduledAtStr = `${bookingDate}T${selectedTimeSlot.start}:00`
+    const endAtStr = `${bookingDate}T${selectedTimeSlot.end}:00`
+
+    if (rescheduleMode && rescheduleApptId) {
+      try {
+        const res = await updateAppointmentStatus(
+          rescheduleApptId,
+          'rescheduled',
+          authUserId,
+          'patient',
+          'Rescheduled by patient',
+          new Date(scheduledAtStr).toISOString(),
+          new Date(endAtStr).toISOString()
+        )
+
+        if (res.success) {
+          setBookingStatus({ success: true })
+          setTimeout(() => {
+            router.push('/patient-dashboard/appointments')
+          }, 1500)
+        } else {
+          setBookingStatus({ error: res.error || 'Failed to reschedule appointment.' })
+        }
+      } catch (err) {
+        setBookingStatus({ error: 'An unexpected error occurred.' })
+      }
+      return
+    }
+
     const selectedServiceObj = services.find(s => s.id === parseInt(bookingService, 10))
     if (!selectedServiceObj) return
 
     const servicePrice = selectedServiceObj.price
     const downpaymentAmount = Math.min(defaultDownpaymentAmount, servicePrice) || servicePrice
     const finalDownpayment = paymentType === 'full' ? servicePrice : downpaymentAmount
-
-    // Convert date + HH:mm to ISO strings
-    const scheduledAtStr = `${bookingDate}T${selectedTimeSlot.start}:00`
-    const endAtStr = `${bookingDate}T${selectedTimeSlot.end}:00`
 
     try {
       const res = await createAppointment({
@@ -179,8 +230,9 @@ export function BookingTab({
                     setBookingService(e.target.value)
                     handleDateOrDentistChange(bookingDate, bookingDentist, e.target.value)
                   }}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-slate-700"
+                  className="w-full border border-slate-200 rounded-lg p-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-slate-700 disabled:opacity-75 disabled:bg-slate-50"
                   required
+                  disabled={rescheduleMode}
                 >
                   {consultationServices.map(s => (
                     <option key={s.id} value={s.id}>
@@ -263,7 +315,7 @@ export function BookingTab({
           )}
 
           {/* Payment Options */}
-          {bookingService && (
+          {!rescheduleMode && bookingService && (
             (() => {
               const activeService = services.find(s => s.id === parseInt(bookingService, 10))
               if (!activeService) return null
@@ -362,7 +414,9 @@ export function BookingTab({
             className="w-full bg-blue-600 hover:bg-blue-700 font-bold"
             disabled={bookingStatus.loading || !selectedTimeSlot}
           >
-            {bookingStatus.loading ? 'Booking...' : 'Book Appointment'}
+            {bookingStatus.loading
+              ? (rescheduleMode ? 'Updating...' : 'Booking...')
+              : (rescheduleMode ? 'Reschedule Appointment' : 'Book Appointment')}
           </Button>
         </form>
       </CardContent>

@@ -64,12 +64,18 @@ export function CalendarTab({
       case 'rescheduled': return { dot: 'bg-blue-500',    badge: 'bg-blue-50 text-blue-700 border-blue-200' }
       case 'completed':   return { dot: 'bg-slate-400',   badge: 'bg-slate-50 text-slate-600 border-slate-200' }
       case 'cancelled':   return { dot: 'bg-red-400',     badge: 'bg-red-50 text-red-600 border-red-200' }
+      case 'no_show':     return { dot: 'bg-orange-500',  badge: 'bg-orange-50 text-orange-700 border-orange-200' }
       default:            return { dot: 'bg-gray-300',    badge: 'bg-gray-50 text-gray-600 border-gray-200' }
     }
   }
 
   const getApptsByDate = (dateStr: string) =>
-    record.appointments.filter((a: any) => a.scheduled_at?.startsWith(dateStr))
+    record.appointments.filter((a: any) => {
+      if (!a.scheduled_at) return false
+      const d = new Date(a.scheduled_at)
+      const apptDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      return apptDateStr === dateStr
+    })
 
   const calGrid = getCalGrid()
   const selectedCalAppts = selectedCalDate ? getApptsByDate(selectedCalDate) : []
@@ -84,7 +90,7 @@ export function CalendarTab({
           { label: 'Pending',     dot: 'bg-amber-400' },
           { label: 'Rescheduled', dot: 'bg-blue-500' },
           { label: 'Completed',   dot: 'bg-slate-400' },
-          { label: 'Cancelled',   dot: 'bg-red-400' },
+          { label: 'No Show',     dot: 'bg-orange-500' },
         ].map(l => (
           <span key={l.label} className="flex items-center gap-1.5">
             <span className={`w-2.5 h-2.5 rounded-full ${l.dot}`} />

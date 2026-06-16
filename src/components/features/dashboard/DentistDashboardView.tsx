@@ -96,10 +96,12 @@ function StatusBadge({ status }: { status: string }) {
     cancelled: 'bg-red-50 text-red-650 border border-red-200',
     no_show: 'bg-gray-100 text-gray-500 border border-gray-200',
     in_progress: 'bg-blue-50 text-blue-700 border border-blue-200 font-semibold',
+    follow_up: 'bg-teal-50 text-teal-700 border border-teal-200',
+    pending_patient_confirm: 'bg-purple-50 text-purple-700 border border-purple-200',
   }
   return (
     <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${styles[status] ?? 'bg-gray-100 text-gray-500 border border-gray-200'}`}>
-      {status === 'in_progress' ? 'In Progress' : status.replace('_', ' ')}
+      {status === 'in_progress' ? 'In Progress' : status.replace(/_/g, ' ')}
     </span>
   )
 }
@@ -174,7 +176,7 @@ export default function DentistDashboardView({
   const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 18 ? 'Good afternoon' : 'Good evening'
 
   // Status Action Handler
-  const handleStatusUpdate = async (apptId: number, status: 'completed' | 'no_show' | 'cancelled') => {
+  const handleStatusUpdate = async (apptId: number, status: 'confirmed' | 'completed' | 'no_show' | 'cancelled') => {
     setUpdatingApptId(apptId)
     const res = await updateAppointmentStatus(
       apptId,
@@ -374,8 +376,17 @@ export default function DentistDashboardView({
                         </div>
 
                         {/* Status updates action buttons inside expanded panel */}
-                        {(appt.status === 'pending' || appt.status === 'confirmed') && (
+                        {(appt.status === 'pending' || appt.status === 'confirmed' || appt.status === 'rescheduled') && (
                           <div className="flex justify-end gap-2.5 pt-3">
+                            {(appt.status === 'pending' || appt.status === 'rescheduled') && (
+                              <button
+                                onClick={() => handleStatusUpdate(appt.id, 'confirmed')}
+                                disabled={isBusy}
+                                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-2xs transition disabled:opacity-50"
+                              >
+                                Approve
+                              </button>
+                            )}
                             <button
                               onClick={() => handleStatusUpdate(appt.id, 'completed')}
                               disabled={isBusy}

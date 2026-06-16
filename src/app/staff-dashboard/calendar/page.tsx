@@ -42,6 +42,8 @@ export default async function CalendarPage() {
         initialAppointments={initialAppointments}
         currentYear={year}
         currentMonth={month}
+        userId={authUser.id}
+        role="staff"
       />
     </div>
   )

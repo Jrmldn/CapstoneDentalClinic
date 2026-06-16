@@ -105,18 +105,30 @@ export async function fetchCalendarData(
   try {
     const monthStr   = String(month).padStart(2, '0')
     const firstDay   = `${year}-${monthStr}-01`
-    const lastDay    = new Date(year, month, 0).toISOString().slice(0, 10)
+    
+    const lastDayDate = new Date(year, month, 0)
+    const lastDay    = `${lastDayDate.getFullYear()}-${String(lastDayDate.getMonth() + 1).padStart(2, '0')}-${String(lastDayDate.getDate()).padStart(2, '0')}`
+
+    // Timezone safety: expand the DB query window by 1 day on both ends
+    const startDate = new Date(year, month - 1, 1)
+    startDate.setDate(startDate.getDate() - 1)
+    const queryStart = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}T00:00:00`
+
+    const endDate = new Date(year, month, 0)
+    endDate.setDate(endDate.getDate() + 1)
+    const queryEnd = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}T23:59:59`
 
     let appointmentsQuery = supabaseAdmin
       .from('appointments')
       .select(`
-        id, scheduled_at, end_at, status,
-        patients ( id, first_name, last_name ),
-        services ( id, name )
+        id, scheduled_at, end_at, status, dentist_id,
+        patients ( id, first_name, last_name, phone ),
+        services ( id, name, slot_duration_min ),
+        dentists ( id, first_name, last_name )
       `)
       .eq('clinic_id', clinicId)
-      .gte('scheduled_at', `${firstDay}T00:00:00`)
-      .lte('scheduled_at', `${lastDay}T23:59:59`)
+      .gte('scheduled_at', queryStart)
+      .lte('scheduled_at', queryEnd)
       .not('status', 'in', '(cancelled,no_show)')
       .order('scheduled_at', { ascending: true })
 

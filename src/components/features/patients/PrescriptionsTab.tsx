@@ -102,82 +102,82 @@ export default function PrescriptionsTab({
         color: '#1e293b',
       }}
     >
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '3px solid #1d4ed8', paddingBottom: '18px', marginBottom: '24px' }}>
-          <div>
-            <div style={{ fontSize: '22px', fontWeight: 700, color: '#1d4ed8' }}>Dental Clinic</div>
-            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Patient Prescription Record</div>
-          </div>
-          <div style={{ fontSize: '11px', color: '#64748b', textAlign: 'right' }}>
-            <strong>Date:</strong> {today}
-          </div>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '3px solid #1d4ed8', paddingBottom: '18px', marginBottom: '24px' }}>
+        <div>
+          <div style={{ fontSize: '22px', fontWeight: 700, color: '#1d4ed8' }}>Dental Clinic</div>
+          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Patient Prescription Record</div>
         </div>
-
-        {/* Patient banner */}
-        <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '14px 18px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: '17px', fontWeight: 700, color: '#1e40af' }}>{patientName}</div>
-            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-              {patient?.birthdate ? `DOB: ${patient.birthdate}` : ''}
-              {patient?.gender ? ` · ${patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1)}` : ''}
-            </div>
-          </div>
-          <div style={{ background: '#1d4ed8', color: '#fff', borderRadius: '20px', padding: '4px 14px', fontSize: '11px', fontWeight: 700 }}>
-            {prescriptions.length} Prescription{prescriptions.length !== 1 ? 's' : ''}
-          </div>
-        </div>
-
-        {/* Section label */}
-        <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '1.2px', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '12px' }}>
-          Medications
-        </div>
-
-        {/* Rx cards */}
-        {prescriptions.map((pres, i) => {
-          const dentist = Array.isArray(pres.dentists) ? pres.dentists[0] : pres.dentists
-          const date = pres.prescribed_at
-            ? new Date(pres.prescribed_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-            : '—'
-          return (
-            <div key={pres.id} style={{ display: 'flex', gap: '14px', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px', marginBottom: '12px', pageBreakInside: 'avoid' }}>
-              <div style={{ width: '26px', height: '26px', background: '#dbeafe', color: '#1d4ed8', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, flexShrink: 0, marginTop: '2px' }}>
-                {i + 1}
-              </div>
-              <div style={{ display: 'flex', gap: '12px', flex: 1 }}>
-                <div style={{ fontSize: '28px', color: '#1d4ed8', fontWeight: 300, lineHeight: 1, flexShrink: 0 }}>℞</div>
-                <div>
-                  <p style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a', marginBottom: '5px' }}>{pres.medication}</p>
-                  <p style={{ fontSize: '12px', color: '#334155', marginBottom: '3px' }}><strong>Sig:</strong> {pres.dosage}</p>
-                  <p style={{ fontSize: '12px', color: '#334155', marginBottom: '3px' }}>
-                    <strong>Frequency:</strong> {pres.frequency}
-                    {pres.duration ? <> &nbsp;·&nbsp; <strong>Duration:</strong> {pres.duration}</> : null}
-                  </p>
-                  {pres.notes && (
-                    <p style={{ fontSize: '11px', color: '#64748b', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '4px 8px', margin: '6px 0 4px' }}>
-                      <em>Note: {pres.notes}</em>
-                    </p>
-                  )}
-                  <p style={{ fontSize: '10px', color: '#94a3b8', marginTop: '6px' }}>
-                    Prescribed: {date}
-                    {dentist ? ` · Dr. ${dentist.first_name} ${dentist.last_name}` : ''}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )
-        })}
-
-        {/* Footer */}
-        <div style={{ marginTop: '36px', paddingTop: '14px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-          <div style={{ fontSize: '10px', color: '#94a3b8', maxWidth: '340px' }}>
-            Generated from the clinic&apos;s electronic health record system. Follow the prescribed dosage and consult your dentist with any questions.
-          </div>
-          <div>
-            <div style={{ width: '180px', borderTop: '1.5px solid #334155', marginBottom: '4px' }} />
-            <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 600, textAlign: 'center' }}>Dentist&apos;s Signature</div>
-          </div>
+        <div style={{ fontSize: '11px', color: '#64748b', textAlign: 'right' }}>
+          <strong>Date:</strong> {today}
         </div>
       </div>
+
+      {/* Patient banner */}
+      <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '14px 18px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <div style={{ fontSize: '17px', fontWeight: 700, color: '#1e40af' }}>{patientName}</div>
+          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+            {patient?.birthdate ? `DOB: ${patient.birthdate}` : ''}
+            {patient?.gender ? ` · ${patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1)}` : ''}
+          </div>
+        </div>
+        <div style={{ background: '#1d4ed8', color: '#fff', borderRadius: '20px', padding: '4px 14px', fontSize: '11px', fontWeight: 700 }}>
+          {prescriptions.length} Prescription{prescriptions.length !== 1 ? 's' : ''}
+        </div>
+      </div>
+
+      {/* Section label */}
+      <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '1.2px', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '12px' }}>
+        Medications
+      </div>
+
+      {/* Rx cards */}
+      {prescriptions.map((pres, i) => {
+        const dentist = Array.isArray(pres.dentists) ? pres.dentists[0] : pres.dentists
+        const date = pres.prescribed_at
+          ? new Date(pres.prescribed_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+          : '—'
+        return (
+          <div key={pres.id} style={{ display: 'flex', gap: '14px', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px', marginBottom: '12px', pageBreakInside: 'avoid' }}>
+            <div style={{ width: '26px', height: '26px', background: '#dbeafe', color: '#1d4ed8', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, flexShrink: 0, marginTop: '2px' }}>
+              {i + 1}
+            </div>
+            <div style={{ display: 'flex', gap: '12px', flex: 1 }}>
+              <div style={{ fontSize: '28px', color: '#1d4ed8', fontWeight: 300, lineHeight: 1, flexShrink: 0 }}>℞</div>
+              <div>
+                <p style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a', marginBottom: '5px' }}>{pres.medication}</p>
+                <p style={{ fontSize: '12px', color: '#334155', marginBottom: '3px' }}><strong>Sig:</strong> {pres.dosage}</p>
+                <p style={{ fontSize: '12px', color: '#334155', marginBottom: '3px' }}>
+                  <strong>Frequency:</strong> {pres.frequency}
+                  {pres.duration ? <> &nbsp;·&nbsp; <strong>Duration:</strong> {pres.duration}</> : null}
+                </p>
+                {pres.notes && (
+                  <p style={{ fontSize: '11px', color: '#64748b', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '4px 8px', margin: '6px 0 4px' }}>
+                    <em>Note: {pres.notes}</em>
+                  </p>
+                )}
+                <p style={{ fontSize: '10px', color: '#94a3b8', marginTop: '6px' }}>
+                  Prescribed: {date}
+                  {dentist ? ` · Dr. ${dentist.first_name} ${dentist.last_name}` : ''}
+                </p>
+              </div>
+            </div>
+          </div>
+        )
+      })}
+
+      {/* Footer */}
+      <div style={{ marginTop: '36px', paddingTop: '14px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div style={{ fontSize: '10px', color: '#94a3b8', maxWidth: '340px' }}>
+          Generated from the clinic&apos;s electronic health record system. Follow the prescribed dosage and consult your dentist with any questions.
+        </div>
+        <div>
+          <div style={{ width: '180px', borderTop: '1.5px solid #334155', marginBottom: '4px' }} />
+          <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 600, textAlign: 'center' }}>Dentist&apos;s Signature</div>
+        </div>
+      </div>
+    </div>
   )
 
   return (
@@ -309,16 +309,16 @@ export default function PrescriptionsTab({
             const dentistObj = Array.isArray(pres.dentists) ? pres.dentists[0] : pres.dentists
             const prescribedDate = pres.prescribed_at
               ? new Date(pres.prescribed_at).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })
               : '—'
 
             // Determine active/completed status (e.g. active if within 7 days, or by parsing duration)
-            const isCompleted = pres.duration?.toLowerCase().includes('completed') || 
-                                pres.notes?.toLowerCase().includes('completed') || 
-                                (pres.prescribed_at && (new Date().getTime() - new Date(pres.prescribed_at).getTime()) > 30 * 24 * 60 * 60 * 1000)
+            const isCompleted = pres.duration?.toLowerCase().includes('completed') ||
+              pres.notes?.toLowerCase().includes('completed') ||
+              (pres.prescribed_at && (new Date().getTime() - new Date(pres.prescribed_at).getTime()) > 30 * 24 * 60 * 60 * 1000)
 
             return (
               <div
@@ -352,11 +352,10 @@ export default function PrescriptionsTab({
 
                 <div className="flex-shrink-0">
                   <span
-                    className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                      isCompleted
-                        ? 'bg-slate-100 text-slate-500 border border-slate-200'
-                        : 'bg-blue-50 text-blue-700 border border-blue-200'
-                    }`}
+                    className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${isCompleted
+                      ? 'bg-slate-100 text-slate-500 border border-slate-200'
+                      : 'bg-blue-50 text-blue-700 border border-blue-200'
+                      }`}
                   >
                     {isCompleted ? 'completed' : 'active'}
                   </span>

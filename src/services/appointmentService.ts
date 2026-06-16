@@ -158,7 +158,7 @@ export async function insertAppointmentLog(logData: AppointmentLogInsertData) {
 export const getAppointmentStatus = cache(async (appointmentId: number) => {
   return supabaseAdmin
     .from('appointments')
-    .select('status')
+    .select('status, reschedule_count, booked_at, scheduled_at, end_at')
     .eq('id', appointmentId)
     .single()
 })

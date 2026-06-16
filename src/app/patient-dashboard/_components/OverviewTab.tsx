@@ -12,7 +12,6 @@ import {
 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { updateAppointmentStatus } from '@/actions/appointmentActions'
 import { PatientRecord } from './types'
 import { formatDate, formatTime, getStatusBadge } from './utils'
 
@@ -30,26 +29,7 @@ export function OverviewTab({
     a => ['pending', 'confirmed', 'rescheduled'].includes(a.status) && new Date(a.scheduled_at) > new Date()
   )
 
-  const handleCancelAppointment = async (apptId: number) => {
-    if (!confirm('Are you sure you want to cancel this appointment?')) return
-    try {
-      const res = await updateAppointmentStatus(
-        apptId,
-        'cancelled',
-        authUserId,
-        'patient',
-        'Cancelled by patient'
-      )
-      if (res.success) {
-        alert('Appointment cancelled successfully.')
-        router.refresh()
-      } else {
-        alert(res.error || 'Failed to cancel appointment.')
-      }
-    } catch (err) {
-      alert('An unexpected error occurred.')
-    }
-  }
+
 
   return (
     <div className="space-y-6">
@@ -147,12 +127,11 @@ export function OverviewTab({
                   </div>
                   <div className="flex gap-2">
                     <Button
-                      onClick={() => handleCancelAppointment(next.id)}
-                      variant="destructive"
+                      onClick={() => router.push(`/patient-dashboard/booking?reschedule=true&apptId=${next.id}`)}
+                      className="bg-slate-900 hover:bg-slate-800 text-white font-bold"
                       size="sm"
-                      className="font-bold"
                     >
-                      Cancel Booking
+                      Reschedule
                     </Button>
                   </div>
                 </div>

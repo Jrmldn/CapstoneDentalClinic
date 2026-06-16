@@ -13,7 +13,6 @@ import type {
 import AppointmentTable from './AppointmentTable'
 import BookAppointmentModal from './BookAppointmentModal'
 import RescheduleModal from './RescheduleModal'
-import CancelModal from './CancelModal'
 import AppointmentBillingModal from './AppointmentBillingModal'
 
 export default function AppointmentsClient({
@@ -29,6 +28,7 @@ export default function AppointmentsClient({
   // Filters
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [typeFilter, setTypeFilter] = useState<string>('all')
   const [dateFilter, setDateFilter] = useState(() => {
     const localDate = new Date()
     const year = localDate.getFullYear()
@@ -40,7 +40,6 @@ export default function AppointmentsClient({
   // Modals state
   const [isBookModalOpen, setIsBookModalOpen] = useState(false)
   const [reschedulingAppt, setReschedulingAppt] = useState<Appointment | null>(null)
-  const [cancellingAppt, setCancellingAppt] = useState<Appointment | null>(null)
   const [billingAppt, setBillingAppt] = useState<Appointment | null>(null)
 
   // Refetch appointments after actions
@@ -65,13 +64,16 @@ export default function AppointmentsClient({
     }
   }
 
-  const handleCancelSuccess = (apptId: number, reason: string) => {
-    setAppointments(prev =>
-      prev.map(a =>
-        a.id === apptId ? { ...a, status: 'cancelled', notes: reason } : a
-      )
-    )
-    setCancellingAppt(null)
+
+
+  const handleNoShow = async (apptId: number) => {
+    if (!confirm('Mark this appointment as No-Show?')) return
+    const res = await updateAppointmentStatus(apptId, 'no_show', userId, 'staff', 'Patient did not show up')
+    if (res.success) {
+      setAppointments(prev => prev.map(a => (a.id === apptId ? { ...a, status: 'no_show' } : a)))
+    } else {
+      alert(res.error || 'Failed to mark as no-show.')
+    }
   }
 
   // Filter logic
@@ -80,15 +82,23 @@ export default function AppointmentsClient({
     const dentistName = `${appt.dentists?.first_name || ''} ${appt.dentists?.last_name || ''}`.toLowerCase()
     const matchesSearch = patientName.includes(searchTerm.toLowerCase()) || dentistName.includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || appt.status === statusFilter
-    const matchesDate = !dateFilter || appt.scheduled_at.startsWith(dateFilter)
-    return matchesSearch && matchesStatus && matchesDate
+    let matchesDate = true
+    if (dateFilter) {
+      const d = new Date(appt.scheduled_at)
+      const apptDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      matchesDate = apptDateStr === dateFilter
+    }
+    const matchesType = typeFilter === 'all' || 
+      (typeFilter === 'walk_in' && appt.is_walk_in) || 
+      (typeFilter === 'online' && !appt.is_walk_in)
+    return matchesSearch && matchesStatus && matchesDate && matchesType
   })
 
   return (
     <div className="space-y-6">
       {/* Tool bar */}
       <div className="flex flex-col lg:flex-row gap-4 justify-between items-stretch lg:items-center bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 flex-1">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 flex-1">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
@@ -121,6 +131,15 @@ export default function AppointmentsClient({
             <option value="cancelled">Cancelled</option>
             <option value="no_show">No-Show</option>
           </select>
+          <select
+            className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none text-slate-700"
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+          >
+            <option value="all">All Booking Types</option>
+            <option value="walk_in">Walk-In</option>
+            <option value="online">Online Booking</option>
+          </select>
         </div>
         <button
           onClick={() => setIsBookModalOpen(true)}
@@ -137,7 +156,7 @@ export default function AppointmentsClient({
         onConfirm={handleConfirm}
         onReschedule={setReschedulingAppt}
         onOpenBilling={setBillingAppt}
-        onCancel={setCancellingAppt}
+        onNoShow={handleNoShow}
       />
 
       {/* MODAL: Book Appointment */}
@@ -160,13 +179,7 @@ export default function AppointmentsClient({
         onSuccess={refreshAppointments}
       />
 
-      {/* MODAL: Cancel */}
-      <CancelModal
-        appointment={cancellingAppt}
-        onClose={() => setCancellingAppt(null)}
-        userId={userId}
-        onSuccess={handleCancelSuccess}
-      />
+
 
       {/* MODAL: Complete & Billing */}
       <AppointmentBillingModal

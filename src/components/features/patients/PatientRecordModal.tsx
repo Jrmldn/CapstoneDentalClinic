@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import type { PatientSummary } from './PatientsClient'
 import { fetchPatientRecord, addClinicalAssessment, updatePatientMedicalHistory } from '@/actions/patientActions'
+import { formatPhone } from '@/utils/phone-helpers'
 import DentalChartTab from './DentalChartTab'
 import TreatmentTab from './TreatmentTab'
 import PrescriptionsTab from './PrescriptionsTab'
@@ -38,6 +39,7 @@ export interface MedicalHistory {
   is_smoker: boolean
   blood_pressure: string | null
   medical_flags: string | null
+  detailed_info?: any
 }
 
 export interface ToothCondition {
@@ -303,7 +305,7 @@ export default function PatientRecordModal({ record, onClose, dentistId, clinicI
                 </div>
                 <div>
                   <span className="text-[10px] text-gray-400 block font-semibold">PHONE</span>
-                  <span className="text-sm font-medium text-slate-800">{localRecord.patient.phone}</span>
+                  <span className="text-sm font-medium text-slate-800">{formatPhone(localRecord.patient.phone)}</span>
                 </div>
                 {localRecord.patient.email && (
                   <div>
@@ -315,10 +317,50 @@ export default function PatientRecordModal({ record, onClose, dentistId, clinicI
                   <span className="text-[10px] text-gray-400 block font-semibold">LAST VISIT</span>
                   <span className="text-sm font-semibold text-blue-600">{lastVisitDate}</span>
                 </div>
+                <div>
+                  <span className="text-[10px] text-gray-400 block font-semibold">PREVIOUS DENTIST</span>
+                  <span className="text-sm font-medium text-slate-800">{(localRecord.patient as any).previous_dentist || 'None'}</span>
+                </div>
+                <div className="col-span-3">
+                  <span className="text-[10px] text-gray-400 block font-semibold">ACCEPTED HMO / HEALTH CARDS</span>
+                  <span className="text-sm font-medium text-slate-800">
+                    {(localRecord.patient as any).hmo_cards && (localRecord.patient as any).hmo_cards.length > 0
+                      ? (localRecord.patient as any).hmo_cards.join(', ')
+                      : 'None'}
+                  </span>
+                </div>
                 <div className="col-span-3">
                   <span className="text-[10px] text-gray-400 block font-semibold">ADDRESS</span>
                   <span className="text-sm font-medium text-slate-800">{localRecord.patient.address || '—'}</span>
                 </div>
+
+                {/* Parent / Guardian Information (shown for minors) */}
+                {(() => {
+                  const birthdateStr = localRecord.patient.birthdate
+                  const isMinor = birthdateStr
+                    ? Math.floor((Date.now() - new Date(birthdateStr).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) < 18
+                    : false
+                  if (!isMinor) return null
+                  return (
+                    <div className="col-span-3 mt-2 p-4 bg-amber-50/50 border border-amber-100 rounded-xl grid grid-cols-2 gap-3">
+                      <div className="col-span-2">
+                        <span className="text-[10px] text-amber-700 font-bold uppercase tracking-wider">Parent / Guardian Details (Minor)</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-semibold">GUARDIAN NAME</span>
+                        <span className="text-xs font-semibold text-slate-800">{(localRecord.patient as any).guardian_name || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-semibold">GUARDIAN PHONE</span>
+                        <span className="text-xs font-semibold text-slate-800">{(localRecord.patient as any).guardian_phone || '—'}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-[10px] text-slate-400 block font-semibold">GUARDIAN ADDRESS</span>
+                        <span className="text-xs font-semibold text-slate-800">{(localRecord.patient as any).guardian_address || '—'}</span>
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
 
               <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-xs grid grid-cols-2 gap-5">
@@ -437,7 +479,7 @@ export default function PatientRecordModal({ record, onClose, dentistId, clinicI
                       <div>
                         <span className="text-[10px] text-gray-400 block font-semibold">MEDICAL FLAGS</span>
                         {viewerRole === 'staff' ? (
-                          <span className={`text-sm font-bold mt-0.5 block ${localRecord.medicalHistory.medical_flags ? 'text-red-650' : 'text-slate-800'}`}>
+                          <span className="text-sm font-bold mt-0.5 block text-slate-800">
                             {localRecord.medicalHistory.medical_flags || 'None'}
                           </span>
                         ) : (
@@ -446,7 +488,7 @@ export default function PatientRecordModal({ record, onClose, dentistId, clinicI
                             placeholder="e.g. Penicillin allergy, Latex"
                             value={editMedicalFlags}
                             onChange={e => setEditMedicalFlags(e.target.value)}
-                            className="mt-0.5 w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-red-400 outline-none font-semibold text-red-650 placeholder:text-gray-300"
+                            className="mt-0.5 w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800 placeholder:text-gray-300"
                           />
                         )}
                       </div>
@@ -491,6 +533,83 @@ export default function PatientRecordModal({ record, onClose, dentistId, clinicI
                         )}
                       </div>
                     </div>
+
+                    {/* Detailed info section if present */}
+                    {localRecord.medicalHistory.detailed_info && (
+                      <div className="col-span-2 border-t border-gray-100 pt-4 mt-2 space-y-4">
+                        <h5 className="font-bold text-slate-800 text-xs uppercase tracking-wider">Detailed Medical History Questionnaire</h5>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
+                          {/* Physician Info */}
+                          <div className="p-3 bg-slate-50 rounded-lg border border-gray-100 col-span-1 sm:col-span-2 md:col-span-3 space-y-1.5">
+                            <span className="text-[10px] text-gray-400 font-semibold uppercase block">Primary Physician Details</span>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-1">
+                              <p className="text-slate-600"><span className="font-bold text-slate-700">Name:</span> {localRecord.medicalHistory.detailed_info.physician_name || '—'}</p>
+                              <p className="text-slate-600"><span className="font-bold text-slate-700">Specialty:</span> {localRecord.medicalHistory.detailed_info.physician_specialty || '—'}</p>
+                              <p className="text-slate-600"><span className="font-bold text-slate-700">Office Address:</span> {localRecord.medicalHistory.detailed_info.physician_office_address || '—'}</p>
+                              <p className="text-slate-600"><span className="font-bold text-slate-700">Office Phone:</span> {localRecord.medicalHistory.detailed_info.physician_office_phone || '—'}</p>
+                            </div>
+                          </div>
+
+                          {/* Dental Visit & Bleeding Time */}
+                          <div className="p-3 bg-slate-50 rounded-lg border border-gray-100">
+                            <span className="text-[10px] text-gray-400 font-semibold uppercase block">Last Dental Visit</span>
+                            <p className="font-bold text-slate-800 mt-0.5">{localRecord.medicalHistory.detailed_info.last_dental_visit || '—'}</p>
+                          </div>
+                          <div className="p-3 bg-slate-50 rounded-lg border border-gray-100">
+                            <span className="text-[10px] text-gray-400 font-semibold uppercase block">Bleeding Time</span>
+                            <p className="font-bold text-slate-800 mt-0.5">{localRecord.medicalHistory.detailed_info.bleeding_time || '—'}</p>
+                          </div>
+
+                          {/* Women Specifics */}
+                          {localRecord.patient.gender === 'female' && (
+                            <div className="p-3 bg-slate-50 rounded-lg border border-gray-100">
+                              <span className="text-[10px] text-gray-400 font-semibold uppercase block">Women-Only Specs</span>
+                              <p className="font-semibold text-slate-700 mt-0.5">
+                                Nursing: <span className="font-bold">{localRecord.medicalHistory.detailed_info.is_nursing ? "YES" : "NO"}</span> · 
+                                Birth Control: <span className="font-bold">{localRecord.medicalHistory.detailed_info.is_birth_control ? "YES" : "NO"}</span>
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Allergy checklist */}
+                          <div className="p-3 bg-slate-50 rounded-lg border border-gray-100 col-span-1 sm:col-span-2 md:col-span-3 space-y-1.5">
+                            <span className="text-[10px] text-gray-400 font-semibold uppercase block">Allergy Checklist Details</span>
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-slate-650">
+                              <p><span className="font-bold text-slate-700">Local Anesthetic (Lidocaine):</span> {localRecord.medicalHistory.detailed_info.allergy_local_anesthetic ? 'YES' : 'NO'}</p>
+                              <p><span className="font-bold text-slate-700">Penicillin / Antibiotics:</span> {localRecord.medicalHistory.detailed_info.allergy_penicillin ? 'YES' : 'NO'}</p>
+                              <p><span className="font-bold text-slate-700">Sulfa Drugs:</span> {localRecord.medicalHistory.detailed_info.allergy_sulfa ? 'YES' : 'NO'}</p>
+                              <p><span className="font-bold text-slate-700">Aspirin:</span> {localRecord.medicalHistory.detailed_info.allergy_aspirin ? 'YES' : 'NO'}</p>
+                              <p><span className="font-bold text-slate-700">Latex:</span> {localRecord.medicalHistory.detailed_info.allergy_latex ? 'YES' : 'NO'}</p>
+                              {localRecord.medicalHistory.detailed_info.allergy_other && (
+                                <p className="w-full"><span className="font-bold text-slate-700">Other Allergies:</span> {localRecord.medicalHistory.detailed_info.allergy_other}</p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Questionnaire */}
+                          <div className="p-3 bg-slate-50 rounded-lg border border-gray-100 col-span-1 sm:col-span-2 md:col-span-3 space-y-1.5">
+                            <span className="text-[10px] text-gray-400 font-semibold uppercase block">Health Questionnaire Responses</span>
+                            <div className="space-y-1 text-slate-650">
+                              <p>1. In good condition? <span className="font-bold text-slate-700 capitalize">{localRecord.medicalHistory.detailed_info.good_condition || '—'}</span></p>
+                              <p>2. Under medical treatment? <span className="font-bold text-slate-700 capitalize">{localRecord.medicalHistory.detailed_info.under_medical_treatment || '—'}</span>
+                                {localRecord.medicalHistory.detailed_info.under_medical_treatment === 'yes' && localRecord.medicalHistory.detailed_info.under_medical_treatment_desc && ` (${localRecord.medicalHistory.detailed_info.under_medical_treatment_desc})`}
+                              </p>
+                              <p>3. Serious illness or operation? <span className="font-bold text-slate-700 capitalize">{localRecord.medicalHistory.detailed_info.serious_illness_operation || '—'}</span>
+                                {localRecord.medicalHistory.detailed_info.serious_illness_operation === 'yes' && localRecord.medicalHistory.detailed_info.serious_illness_operation_desc && ` (${localRecord.medicalHistory.detailed_info.serious_illness_operation_desc})`}
+                              </p>
+                              <p>4. Been hospitalized? <span className="font-bold text-slate-700 capitalize">{localRecord.medicalHistory.detailed_info.hospitalized || '—'}</span>
+                                {localRecord.medicalHistory.detailed_info.hospitalized === 'yes' && localRecord.medicalHistory.detailed_info.hospitalized_desc && ` (${localRecord.medicalHistory.detailed_info.hospitalized_desc})`}
+                              </p>
+                              <p>5. Taking prescription/non-prescription meds? <span className="font-bold text-slate-700 capitalize">{localRecord.medicalHistory.detailed_info.prescription_medication || '—'}</span>
+                                {localRecord.medicalHistory.detailed_info.prescription_medication === 'yes' && localRecord.medicalHistory.detailed_info.prescription_medication_desc && ` (${localRecord.medicalHistory.detailed_info.prescription_medication_desc})`}
+                              </p>
+                              <p>6. Uses alcohol / other drugs? <span className="font-bold text-slate-700 capitalize">{localRecord.medicalHistory.detailed_info.drug_use || '—'}</span></p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Save button — dentist only */}
                     {viewerRole !== 'staff' && (

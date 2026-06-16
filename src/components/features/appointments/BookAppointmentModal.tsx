@@ -9,6 +9,7 @@ import {
 } from '@/actions/appointmentActions'
 import { registerPatient } from '@/actions/patientActions'
 import type { Patient, Service, Dentist } from './AppointmentTypes'
+import { formatPhone } from '@/utils/phone-helpers'
 
 const MILLISECONDS_PER_MINUTE = 60_000
 
@@ -203,7 +204,7 @@ export default function BookAppointmentModal({
                 <option value="">-- Select Patient --</option>
                 {patients.map(p => (
                   <option key={p.id} value={p.id}>
-                    {p.last_name}, {p.first_name} ({p.phone})
+                    {p.last_name}, {p.first_name} ({formatPhone(p.phone)})
                   </option>
                 ))}
               </select>

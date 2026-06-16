@@ -250,7 +250,7 @@ export async function fetchPatientRecord(
     let appointmentsQuery = supabaseAdmin
       .from('appointments')
       .select(`
-        id, scheduled_at, end_at, status, is_walk_in, downpayment, payment_status, notes,
+        id, clinic_id, scheduled_at, end_at, status, is_walk_in, downpayment, payment_status, notes,
         services ( id, name, price ),
         dentists ( id, first_name, last_name )
       `)
@@ -551,6 +551,11 @@ export async function updatePatientProfile(
     birthdate: string
     gender: string
     address: string
+    previous_dentist?: string | null
+    guardian_name?: string | null
+    guardian_address?: string | null
+    guardian_phone?: string | null
+    hmo_cards?: string[] | null
   }
 ) {
   try {
@@ -563,6 +568,11 @@ export async function updatePatientProfile(
         birthdate: data.birthdate,
         gender: data.gender,
         address: data.address,
+        previous_dentist: data.previous_dentist ?? null,
+        guardian_name: data.guardian_name ?? null,
+        guardian_address: data.guardian_address ?? null,
+        guardian_phone: data.guardian_phone ?? null,
+        hmo_cards: data.hmo_cards ?? [],
       })
       .eq('id', patientId)
       .select()
@@ -591,6 +601,7 @@ export interface PatientMedicalHistoryData {
   previous_surgeries?: string | null
   is_pregnant?: boolean
   is_smoker?: boolean
+  detailed_info?: any
 }
 
 export async function updatePatientMedicalHistory(
@@ -612,6 +623,7 @@ export async function updatePatientMedicalHistory(
           previous_surgeries: data.previous_surgeries ?? null,
           is_pregnant: data.is_pregnant ?? false,
           is_smoker: data.is_smoker ?? false,
+          detailed_info: data.detailed_info ?? {},
         },
         { onConflict: 'patient_id' }
       )
@@ -799,6 +811,47 @@ export async function addTmjAssessment(data: TmjAssessmentData) {
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to add TMJ assessment',
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// SUBMIT APPOINTMENT FEEDBACK (G1)
+// ─────────────────────────────────────────────────────────────
+
+export async function submitFeedback(
+  appointmentId: number,
+  patientId: number,
+  clinicId: number,
+  rating: number,
+  comment?: string
+) {
+  try {
+    const { error } = await supabaseAdmin
+      .from('feedback')
+      .insert([{
+        appointment_id: appointmentId,
+        patient_id: patientId,
+        clinic_id: clinicId,
+        rating,
+        comment: comment ?? null,
+      }])
+
+    if (error) {
+      // Unique constraint violation: already submitted
+      if (error.code === '23505') {
+        return { success: false, error: 'You have already submitted feedback for this appointment.' }
+      }
+      throw new Error(error.message)
+    }
+
+    revalidatePath('/patient-dashboard/appointments')
+    return { success: true }
+  } catch (error) {
+    console.error('Error in submitFeedback:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to submit feedback',
     }
   }
 }

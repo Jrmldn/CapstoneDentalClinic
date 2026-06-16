@@ -2,6 +2,7 @@
 
 import { User, Phone, Calendar, FileText, ClipboardList } from 'lucide-react'
 import type { PatientSummary } from './PatientsClient'
+import { formatPhone } from '@/utils/phone-helpers'
 
 interface PatientCardProps {
   patient: PatientSummary
@@ -36,7 +37,7 @@ export default function PatientCard({ patient, onViewRecord }: PatientCardProps)
         <div className="space-y-1 mt-2 text-xs text-gray-500">
           <p className="flex items-center gap-1.5">
             <Phone className="w-3.5 h-3.5" />
-            {patient.phone}
+            {formatPhone(patient.phone)}
           </p>
           {patient.email && (
             <p className="flex items-center gap-1.5 truncate">

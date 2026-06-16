@@ -53,10 +53,10 @@ export default function RescheduleModal({
 
     const rescheduleResult = await updateAppointmentStatus(
       appointment.id,
-      'rescheduled',
+      'pending_patient_confirm',
       userId,
       'staff',
-      'Rescheduled by staff',
+      'Rescheduled by staff — awaiting patient confirmation',
       startDateObj.toISOString(),
       endIso
     )

@@ -12,6 +12,7 @@ import {
   Play
 } from 'lucide-react'
 import { retriggerNotification, fetchNotifications } from '@/actions/managementActions'
+import { formatPhone } from '@/utils/phone-helpers'
 
 interface Notification {
   id: number
@@ -125,7 +126,7 @@ export default function NotificationsClient({
                       <p className="font-semibold text-slate-900">
                         {notif.patients ? `${notif.patients.first_name} ${notif.patients.last_name}` : 'Unknown Patient'}
                       </p>
-                      <p className="text-xs text-gray-500">{notif.patients?.phone || 'No phone'}</p>
+                      <p className="text-xs text-gray-500">{formatPhone(notif.patients?.phone)}</p>
                     </div>
                   </td>
                   <td className="px-6 py-4">

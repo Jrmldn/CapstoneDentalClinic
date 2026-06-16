@@ -118,20 +118,6 @@ export async function GET(request: NextRequest) {
 
     if (role === 'patient') {
       try {
-        const targetUrl = attemptedClinicId
-          ? `/patient-dashboard?clinic=${attemptedClinicId}`
-          : `/patient-dashboard`
-
-        const { data: patientData, error: patientError } = await supabase
-          .from('patients')
-          .select('id')
-          .eq('user_id', sessionUser.id)
-          .maybeSingle()
-
-        if (patientError || !patientData) {
-          await new Promise((resolve) => setTimeout(resolve, 500))
-        }
-
         if (attemptedClinicId) {
           cookieStore.set('clinic_id', attemptedClinicId, {
             httpOnly: true,
@@ -140,6 +126,26 @@ export async function GET(request: NextRequest) {
             path: '/',
           })
         }
+
+        const { data: patientData } = await supabase
+          .from('patients')
+          .select('id, phone')
+          .eq('user_id', sessionUser.id)
+          .maybeSingle()
+
+        // If the patient has no phone (newly registered), send to profile to complete details
+        const isNewPatient =
+          !patientData ||
+          !patientData.phone ||
+          patientData.phone.trim() === '' ||
+          // Guard against UUIDs accidentally stored in phone field
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(patientData.phone)
+
+        const targetUrl = isNewPatient
+          ? `/patient-dashboard/profile?onboarding=true`
+          : attemptedClinicId
+          ? `/patient-dashboard?clinic=${attemptedClinicId}`
+          : `/patient-dashboard`
 
         return NextResponse.redirect(new URL(targetUrl, request.url))
       } catch {

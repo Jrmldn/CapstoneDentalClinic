@@ -31,6 +31,8 @@ export type AppointmentStatus =
   | 'completed'
   | 'cancelled'
   | 'no_show'
+  | 'follow_up'
+  | 'pending_patient_confirm'
 
 export type PaymentMethod = 'gcash' | 'credit_card' | 'paymaya' | 'cash' | 'hmo'
 export type PaymentStatus = 'unpaid' | 'partial' | 'paid'
@@ -175,6 +177,31 @@ export async function getAvailableSlots(
 
 export async function createAppointment(data: CreateAppointmentData) {
   try {
+    // Resolve authenticated user and their role
+    let performedBy: string | null = null
+    let performedByRole: string | null = null
+    try {
+      const supabase = await createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        performedBy = user.id
+        const { data: userData } = await supabaseAdmin
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle()
+        if (userData) {
+          performedByRole = userData.role
+        }
+      }
+    } catch (authErr) {
+      console.warn('Could not resolve auth user details in createAppointment:', authErr)
+    }
+
+    if (!performedByRole) {
+      performedByRole = data.is_walk_in ? 'staff' : 'patient'
+    }
+
     const { data: appointment, error } = await insertAppointment({
       clinic_id:      data.clinic_id,
       patient_id:     data.patient_id,
@@ -195,21 +222,14 @@ export async function createAppointment(data: CreateAppointmentData) {
     // Log the creation
     await insertAppointmentLog({
       appointment_id: appointment.id,
+      performed_by:   performedBy,
+      role:           performedByRole,
       action:         'created',
       new_status:     'pending',
       notes:          data.is_walk_in ? 'Walk-in appointment' : 'Online booking',
     })
 
     // Link patient to clinic via clinic_patients junction table if they aren't already linked
-    let enrolledByUserId: string | null = null
-    try {
-      const supabase = await createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) enrolledByUserId = user.id
-    } catch (authErr) {
-      console.warn('Could not resolve enrolled_by user automatically in createAppointment:', authErr)
-    }
-
     const { error: junctionError } = await supabaseAdmin
       .from('clinic_patients')
       .upsert(
@@ -217,7 +237,7 @@ export async function createAppointment(data: CreateAppointmentData) {
           clinic_id: data.clinic_id,
           patient_id: data.patient_id,
           is_active: true,
-          enrolled_by: enrolledByUserId,
+          enrolled_by: performedBy,
         }],
         { onConflict: 'clinic_id,patient_id', ignoreDuplicates: true }
       )
@@ -256,28 +276,95 @@ export async function updateAppointmentStatus(
   rescheduledEnd?: string
 ) {
   try {
-    // Fetch current status for the log
+    // Fetch current status (and reschedule tracking fields) for the log
     const { data: current, error: fetchError } = await getAppointmentStatus(appointmentId)
 
     if (fetchError || !current) throw new Error('Appointment not found')
 
+    // A2: Enforce reschedule limits for patients
+    const isPatientReschedule = role === 'patient' && rescheduledAt
+    if (isPatientReschedule) {
+      const rescheduleCount = (current as any).reschedule_count ?? 0
+      if (rescheduleCount >= 3) {
+        return { success: false, error: 'Reschedule limit reached. You may only reschedule up to 3 times per appointment.' }
+      }
+      const bookedAt = (current as any).booked_at
+      if (bookedAt) {
+        const hoursSinceBooking = (Date.now() - new Date(bookedAt).getTime()) / (1000 * 60 * 60)
+        if (hoursSinceBooking < 1) {
+          return { success: false, error: 'You cannot reschedule within 1 hour of booking. Please wait a moment.' }
+        }
+      }
+    }
+
     const updateData: Record<string, unknown> = { status: newStatus }
     if (rescheduledAt) updateData.scheduled_at = rescheduledAt
     if (rescheduledEnd)  updateData.end_at      = rescheduledEnd
+    // A2: Increment reschedule_count when patient reschedules
+    if (isPatientReschedule) {
+      updateData.reschedule_count = ((current as any).reschedule_count ?? 0) + 1
+    }
+
+    // If declining a reschedule (moving from pending_patient_confirm to pending),
+    // find the original scheduled times in the log notes and revert to them.
+    if (current.status === 'pending_patient_confirm' && newStatus === 'pending') {
+      try {
+        const { data: latestLog } = await supabaseAdmin
+          .from('appointment_logs')
+          .select('notes')
+          .eq('appointment_id', appointmentId)
+          .eq('new_status', 'pending_patient_confirm')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        
+        if (latestLog && latestLog.notes) {
+          const match = latestLog.notes.match(/\[Original: ([^|]+) \| ([^\]]+)\]/)
+          if (match) {
+            updateData.scheduled_at = match[1].trim()
+            updateData.end_at = match[2].trim()
+          }
+        }
+      } catch (logErr) {
+        console.warn('Failed to retrieve original schedule time from logs in updateAppointmentStatus:', logErr)
+      }
+    }
 
     const { error: updateError } = await updateAppointmentDetails(appointmentId, updateData)
 
     if (updateError) throw new Error(updateError.message)
 
     // Write audit log
+    let logAction: 'created' | 'confirmed' | 'rescheduled' | 'cancelled' | 'completed' | 'no_show' | 'follow_up_set' | 'status_updated'
+    if (newStatus === 'rescheduled' || newStatus === 'pending_patient_confirm') {
+      logAction = 'rescheduled'
+    } else if (newStatus === 'confirmed') {
+      logAction = 'confirmed'
+    } else if (newStatus === 'completed') {
+      logAction = 'completed'
+    } else if (newStatus === 'cancelled') {
+      logAction = 'cancelled'
+    } else if (newStatus === 'no_show') {
+      logAction = 'no_show'
+    } else if (newStatus === 'follow_up') {
+      logAction = 'follow_up_set'
+    } else {
+      logAction = 'status_updated'
+    }
+
+    let logNotes = notes ?? null
+    if (newStatus === 'pending_patient_confirm') {
+      logNotes = `${notes ?? ''} [Original: ${(current as any).scheduled_at} | ${(current as any).end_at}]`
+    }
+
     await insertAppointmentLog({
       appointment_id: appointmentId,
       performed_by:   performedBy,
       role,
-      action:         newStatus === 'rescheduled' ? 'rescheduled' : 'status_change',
+      action:         logAction,
       old_status:     current.status,
       new_status:     newStatus,
-      notes:          notes ?? null,
+      notes:          logNotes,
     })
 
     revalidatePath('/staff-dashboard/appointments')

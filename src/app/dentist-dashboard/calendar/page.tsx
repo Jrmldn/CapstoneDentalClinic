@@ -47,6 +47,9 @@ export default async function CalendarPage() {
         currentYear={year}
         currentMonth={month}
         canManageHolidays={false}
+        userId={authUser.id}
+        role="dentist"
+        dentistId={dentistId}
       />
     </div>
   )
