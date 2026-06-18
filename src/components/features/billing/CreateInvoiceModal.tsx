@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import {
   Receipt,
   AlertCircle,
@@ -45,17 +45,24 @@ export default function CreateInvoiceModal({
   const [selectedPatientId, setSelectedPatientId] = useState('')
   const [items, setItems] = useState<TransactionItem[]>([])
   const [discountType, setDiscountType] = useState<DiscountType>('none')
-  const [hmoCoverage, setHmoCoverage] = useState('0')
   const [philhealthCoverage, setPhilhealthCoverage] = useState('0')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('paid')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
+  const [patientSearch, setPatientSearch] = useState('')
+  const [isPatientDropdownOpen, setIsPatientDropdownOpen] = useState(false)
+  const [isPatientAutoSelected, setIsPatientAutoSelected] = useState(false)
 
   const handleApptChange = (apptIdStr: string) => {
     setSelectedApptId(apptIdStr)
     if (!apptIdStr) {
       setItems([])
+      if (isPatientAutoSelected) {
+        setSelectedPatientId('')
+        setPatientSearch('')
+        setIsPatientAutoSelected(false)
+      }
       return
     }
 
@@ -64,7 +71,13 @@ export default function CreateInvoiceModal({
       const patientObj = Array.isArray(appointment.patients) ? appointment.patients[0] : appointment.patients
       const serviceObj = Array.isArray(appointment.services) ? appointment.services[0] : appointment.services
 
-      setSelectedPatientId(patientObj?.id?.toString() || '')
+      if (patientObj) {
+        if (!selectedPatientId || selectedPatientId !== patientObj.id.toString()) {
+          setSelectedPatientId(patientObj.id.toString())
+          setPatientSearch(`${patientObj.last_name}, ${patientObj.first_name}`)
+          setIsPatientAutoSelected(true)
+        }
+      }
       if (serviceObj) {
         setItems([
           {
@@ -77,6 +90,41 @@ export default function CreateInvoiceModal({
       }
     }
   }
+
+  const handleSelectPatient = (patient: Patient) => {
+    setSelectedPatientId(patient.id.toString())
+    setPatientSearch(`${patient.last_name}, ${patient.first_name}`)
+    setIsPatientDropdownOpen(false)
+    setIsPatientAutoSelected(false)
+
+    // Clear selected appointment if it belongs to a different patient
+    if (selectedApptId) {
+      const appt = appointments.find(a => a.id === parseInt(selectedApptId))
+      const apptPatient = appt ? (Array.isArray(appt.patients) ? appt.patients[0] : appt.patients) : null
+      if (apptPatient && apptPatient.id !== patient.id) {
+        setSelectedApptId('')
+        setItems([])
+      }
+    }
+  }
+
+  const handleSearchChange = (val: string) => {
+    setPatientSearch(val)
+    setSelectedPatientId('')
+    setIsPatientAutoSelected(false)
+    setIsPatientDropdownOpen(true)
+  }
+
+  const filteredPatients = patients.filter(p => {
+    const fullName = `${p.first_name} ${p.last_name} ${p.last_name}, ${p.first_name}`.toLowerCase()
+    return fullName.includes(patientSearch.toLowerCase())
+  })
+
+  const filteredAppointments = appointments.filter(a => {
+    if (!selectedPatientId) return true
+    const patientObj = Array.isArray(a.patients) ? a.patients[0] : a.patients
+    return patientObj?.id === parseInt(selectedPatientId)
+  })
 
   const handleAddItem = (type: 'service' | 'product', itemIdStr: string) => {
     if (!itemIdStr) return
@@ -121,6 +169,12 @@ export default function CreateInvoiceModal({
     )
   }
 
+  const handlePriceChange = (index: number, price: number) => {
+    setItems(prev =>
+      prev.map((item, i) => (i === index ? { ...item, unit_price: Math.max(0, price) } : item))
+    )
+  }
+
   const calculateTotals = () => {
     const subtotal = items.reduce((sum, item) => sum + item.unit_price * item.quantity, 0)
     let discountAmount = 0
@@ -129,19 +183,26 @@ export default function CreateInvoiceModal({
     if (discountType === 'senior' || discountType === 'pwd') {
       discountAmount = parseFloat((subtotal * SENIOR_PWD_DISCOUNT_RATE).toFixed(2))
       total -= discountAmount
-    } else if (discountType === 'hmo') {
-      const hmoCoverageAmount = parseFloat(hmoCoverage) || 0
-      discountAmount = Math.min(subtotal, hmoCoverageAmount)
-      total -= discountAmount
     } else if (discountType === 'philhealth') {
       const philhealthCoverageAmount = parseFloat(philhealthCoverage) || 0
       discountAmount = Math.min(subtotal, philhealthCoverageAmount)
       total -= discountAmount
     }
 
+    // Deduct downpayment if appointment is linked
+    let downpaymentDeduction = 0
+    if (selectedApptId) {
+      const appointment = appointments.find(a => a.id === parseInt(selectedApptId))
+      if (appointment && appointment.downpayment) {
+        downpaymentDeduction = appointment.downpayment
+      }
+    }
+    total -= downpaymentDeduction
+
     return {
       subtotal,
       discountAmount,
+      downpaymentDeduction,
       total: Math.max(0, total)
     }
   }
@@ -151,9 +212,11 @@ export default function CreateInvoiceModal({
   const resetForm = () => {
     setSelectedApptId('')
     setSelectedPatientId('')
+    setPatientSearch('')
+    setIsPatientDropdownOpen(false)
+    setIsPatientAutoSelected(false)
     setItems([])
     setDiscountType('none')
-    setHmoCoverage('0')
     setPhilhealthCoverage('0')
     setPaymentMethod('cash')
     setPaymentStatus('paid')
@@ -180,12 +243,11 @@ export default function CreateInvoiceModal({
 
     setIsSubmitting(true)
     const result = await createTransaction({
-      appointment_id: parseInt(selectedApptId),
+      appointment_id: selectedApptId ? parseInt(selectedApptId) : null,
       patient_id: parseInt(selectedPatientId),
       clinic_id: clinicId,
       items,
       discount_type: discountType,
-      hmo_coverage: parseFloat(hmoCoverage) || 0,
       philhealth_coverage: parseFloat(philhealthCoverage) || 0,
       payment_method: paymentMethod,
       payment_status: paymentStatus
@@ -229,41 +291,77 @@ export default function CreateInvoiceModal({
             <div className="space-y-1">
               <label className="text-sm font-semibold text-slate-800">Linked Appointment (Optional)</label>
               <select
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500 text-slate-700"
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500 text-slate-700 font-semibold"
                 value={selectedApptId}
                 onChange={(e) => handleApptChange(e.target.value)}
               >
                 <option value="">-- No Appointment (Custom Invoice) --</option>
-                {appointments.map(a => {
+                {filteredAppointments.map(a => {
                   const patientObj = Array.isArray(a.patients) ? a.patients[0] : a.patients
                   const serviceObj = Array.isArray(a.services) ? a.services[0] : a.services
                   const patientName = patientObj ? `${patientObj.first_name} ${patientObj.last_name}` : 'Unknown'
-                  const dateStr = new Date(a.scheduled_at).toLocaleDateString()
+                  
+                  const dateObj = new Date(a.scheduled_at)
+                  const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                  const formattedTime = dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+                  
                   return (
                     <option key={a.id} value={a.id}>
-                      {patientName} - {dateStr} ({serviceObj?.name ?? 'No service'})
+                      {patientName} — {serviceObj?.name ?? 'No service'} — {formattedDate} at {formattedTime}
                     </option>
                   )
                 })}
               </select>
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1 relative">
               <label className="text-sm font-semibold text-slate-800">Select Patient *</label>
-              <select
-                required
-                disabled={!!selectedApptId}
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500 text-slate-700 disabled:opacity-60"
-                value={selectedPatientId}
-                onChange={(e) => setSelectedPatientId(e.target.value)}
-              >
-                <option value="">-- Select Patient --</option>
-                {patients.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.last_name}, {p.first_name}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search patient by name..."
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500 text-slate-750 font-semibold disabled:opacity-60"
+                  value={patientSearch}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onFocus={() => setIsPatientDropdownOpen(true)}
+                  onBlur={() => setTimeout(() => setIsPatientDropdownOpen(false), 200)}
+                  disabled={!!selectedApptId}
+                  required={!selectedPatientId}
+                />
+                {patientSearch && !selectedApptId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPatientSearch('')
+                      setSelectedPatientId('')
+                      setIsPatientAutoSelected(false)
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              {isPatientDropdownOpen && !selectedApptId && (
+                <div className="absolute z-[55] left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg">
+                  {filteredPatients.length > 0 ? (
+                    filteredPatients.map(p => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => handleSelectPatient(p)}
+                        className="w-full text-left px-4 py-2.5 text-xs hover:bg-slate-50 text-slate-750 font-semibold border-b border-gray-50 last:border-0"
+                      >
+                        {p.last_name}, {p.first_name}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-4 py-3 text-xs text-gray-450 text-center font-bold">
+                      No matching patients found
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -325,7 +423,18 @@ export default function CreateInvoiceModal({
                           onChange={(e) => handleQuantityChange(index, parseInt(e.target.value))}
                         />
                       </td>
-                      <td className="px-4 py-2.5">₱{item.unit_price.toLocaleString()}</td>
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-1">
+                          <span className="text-slate-400">₱</span>
+                          <input
+                            type="number"
+                            min="0"
+                            className="w-24 px-2 py-1 bg-white border border-gray-200 rounded outline-none text-center font-semibold text-slate-800"
+                            value={item.unit_price}
+                            onChange={(e) => handlePriceChange(index, parseFloat(e.target.value) || 0)}
+                          />
+                        </div>
+                      </td>
                       <td className="px-4 py-2.5 text-right font-bold">
                         ₱{(item.unit_price * item.quantity).toLocaleString()}
                       </td>
@@ -365,24 +474,10 @@ export default function CreateInvoiceModal({
                 <option value="none">No Discount</option>
                 <option value="senior">Senior Citizen (20%)</option>
                 <option value="pwd">PWD (20%)</option>
-                <option value="hmo">HMO Coverage</option>
                 <option value="philhealth">PhilHealth Coverage</option>
               </select>
             </div>
 
-            {discountType === 'hmo' && (
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-650 block">HMO Covered Amount (₱)</label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none"
-                  value={hmoCoverage}
-                  onChange={e => setHmoCoverage(e.target.value)}
-                />
-              </div>
-            )}
 
             {discountType === 'philhealth' && (
               <div className="space-y-1">
@@ -412,7 +507,6 @@ export default function CreateInvoiceModal({
                 <option value="gcash">GCash</option>
                 <option value="paymaya">PayMaya</option>
                 <option value="credit_card">Credit Card</option>
-                <option value="hmo">HMO</option>
               </select>
             </div>
 
@@ -437,9 +531,15 @@ export default function CreateInvoiceModal({
               <span>₱{totals.subtotal.toLocaleString()}</span>
             </div>
             {totals.discountAmount > 0 && (
-              <div className="flex justify-between text-indigo-600">
+              <div className="flex justify-between text-indigo-650">
                 <span>Discount / Coverages:</span>
                 <span>- ₱{totals.discountAmount.toLocaleString()}</span>
+              </div>
+            )}
+            {totals.downpaymentDeduction > 0 && (
+              <div className="flex justify-between text-indigo-600">
+                <span>Downpayment Paid (Consultation):</span>
+                <span>- ₱{totals.downpaymentDeduction.toLocaleString()}</span>
               </div>
             )}
             <div className="flex justify-between border-t border-gray-200 pt-2 text-sm font-bold text-slate-900">

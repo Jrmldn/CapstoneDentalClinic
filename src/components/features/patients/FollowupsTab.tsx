@@ -293,6 +293,15 @@ export default function FollowupsTab({
                         Attending: Dr. {dentistObj.first_name} {dentistObj.last_name}
                       </p>
                     )}
+                    {(() => {
+                      const clinicObj = Array.isArray(appt.clinics) ? appt.clinics[0] : appt.clinics
+                      if (!clinicObj) return null
+                      return (
+                        <p className="text-[9px] text-slate-400 font-semibold mt-0.5">
+                          Scheduled at {clinicObj.name} {appt.booked_at ? `on ${new Date(appt.booked_at).toLocaleDateString()}` : ''}
+                        </p>
+                      )
+                    })()}
                   </div>
                 </div>
 

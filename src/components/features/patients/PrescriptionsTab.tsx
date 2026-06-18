@@ -334,13 +334,22 @@ export default function PrescriptionsTab({
                     <p className="text-xs text-slate-600">
                       {pres.dosage} · {pres.frequency} {pres.duration ? `· ${pres.duration}` : ''}
                     </p>
-                    <div className="flex items-center gap-1.5 mt-1">
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
                       <span className="text-[10px] text-gray-400 font-semibold">{prescribedDate}</span>
                       {dentistObj && (
                         <span className="text-[10px] text-gray-450">
                           · Dr. {dentistObj.first_name} {dentistObj.last_name}
                         </span>
                       )}
+                      {(() => {
+                        const clinicObj = Array.isArray(pres.clinics) ? pres.clinics[0] : pres.clinics
+                        if (!clinicObj) return null
+                        return (
+                          <span className="text-[10px] text-slate-400 font-semibold">
+                            · Prescribed at {clinicObj.name}
+                          </span>
+                        )
+                      })()}
                     </div>
                     {pres.notes && (
                       <p className="text-[11px] text-gray-500 italic mt-1 bg-slate-50 px-2 py-0.5 rounded border border-gray-100 w-fit">

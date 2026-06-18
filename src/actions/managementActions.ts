@@ -433,7 +433,7 @@ export async function generateSalesReport(
       .from('transactions')
       .select(`
         id, subtotal, discount_type, discount_amount,
-        hmo_coverage, philhealth_coverage, total_amount,
+        philhealth_coverage, total_amount,
         payment_method, payment_status, created_at,
         patients ( id, first_name, last_name ),
         transaction_items (
@@ -453,7 +453,6 @@ export async function generateSalesReport(
       total_amount: number | string | null
       subtotal: number | string | null
       discount_amount: number | string | null
-      hmo_coverage: number | string | null
       philhealth_coverage: number | string | null
     }
 
@@ -463,7 +462,6 @@ export async function generateSalesReport(
     const totalRevenue    = txList.reduce((s, t) => s + Number(t.total_amount), 0)
     const totalSubtotal   = txList.reduce((s, t) => s + Number(t.subtotal), 0)
     const totalDiscounts  = txList.reduce((s, t) => s + Number(t.discount_amount), 0)
-    const totalHmo        = txList.reduce((s, t) => s + Number(t.hmo_coverage), 0)
     const totalPhilHealth = txList.reduce((s, t) => s + Number(t.philhealth_coverage), 0)
 
     return {
@@ -475,7 +473,6 @@ export async function generateSalesReport(
         totalRevenue,
         totalSubtotal,
         totalDiscounts,
-        totalHmo,
         totalPhilHealth,
       },
       transactions: txList,

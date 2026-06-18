@@ -1,43 +1,43 @@
-# Patient Dashboard Implementation Plan
+# AppointDent Architecture Pivot & Implementation Plan
 
-This plan outlines the steps for creating and building a premium, fully-functional, role-secured **Patient Dashboard** in AppointDent.
+Based on the recent context and architecture pivot to a single business with multiple branches, this plan outlines the necessary steps to transition the application.
 
-## 📋 Checklist & Milestones
+## 📋 Phase 1: Database & RLS Restructuring
+- [ ] Update RLS policies to allow staff and dentists to read clinical records company-wide (drop `auth_clinic_id()` read restrictions). Keep `clinic_id` on rows for audit.
+  - Tables: `dental_charts`, `tooth_conditions`, `patient_medical_history`, `clinical_assessments`, `tmj_assessments`, `periodontal_screenings`, `oral_surgery_records`, `prescriptions`, `treatment_history`, `informed_consent`, `follow_up_schedules`.
+- [ ] Update RLS policies for transaction tables to allow company-wide reads for staff.
+  - Tables: `transactions`, `transaction_items`.
+- [ ] Split `appointments` RLS policies:
+  - **WRITE**: Remains clinic-scoped (booking at a physical location).
+  - **READ**: Company-wide for staff to maintain treatment continuity context.
 
-### Phase 1: Core Dashboard Structure & Navigation
-- [x] Create a responsive sidebar/top navigation layout suitable for patients.
-- [x] Define a multi-tab system (`Overview`, `Book Appointment`, `My Appointments`, `Clinical Records`, `Profile Details`).
-- [x] Secure the client components by passing role-verified, cookie-aligned parameters from the server page component.
-- [x] Wire up logout functions.
+## 📋 Phase 2: Refactoring Auth & Login Flow
+- [ ] **Patient Login Updates**:
+  - Remove the `?clinic=` query parameter dependency from `/login`.
+  - Update the landing page to point the login button straight to `/login` without any clinic params.
+- [ ] **Auth Callback & Cookies**:
+  - Remove setting the `clinic_id` httpOnly cookie in `/auth/callback/route.ts` for patients.
+- [ ] **Dashboard Access Checks**:
+  - Remove `verifyClinicAccess()` check and redirect logic in `src/app/patient-dashboard/page.tsx`.
 
-### Phase 2: Live Database Integrations & Scheduling Engine
-- [x] Implement the **Appointment Booking Form**:
-  - [x] Dynamic service list loading with price indicators.
-  - [x] Dynamic dentist selection filtered by clinic.
-  - [x] Interactive calendar date-picker.
-  - [x] Integration with the `getAvailableSlots` server action to retrieve real-time free time slots.
-  - [x] Submitting and validation of slot bookings via `createAppointment`.
-- [x] Implement the **My Appointments List**:
-  - [x] Split list into "Upcoming Appointments" and "Past Appointments".
-  - [x] Add inline "Cancel Booking" action for future appointments utilizing `updateAppointmentStatus`.
+## 📋 Phase 3: Patient Dashboard Revamp (Unified View)
+- [ ] Refactor `src/app/patient-dashboard/page.tsx` to display a unified view of the patient's records across all branches.
+- [ ] Consolidate views for:
+  - All appointments
+  - All medical history
+  - All prescriptions
+- [ ] Remove any clinic-specific lock or headers in the patient's dashboard.
 
-### Phase 3: Clinical Records & Medical History
-- [x] Display **Clinical Records**:
-  - [x] List active tooth conditions recorded in the patient's dental chart.
-  - [x] Show completed treatments history list with performing dentist and price.
-  - [x] List active prescriptions with dosage guidelines.
-- [x] Display **Medical History**:
-  - [x] Render read-only dashboard overview cards for blood type, allergies, medications, and chronic conditions.
+## 📋 Phase 4: Appointment Scheduling Updates
+- [ ] Update the "Schedule Appointment" flow to include branch selection.
+- [ ] Ensure the patient can pick which physical branch to visit only during the booking process.
 
-### Phase 4: Profile Management
-- [x] Implement **Profile Update Form**:
-  - [x] Allow editing of first name, last name, phone, birthdate, gender, and address.
-  - [x] Save changes securely using the newly created `updatePatientProfile` server action.
+## 📋 Phase 5: Audit Logging System
+- [ ] Create `login_logs` table (`user_id`, `email`, `role`, `login_at`).
+- [ ] Implement a shared server action to insert login records.
+- [ ] Integrate logging in `/auth/callback` for Google OAuth.
+- [ ] Integrate logging in a client-side `onAuthStateChange` listener for email/password logins (since `@supabase/auth-ui-react` handles them internally).
+- [ ] Finalize logging logic in `src/app/superadmin-login/page.tsx` to capture superadmin logins.
 
----
-
-## 🛠️ Tech Stack & Services Used
-* **Frontend Components**: Tailwind CSS, Lucide React Icons, Shadcn UI (`Card`, `Button`, `Badge`).
-* **Database/ORM**: Supabase JS client querying `patients`, `appointments`, `dentists`, `services`, `feedback`, `dental_charts`, `prescriptions`, `treatment_history`.
-* **State Management**: React Client State (`useState`) for tabs routing, booking details, slot availability queries, form submissions, and loading indicators.
-* **Server Actions**: `getAvailableSlots`, `createAppointment`, `updateAppointmentStatus`, `updatePatientProfile`.
+## 📋 Phase 6: Unsolved Problems Resolution
+- [ ] Review and address any outstanding known unsolved problems mentioned previously during the pivot.

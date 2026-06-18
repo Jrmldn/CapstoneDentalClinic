@@ -34,7 +34,7 @@ export type AppointmentStatus =
   | 'follow_up'
   | 'pending_patient_confirm'
 
-export type PaymentMethod = 'gcash' | 'credit_card' | 'paymaya' | 'cash' | 'hmo'
+export type PaymentMethod = 'gcash' | 'credit_card' | 'paymaya' | 'cash'
 export type PaymentStatus = 'unpaid' | 'partial' | 'paid'
 
 export interface CreateAppointmentData {
@@ -228,23 +228,6 @@ export async function createAppointment(data: CreateAppointmentData) {
       new_status:     'pending',
       notes:          data.is_walk_in ? 'Walk-in appointment' : 'Online booking',
     })
-
-    // Link patient to clinic via clinic_patients junction table if they aren't already linked
-    const { error: junctionError } = await supabaseAdmin
-      .from('clinic_patients')
-      .upsert(
-        [{
-          clinic_id: data.clinic_id,
-          patient_id: data.patient_id,
-          is_active: true,
-          enrolled_by: performedBy,
-        }],
-        { onConflict: 'clinic_id,patient_id', ignoreDuplicates: true }
-      )
-
-    if (junctionError) {
-      console.warn('Failed to link patient to clinic on appointment creation:', junctionError.message)
-    }
 
     revalidatePath('/staff-dashboard/appointments')
     revalidatePath('/staff-dashboard/patients')

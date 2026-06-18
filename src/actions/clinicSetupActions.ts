@@ -32,7 +32,7 @@ export async function updateClinicProfile(
     if (error) throw new Error(error.message)
 
     revalidatePath('/')
-    revalidatePath('/staff-dashboard/profile')
+    revalidatePath(`/superadmin-dashboard/clinic/${clinicId}/profile`)
     return { success: true, clinic: clinic?.[0] }
   } catch (error) {
     console.error('Error in updateClinicProfile:', error)
@@ -69,7 +69,7 @@ export async function updateOperatingHours(clinicId: number, hours: OperatingHou
     if (error) throw new Error(error.message)
 
     revalidatePath('/')
-    revalidatePath('/staff-dashboard/profile')
+    revalidatePath(`/superadmin-dashboard/clinic/${clinicId}/profile`)
     return { success: true, hours: data }
   } catch (error) {
     console.error('Error in updateOperatingHours:', error)
@@ -80,37 +80,6 @@ export async function updateOperatingHours(clinicId: number, hours: OperatingHou
   }
 }
 
-export async function manageClinicHMOs(clinicId: number, hmoNames: string[]) {
-  try {
-    await supabaseAdmin
-      .from('clinic_hmo')
-      .delete()
-      .eq('clinic_id', clinicId)
-
-    if (hmoNames.length > 0) {
-      const hmoData = hmoNames.map(name => ({
-        clinic_id: clinicId,
-        hmo_name: name
-      }))
-
-      const { error } = await supabaseAdmin
-        .from('clinic_hmo')
-        .insert(hmoData)
-
-      if (error) throw new Error(error.message)
-    }
-
-    revalidatePath('/')
-    revalidatePath('/staff-dashboard/profile')
-    return { success: true }
-  } catch (error) {
-    console.error('Error in manageClinicHMOs:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to manage HMOs',
-    }
-  }
-}
 
 export async function manageClinicSpecialties(clinicId: number, specialties: string[]) {
   try {
@@ -133,7 +102,7 @@ export async function manageClinicSpecialties(clinicId: number, specialties: str
     }
 
     revalidatePath('/')
-    revalidatePath('/staff-dashboard/profile')
+    revalidatePath(`/superadmin-dashboard/clinic/${clinicId}/profile`)
     return { success: true }
   } catch (error) {
     console.error('Error in manageClinicSpecialties:', error)
@@ -166,7 +135,7 @@ export async function manageClinicGallery(clinicId: number, imageUrls: { url: st
     }
 
     revalidatePath('/')
-    revalidatePath('/staff-dashboard/profile')
+    revalidatePath(`/superadmin-dashboard/clinic/${clinicId}/profile`)
     return { success: true }
   } catch (error) {
     console.error('Error in manageClinicGallery:', error)

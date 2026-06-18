@@ -12,7 +12,8 @@ import {
   Plus,
   RefreshCw,
   AlertCircle,
-  Calendar
+  Calendar,
+  Camera
 } from 'lucide-react'
 import type { PatientSummary } from './PatientsClient'
 import { fetchPatientRecord, addClinicalAssessment, updatePatientMedicalHistory } from '@/actions/patientActions'
@@ -22,11 +23,13 @@ import TreatmentTab from './TreatmentTab'
 import PrescriptionsTab from './PrescriptionsTab'
 import PeriodontalTab, { PeriodontalScreening, TmjAssessment } from './PeriodontalTab'
 import FollowupsTab from './FollowupsTab'
+import PhotosTab from './PhotosTab'
 
-export type RecordTab = 'chart' | 'treatments' | 'prescriptions' | 'info' | 'periodontal' | 'followups'
+export type RecordTab = 'chart' | 'treatments' | 'prescriptions' | 'info' | 'periodontal' | 'followups' | 'photos'
 
 export interface FullPatientDetail extends PatientSummary {
   address: string | null
+  updated_at?: string
 }
 
 export interface MedicalHistory {
@@ -40,6 +43,7 @@ export interface MedicalHistory {
   blood_pressure: string | null
   medical_flags: string | null
   detailed_info?: any
+  updated_at?: string
 }
 
 export interface ToothCondition {
@@ -55,6 +59,10 @@ export interface ToothCondition {
 export interface DentalChart {
   id: number
   tooth_conditions: ToothCondition[]
+  created_at?: string
+  updated_at?: string
+  dentists?: { id: number; first_name: string; last_name: string } | { id: number; first_name: string; last_name: string }[] | null
+  clinics?: { id: number; name: string } | { id: number; name: string }[] | null
 }
 
 export interface TreatmentHistory {
@@ -66,6 +74,7 @@ export interface TreatmentHistory {
   service_id: number | null
   services: { id: number; name: string } | { id: number; name: string }[] | null
   dentists: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null
+  clinics?: { id: number; name: string } | { id: number; name: string }[] | null
 }
 
 export interface Assessment {
@@ -87,6 +96,7 @@ export interface Prescription {
   duration: string | null
   notes?: string | null
   dentists: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null
+  clinics?: { id: number; name: string } | { id: number; name: string }[] | null
 }
 
 export interface AppointmentRecord {
@@ -96,6 +106,8 @@ export interface AppointmentRecord {
   notes: string | null
   services: { name: string } | { name: string }[] | null
   dentists: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null
+  clinics?: { id: number; name: string } | { id: number; name: string }[] | null
+  booked_at?: string
 }
 
 export interface PatientRecord {
@@ -201,7 +213,8 @@ export default function PatientRecordModal({ record, onClose, dentistId, clinicI
     { id: 'prescriptions', label: 'Prescriptions', icon: ClipboardList },
     { id: 'info', label: 'Medical History', icon: User },
     { id: 'periodontal', label: 'Periodontal', icon: HeartPulse },
-    { id: 'followups', label: 'Follow-ups', icon: Calendar }
+    { id: 'followups', label: 'Follow-ups', icon: Calendar },
+    { id: 'photos', label: 'Photos', icon: Camera }
   ]
 
   const handleRefreshRecord = async () => {
@@ -292,8 +305,21 @@ export default function PatientRecordModal({ record, onClose, dentistId, clinicI
           {activeRecordTab === 'info' && (
             <div className="space-y-6">
               <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-xs grid grid-cols-3 gap-4">
-                <div className="col-span-3">
-                  <h4 className="font-bold text-slate-900 text-sm border-b border-gray-100 pb-1 mb-2">Personal Details</h4>
+                <div className="col-span-3 flex justify-between items-center border-b border-gray-100 pb-1 mb-2">
+                  <h4 className="font-bold text-slate-900 text-sm">Personal Details</h4>
+                  {localRecord.medicalHistory?.detailed_info?.profile_updated_by ? (
+                    <span className="text-[10px] text-gray-400 font-medium">
+                      Last updated: {localRecord.medicalHistory.detailed_info.profile_updated_at ? new Date(localRecord.medicalHistory.detailed_info.profile_updated_at).toLocaleString() : '—'}
+                      {` by ${localRecord.medicalHistory.detailed_info.profile_updated_by}`}
+                      {localRecord.medicalHistory.detailed_info.profile_updated_by_branch && ` (${localRecord.medicalHistory.detailed_info.profile_updated_by_branch})`}
+                    </span>
+                  ) : (
+                    localRecord.patient.updated_at && (
+                      <span className="text-[10px] text-gray-400 font-medium">
+                        Last updated: {new Date(localRecord.patient.updated_at).toLocaleString()}
+                      </span>
+                    )
+                  )}
                 </div>
                 <div>
                   <span className="text-[10px] text-gray-400 block font-semibold">GENDER</span>
@@ -320,14 +346,6 @@ export default function PatientRecordModal({ record, onClose, dentistId, clinicI
                 <div>
                   <span className="text-[10px] text-gray-400 block font-semibold">PREVIOUS DENTIST</span>
                   <span className="text-sm font-medium text-slate-800">{(localRecord.patient as any).previous_dentist || 'None'}</span>
-                </div>
-                <div className="col-span-3">
-                  <span className="text-[10px] text-gray-400 block font-semibold">ACCEPTED HMO / HEALTH CARDS</span>
-                  <span className="text-sm font-medium text-slate-800">
-                    {(localRecord.patient as any).hmo_cards && (localRecord.patient as any).hmo_cards.length > 0
-                      ? (localRecord.patient as any).hmo_cards.join(', ')
-                      : 'None'}
-                  </span>
                 </div>
                 <div className="col-span-3">
                   <span className="text-[10px] text-gray-400 block font-semibold">ADDRESS</span>
@@ -364,8 +382,15 @@ export default function PatientRecordModal({ record, onClose, dentistId, clinicI
               </div>
 
               <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-xs grid grid-cols-2 gap-5">
-                <div className="col-span-2">
-                  <h4 className="font-bold text-slate-900 text-sm border-b border-gray-100 pb-1 mb-2">Medical History Summary</h4>
+                <div className="col-span-2 flex justify-between items-center border-b border-gray-100 pb-1 mb-2">
+                  <h4 className="font-bold text-slate-900 text-sm">Medical History Summary</h4>
+                  {localRecord.medicalHistory && (
+                    <span className="text-[10px] text-gray-400 font-medium">
+                      Last updated: {localRecord.medicalHistory.updated_at ? new Date(localRecord.medicalHistory.updated_at).toLocaleString() : '—'}
+                      {(localRecord.medicalHistory as any).detailed_info?.updated_by && ` by ${(localRecord.medicalHistory as any).detailed_info.updated_by}`}
+                      {(localRecord.medicalHistory as any).detailed_info?.updated_by_branch && ` (${(localRecord.medicalHistory as any).detailed_info.updated_by_branch})`}
+                    </span>
+                  )}
                 </div>
                 {localRecord.medicalHistory ? (
                   <>
@@ -687,6 +712,13 @@ export default function PatientRecordModal({ record, onClose, dentistId, clinicI
               dentistId={dentistId}
               appointments={localRecord.appointments || []}
               onRefresh={handleRefreshRecord}
+            />
+          )}
+
+          {activeRecordTab === 'photos' && (
+            <PhotosTab
+              patientId={localRecord.patient.id}
+              viewerRole={viewerRole}
             />
           )}
         </div>

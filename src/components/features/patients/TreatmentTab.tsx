@@ -320,10 +320,21 @@ export default function TreatmentTab({
                       </div>
                     )}
 
-                    <div className="flex justify-between items-center pt-2.5 border-t border-gray-100 text-[11px] text-slate-500 font-semibold">
-                      <div className="flex items-center gap-1">
-                        <User className="w-3.5 h-3.5 text-slate-400" />
-                        <span>Attending: Dr. {dentistObj ? `${dentistObj.first_name} ${dentistObj.last_name}` : 'Cruz'}</span>
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-center pt-2.5 border-t border-gray-100 text-[11px] text-slate-500 font-semibold gap-2">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center gap-1">
+                          <User className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Attending: Dr. {dentistObj ? `${dentistObj.first_name} ${dentistObj.last_name}` : 'Cruz'}</span>
+                        </div>
+                        {(() => {
+                          const clinicObj = Array.isArray(treat.clinics) ? treat.clinics[0] : treat.clinics
+                          if (!clinicObj) return null
+                          return (
+                            <span className="text-slate-400 font-medium">
+                              · Recorded at {clinicObj.name} on {treat.performed_at ? new Date(treat.performed_at).toLocaleString() : '—'}
+                            </span>
+                          )
+                        })()}
                       </div>
                       <span className="font-mono text-gray-400 text-xs">{trCode}</span>
                     </div>

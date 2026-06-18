@@ -7,9 +7,6 @@ export interface ClinicSpecialty {
   specialty_name: string;
 }
 
-export interface ClinicHMO {
-  hmo_name: string;
-}
 
 export interface ClinicOperatingHour {
   day_of_week: number;
@@ -35,7 +32,6 @@ export interface Clinic {
   manual_status: string | null;
   latitude: number | null;
   longitude: number | null;
-  clinic_hmo: ClinicHMO[];
   clinic_specialties: ClinicSpecialty[];
   clinic_operating_hours: ClinicOperatingHour[];
   clinic_gallery: ClinicGallery[];
@@ -45,5 +41,4 @@ export interface Clinic {
 export interface ClinicMapProps {
   clinics: Clinic[];
   availableSpecialties?: string[];
-  availableHMOs?: string[];
 }

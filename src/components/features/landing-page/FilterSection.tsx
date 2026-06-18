@@ -6,9 +6,6 @@ interface FilterSectionProps {
   selectedSpecialty: string
   setSelectedSpecialty: (val: string) => void
   specialtyOptions: string[]
-  selectedHMO: string
-  setSelectedHMO: (val: string) => void
-  hmoOptions: string[]
   minRating: number
   setMinRating: (val: number) => void
   showOpenOnly: boolean
@@ -17,15 +14,12 @@ interface FilterSectionProps {
 
 /**
  * FilterSection Component
- * Renders the filter controls (Specialty dropdown, HMO dropdown, Rating dropdown, Open Status checkbox).
+ * Renders the filter controls (Specialty dropdown, Rating dropdown, Open Status checkbox).
  */
 export const FilterSection = ({
   selectedSpecialty,
   setSelectedSpecialty,
   specialtyOptions,
-  selectedHMO,
-  setSelectedHMO,
-  hmoOptions,
   minRating,
   setMinRating,
   showOpenOnly,
@@ -45,22 +39,6 @@ export const FilterSection = ({
           {specialtyOptions.map((spec) => (
             <option key={spec} value={spec}>
               {spec}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-          HMO / Health Card
-        </label>
-        <select
-          value={selectedHMO}
-          onChange={(e) => setSelectedHMO(e.target.value)}
-          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-        >
-          {hmoOptions.map((hmo) => (
-            <option key={hmo} value={hmo}>
-              {hmo}
             </option>
           ))}
         </select>

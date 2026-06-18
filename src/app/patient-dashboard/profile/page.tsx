@@ -1,6 +1,5 @@
 import React, { Suspense } from 'react'
 import { enforceRole } from '@/lib/auth/protection'
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { fetchPatientRecord } from '@/actions/patientActions'
 import { createClient } from '@/lib/supabase/serverSSR'
@@ -9,9 +8,6 @@ import { PatientRecord } from '../_components/types'
 
 export default async function ProfilePage() {
   const authUser = await enforceRole('patient')
-  const cookieStore = await cookies()
-  const clinicId = cookieStore.get('clinic_id')?.value
-  if (!clinicId) redirect('/')
 
   const supabase = await createClient()
 
@@ -26,8 +22,7 @@ export default async function ProfilePage() {
     redirect('/')
   }
 
-  const clinicIdNum = parseInt(clinicId, 10)
-  const patientDetails = await fetchPatientRecord(patientRecord.id, clinicIdNum, {
+  const patientDetails = await fetchPatientRecord(patientRecord.id, undefined, {
     includeMedicalHistory: true
   })
   if (!patientDetails.success || !patientDetails.record) {
@@ -43,19 +38,10 @@ export default async function ProfilePage() {
     patientDetails.record.patient.email = authUser.email
   }
 
-  // Fetch clinic HMO options
-  const { data: clinicHmos } = await supabase
-    .from('clinic_hmo')
-    .select('hmo_name')
-    .eq('clinic_id', clinicIdNum)
-
-  const hmoOptions = (clinicHmos || []).map((h: any) => h.hmo_name).filter(Boolean)
-
   return (
     <Suspense fallback={<div className="p-8 text-center text-slate-400 text-sm">Loading profile...</div>}>
       <ProfileTab 
         record={patientDetails.record as unknown as PatientRecord} 
-        hmoOptions={hmoOptions}
       />
     </Suspense>
   )

@@ -1,6 +1,5 @@
 import React from 'react'
 import { enforceRole } from '@/lib/auth/protection'
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { fetchPatientRecord } from '@/actions/patientActions'
 import { createClient } from '@/lib/supabase/serverSSR'
@@ -9,9 +8,6 @@ import { PatientRecord } from '../_components/types'
 
 export default async function DashboardPage() {
   const authUser = await enforceRole('patient')
-  const cookieStore = await cookies()
-  const clinicId = cookieStore.get('clinic_id')?.value
-  if (!clinicId) redirect('/')
 
   const supabase = await createClient()
 
@@ -26,8 +22,7 @@ export default async function DashboardPage() {
     redirect('/')
   }
 
-  const clinicIdNum = parseInt(clinicId, 10)
-  const patientDetails = await fetchPatientRecord(patientRecord.id, clinicIdNum, {
+  const patientDetails = await fetchPatientRecord(patientRecord.id, undefined, {
     includeAppointments: true,
     includePrescriptions: true
   })

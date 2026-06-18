@@ -10,9 +10,7 @@ import {
   Receipt,
   Package,
   Settings,
-  Stethoscope,
   Bell,
-  BarChart3,
   Image as ImageIcon,
 } from 'lucide-react'
 
@@ -35,21 +33,18 @@ const menuGroups = [
     label: 'Finance',
     items: [
       { label: 'Billing',       href: '/staff-dashboard/billing',        icon: Receipt,       key: 'billing' },
-      { label: 'Reports',       href: '/staff-dashboard/reports',        icon: BarChart3,     key: 'reports' },
     ],
   },
   {
     label: 'Management',
     items: [
       { label: 'Inventory',     href: '/staff-dashboard/inventory',      icon: Package,       key: 'inventory' },
-      { label: 'Personnel',     href: '/staff-dashboard/personnel',      icon: Users,         key: 'personnel' },
       { label: 'Notifications', href: '/staff-dashboard/notifications',  icon: Bell,          key: 'notifications' },
     ],
   },
   {
     label: 'Settings',
     items: [
-      { label: 'Clinic Profile', href: '/staff-dashboard/profile',       icon: Stethoscope,   key: 'profile' },
       { label: 'Services',       href: '/staff-dashboard/services',      icon: Settings,      key: 'services' },
     ],
   },

@@ -14,7 +14,6 @@ interface Clinic {
   manual_status: string | null
   clinic_operating_hours: { day_of_week: number; open_time: string; close_time: string; is_closed: boolean }[]
   clinic_specialties: { specialty_name: string }[]
-  clinic_hmo: { hmo_name: string }[]
   clinic_gallery?: { image_url: string; sort_order: number }[]
   feedback: { rating: number }[]
   latitude: number | null
@@ -143,7 +142,6 @@ const LeafletMapInner = ({ clinics, onMapReady, activeClinicId, onMarkerClick }:
           gallery={clinic.clinic_gallery}
           feedback={clinic.feedback}
           isOpen={getEffectiveClinicStatus(clinic.manual_status, clinic.clinic_operating_hours) === 'open'}
-          hmos={clinic.clinic_hmo}
           operatingHours={clinic.clinic_operating_hours}
           compact={true}
           className="bg-transparent shadow-none"

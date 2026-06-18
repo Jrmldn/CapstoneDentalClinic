@@ -397,9 +397,20 @@ export default function DentistDashboardView({
                             <button
                               onClick={() => handleStatusUpdate(appt.id, 'no_show')}
                               disabled={isBusy}
-                              className="px-4 py-1.5 bg-red-100 hover:bg-red-200 text-red-750 rounded-lg text-xs font-bold transition disabled:opacity-50"
+                              className="px-4 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-bold transition disabled:opacity-50"
                             >
                               No Show
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (confirm('Are you sure you want to cancel this appointment?')) {
+                                  handleStatusUpdate(appt.id, 'cancelled')
+                                }
+                              }}
+                              disabled={isBusy}
+                              className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow-2xs transition disabled:opacity-50"
+                            >
+                              Cancel Appointment
                             </button>
                           </div>
                         )}

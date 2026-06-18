@@ -24,7 +24,7 @@ export default async function AppointmentsPage() {
 
 
   // Fetch initial appointments list
-  const { data: appointments } = await supabase
+  const { data: appointments } = await supabaseAdmin
     .from('appointments')
     .select(`
       id,
@@ -43,7 +43,7 @@ export default async function AppointmentsPage() {
     .eq('clinic_id', clinicId)
     .order('scheduled_at', { ascending: false })
 
-  const mappedAppointments: Appointment[] = (appointments || []).map((appt) => {
+  const mappedAppointments: Appointment[] = (appointments || []).map((appt: any) => {
     const rawPatient = appt.patients
     const rawService = appt.services
     const rawDentist = appt.dentists
@@ -86,18 +86,9 @@ export default async function AppointmentsPage() {
   // Fetch active patients, services, and dentists for booking
   const [patientsRes, servicesRes, dentistsRes] = await Promise.all([
     supabaseAdmin
-      .from('clinic_patients')
-      .select(`
-        is_active,
-        patients!inner (
-          id,
-          first_name,
-          last_name,
-          phone
-        )
-      `)
-      .eq('clinic_id', clinicId)
-      .eq('is_active', true),
+      .from('patients')
+      .select('id, first_name, last_name, phone')
+      .eq('is_guest', false),
     supabase
       .from('services')
       .select('id, name, price, slot_duration_min')
@@ -112,23 +103,12 @@ export default async function AppointmentsPage() {
   ])
 
   // Map and flatten nested items
-  const patientsData = (patientsRes.data || []) as unknown as {
-    patients: {
-      id: number
-      first_name: string
-      last_name: string
-      phone: string | null
-    } | null
-  }[]
-  const activePatients: Patient[] = patientsData
-    .map((item) => item.patients)
-    .filter((p): p is NonNullable<typeof p> => p !== null)
-    .map((p) => ({
-      id: p.id,
-      first_name: p.first_name,
-      last_name: p.last_name,
-      phone: p.phone ?? '',
-    }))
+  const activePatients: Patient[] = (patientsRes.data || []).map((p: any) => ({
+    id: p.id,
+    first_name: p.first_name,
+    last_name: p.last_name,
+    phone: p.phone ?? '',
+  }))
 
   // Sort by last name and then first name
   activePatients.sort((a, b) => {

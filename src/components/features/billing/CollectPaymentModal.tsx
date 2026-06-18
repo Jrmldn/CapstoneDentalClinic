@@ -65,7 +65,6 @@ export default function CollectPaymentModal({ transaction, onClose, onSuccess }:
                 <option value="gcash">GCash</option>
                 <option value="paymaya">PayMaya</option>
                 <option value="credit_card">Credit Card</option>
-                <option value="hmo">HMO</option>
               </select>
             </div>
 

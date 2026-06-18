@@ -2,42 +2,19 @@
 
 import { useState, useTransition } from 'react'
 import { Save, Loader2, Plus, X } from 'lucide-react'
-import { manageClinicHMOs, manageClinicSpecialties } from '@/actions/clinicSetupActions'
+import { manageClinicSpecialties } from '@/actions/clinicSetupActions'
 
 interface Props {
   clinicId: number
-  hmos: Record<string, unknown>[]
   specialties: Record<string, unknown>[]
 }
 
-export default function HMOsSpecialtiesForm({ clinicId, hmos, specialties }: Props) {
-  const [hmoList, setHmoList]     = useState<string[]>(hmos.map(h => String(h.hmo_name)))
+export default function HMOsSpecialtiesForm({ clinicId, specialties }: Props) {
   const [specList, setSpecList]   = useState<string[]>(specialties.map(s => String(s.specialty_name)))
-  const [hmoInput, setHmoInput]   = useState('')
   const [specInput, setSpecInput] = useState('')
 
-  const [isPendingHmo, startHmo]   = useTransition()
   const [isPendingSpec, startSpec] = useTransition()
-  const [msgHmo, setMsgHmo]   = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [msgSpec, setMsgSpec] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-
-  // ── HMO helpers ──
-  const addHmo = () => {
-    const v = hmoInput.trim()
-    if (v && !hmoList.includes(v)) setHmoList(p => [...p, v])
-    setHmoInput('')
-  }
-  const removeHmo = (name: string) => setHmoList(p => p.filter(h => h !== name))
-
-  const saveHmos = () => {
-    setMsgHmo(null)
-    startHmo(async () => {
-      const r = await manageClinicHMOs(clinicId, hmoList)
-      setMsgHmo(r.success
-        ? { type: 'success', text: 'HMOs saved.' }
-        : { type: 'error', text: r.error ?? 'Failed.' })
-    })
-  }
 
   // ── Specialty helpers ──
   const addSpec = () => {
@@ -58,66 +35,7 @@ export default function HMOsSpecialtiesForm({ clinicId, hmos, specialties }: Pro
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl">
-      {/* HMOs */}
-      <section className="space-y-4">
-        <h2 className="text-base font-semibold text-slate-800">Accepted HMOs / Health Cards</h2>
-
-        <div className="flex gap-2">
-          <input
-            id="hmo-input"
-            type="text"
-            value={hmoInput}
-            onChange={e => setHmoInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addHmo())}
-            placeholder="e.g. Intellicare"
-            className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            id="add-hmo-btn"
-            type="button"
-            onClick={addHmo}
-            className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="flex flex-wrap gap-2 min-h-[40px]">
-          {hmoList.map(name => (
-            <span
-              key={name}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium"
-            >
-              {name}
-              <button type="button" onClick={() => removeHmo(name)} className="hover:text-red-500 transition">
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
-          {hmoList.length === 0 && (
-            <p className="text-xs text-gray-400">No HMOs added yet.</p>
-          )}
-        </div>
-
-        {msgHmo && (
-          <p className={`text-xs font-medium ${msgHmo.type === 'success' ? 'text-emerald-600' : 'text-red-600'}`}>
-            {msgHmo.text}
-          </p>
-        )}
-
-        <button
-          id="save-hmos-btn"
-          type="button"
-          onClick={saveHmos}
-          disabled={isPendingHmo}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-60 transition"
-        >
-          {isPendingHmo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          {isPendingHmo ? 'Saving…' : 'Save HMOs'}
-        </button>
-      </section>
-
+    <div className="max-w-xl">
       {/* Specialties */}
       <section className="space-y-4">
         <h2 className="text-base font-semibold text-slate-800">Clinic Specialties</h2>

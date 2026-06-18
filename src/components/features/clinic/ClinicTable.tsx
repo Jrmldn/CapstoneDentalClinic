@@ -76,6 +76,18 @@ export default function ClinicTable({
         </button>
       ),
     },
+    {
+      key: 'id',
+      label: 'PROFILE',
+      render: (_, clinic) => (
+        <a
+          href={`/superadmin-dashboard/clinic/${clinic.id}/profile`}
+          className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline"
+        >
+          Manage Profile
+        </a>
+      ),
+    },
     { key: 'email', label: 'EMAIL' },
     { key: 'phone', label: 'PHONE NUMBER' },
     {

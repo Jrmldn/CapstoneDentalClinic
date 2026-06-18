@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { supabaseAdmin } from '@/lib/supabase/server'
 import {
   insertTransactionHeader,
   insertTransactionItems,
@@ -17,8 +18,8 @@ import { calculateTransactionAmounts } from '@/utils/billing-helpers'
 // TYPES
 // ─────────────────────────────────────────────────────────────
 
-export type DiscountType = 'none' | 'senior' | 'pwd' | 'hmo' | 'philhealth'
-export type PaymentMethod = 'cash' | 'gcash' | 'credit_card' | 'paymaya' | 'hmo'
+export type DiscountType = 'none' | 'senior' | 'pwd' | 'philhealth'
+export type PaymentMethod = 'cash' | 'gcash' | 'credit_card' | 'paymaya'
 export type PaymentStatus  = 'unpaid' | 'partial' | 'paid'
 
 export interface TransactionItem {
@@ -30,12 +31,11 @@ export interface TransactionItem {
 }
 
 export interface CreateTransactionData {
-  appointment_id: number
+  appointment_id?: number | null
   patient_id:     number
   clinic_id:      number
   items:          TransactionItem[]
   discount_type:  DiscountType
-  hmo_coverage?:       number   // amount covered by HMO
   philhealth_coverage?: number  // amount covered by PhilHealth
   payment_method: PaymentMethod
   payment_status: PaymentStatus
@@ -47,11 +47,24 @@ export interface CreateTransactionData {
 
 export async function createTransaction(data: CreateTransactionData) {
   try {
+    // Fetch downpayment if appointment_id is linked to deduct consultation fee
+    let downpayment = 0
+    if (data.appointment_id) {
+      const { data: appt } = await supabaseAdmin
+        .from('appointments')
+        .select('downpayment')
+        .eq('id', data.appointment_id)
+        .maybeSingle()
+      if (appt?.downpayment) {
+        downpayment = appt.downpayment
+      }
+    }
+
     const { subtotal, discount_amount, total_amount } = calculateTransactionAmounts(
       data.items,
       data.discount_type,
-      data.hmo_coverage,
-      data.philhealth_coverage
+      data.philhealth_coverage,
+      downpayment
     )
 
     // Insert the transaction header
@@ -62,7 +75,7 @@ export async function createTransaction(data: CreateTransactionData) {
       subtotal,
       discount_type:        data.discount_type,
       discount_amount,
-      hmo_coverage:         data.hmo_coverage ?? 0,
+      hmo_coverage:         0, // Set to 0 since HMO is removed
       philhealth_coverage:  data.philhealth_coverage ?? 0,
       total_amount,
       payment_method:       data.payment_method,
@@ -87,7 +100,9 @@ export async function createTransaction(data: CreateTransactionData) {
     if (itemsError) throw new Error(itemsError.message)
 
     // Sync payment_status on the linked appointment
-    await syncAppointmentPayment(data.appointment_id, data.payment_status)
+    if (data.appointment_id) {
+      await syncAppointmentPayment(data.appointment_id, data.payment_status)
+    }
 
     revalidatePath('/staff-dashboard/transactions')
     return {

@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Star, MapPin, CreditCard, Clock } from 'lucide-react'
+import { Star, MapPin, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { useClinicCard } from './useClinicCard'
@@ -17,7 +17,6 @@ export interface ClinicCardProps {
   gallery?: { image_url: string; sort_order: number }[]
   feedback?: { rating: number }[]
   isOpen?: boolean
-  hmos?: { hmo_name: string }[]
   operatingHours?: { day_of_week: number; open_time: string; close_time: string; is_closed: boolean }[]
   className?: string
   compact?: boolean
@@ -26,12 +25,12 @@ export interface ClinicCardProps {
 
 /**
  * ClinicCard Component
- * Presentational UI component displaying clinic details, HMOs, specialties, schedules, and images.
+ * Presentational UI component displaying clinic details, specialties, schedules, and images.
  * Delegates slider logic and scheduling calculations to useClinicCard hook.
  */
 export function ClinicCard({ 
   id, name, address, phone, specialties, gallery, 
-  feedback, isOpen, hmos, operatingHours, className, compact, onClick 
+  feedback, isOpen, operatingHours, className, compact, onClick 
 }: ClinicCardProps) {
   const {
     images,
@@ -113,14 +112,6 @@ export function ClinicCard({
             <span className="leading-relaxed">{address}</span>
           </div>
           
-          {hmos && hmos.length > 0 && (
-            <div className="flex items-start gap-2">
-              <CreditCard className={cn("text-blue-600 shrink-0", compact ? "w-3.5 h-3.5 mt-0.5" : "w-4 h-4 mt-0.5")} />
-              <span className="leading-relaxed">
-                {hmos.map(h => h.hmo_name).join(", ")}
-              </span>
-            </div>
-          )}
 
           <div className="flex items-center gap-2">
             <Clock className={cn("text-blue-600 shrink-0", compact ? "w-3.5 h-3.5" : "w-4 h-4")} />
@@ -133,7 +124,7 @@ export function ClinicCard({
         </div>
         
         <a
-          href={`/login?clinic=${id}`}
+          href="/login"
           onClick={(e) => {
             // Let the global listener handle smooth navigation to avoid "no router context" errors in Leaflet popups
           }}

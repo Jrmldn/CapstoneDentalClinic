@@ -24,12 +24,10 @@ const LeafletMapInner = dynamic(
  * Business logic, state management, and side-effects are delegated to the useClinicFilters hook.
  * The filtering UI is delegated to the FilterSection component.
  */
-export const ClinicMap = ({ clinics, availableSpecialties, availableHMOs }: ClinicMapProps) => {
+export const ClinicMap = ({ clinics, availableSpecialties }: ClinicMapProps) => {
   const {
     selectedSpecialty,
     setSelectedSpecialty,
-    selectedHMO,
-    setSelectedHMO,
     showOpenOnly,
     setShowOpenOnly,
     minRating,
@@ -38,10 +36,9 @@ export const ClinicMap = ({ clinics, availableSpecialties, availableHMOs }: Clin
     setActiveClinicId,
     isMapReady,
     specialtyOptions,
-    hmoOptions,
     filteredClinics,
     handleMapReady,
-  } = useClinicFilters({ clinics, availableSpecialties, availableHMOs })
+  } = useClinicFilters({ clinics, availableSpecialties })
 
   // Refs for sidebar scroll-into-view behaviour
   const sidebarRef = useRef<HTMLDivElement>(null)
@@ -61,9 +58,6 @@ export const ClinicMap = ({ clinics, availableSpecialties, availableHMOs }: Clin
         selectedSpecialty={selectedSpecialty}
         setSelectedSpecialty={setSelectedSpecialty}
         specialtyOptions={specialtyOptions}
-        selectedHMO={selectedHMO}
-        setSelectedHMO={setSelectedHMO}
-        hmoOptions={hmoOptions}
         minRating={minRating}
         setMinRating={setMinRating}
         showOpenOnly={showOpenOnly}
@@ -124,7 +118,6 @@ export const ClinicMap = ({ clinics, availableSpecialties, availableHMOs }: Clin
                 gallery={clinic.clinic_gallery}
                 feedback={clinic.feedback}
                 isOpen={getEffectiveClinicStatus(clinic.manual_status, clinic.clinic_operating_hours) === 'open'}
-                hmos={clinic.clinic_hmo}
                 operatingHours={clinic.clinic_operating_hours}
                 onClick={() => setActiveClinicId(clinic.id)}
                 className={cn(

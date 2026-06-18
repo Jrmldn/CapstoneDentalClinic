@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { logLogin } from '@/actions/logLogin'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -95,6 +96,7 @@ export async function GET(request: NextRequest) {
     const attemptedClinicId = searchParams.get('clinic')
 
     if (role === 'superadmin') {
+      await logLogin(sessionUser.id, sessionUser.email ?? '', 'superadmin')
       return NextResponse.redirect(new URL('/superadmin-dashboard', request.url))
     }
 
@@ -113,20 +115,12 @@ export async function GET(request: NextRequest) {
       }
 
       const nextPath = role === 'staff' ? '/staff-dashboard' : '/dentist-dashboard'
+      await logLogin(sessionUser.id, sessionUser.email ?? '', role as 'staff' | 'dentist')
       return NextResponse.redirect(new URL(nextPath, request.url))
     }
 
     if (role === 'patient') {
       try {
-        if (attemptedClinicId) {
-          cookieStore.set('clinic_id', attemptedClinicId, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            path: '/',
-          })
-        }
-
         const { data: patientData } = await supabase
           .from('patients')
           .select('id, phone')
@@ -143,10 +137,9 @@ export async function GET(request: NextRequest) {
 
         const targetUrl = isNewPatient
           ? `/patient-dashboard/profile?onboarding=true`
-          : attemptedClinicId
-          ? `/patient-dashboard?clinic=${attemptedClinicId}`
           : `/patient-dashboard`
 
+        await logLogin(sessionUser.id, sessionUser.email ?? '', 'patient')
         return NextResponse.redirect(new URL(targetUrl, request.url))
       } catch {
         return NextResponse.redirect(new URL('/login?error=PATIENT_ROUTING_FAILED', request.url))

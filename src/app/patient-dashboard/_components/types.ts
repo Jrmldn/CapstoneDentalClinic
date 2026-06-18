@@ -22,6 +22,7 @@ export interface PatientRecord {
     gender: string
     address: string
     email: string | null
+    updated_at?: string
   }
   medicalHistory: {
     blood_type: string | null
@@ -33,6 +34,7 @@ export interface PatientRecord {
     previous_surgeries: string | null
     is_pregnant: boolean
     is_smoker: boolean
+    updated_at?: string
     detailed_info: {
       last_dental_visit?: string
       physician_name?: string
@@ -58,6 +60,8 @@ export interface PatientRecord {
       bleeding_time?: string
       is_nursing?: boolean
       is_birth_control?: boolean
+      updated_by?: string
+      updated_by_branch?: string
     } | null
   } | null
   dentalCharts: any[]

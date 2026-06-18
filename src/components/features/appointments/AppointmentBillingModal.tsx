@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, RefreshCw, FileText } from 'lucide-react'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
 import { createTransaction } from '@/actions/billingActions'
@@ -21,11 +21,31 @@ export default function AppointmentBillingModal({
   clinicId,
   onSuccess
 }: AppointmentBillingModalProps) {
-  const [discountType, setDiscountType] = useState<'none' | 'senior' | 'pwd' | 'hmo' | 'philhealth'>('none')
-  const [hmoCoverage, setHmoCoverage] = useState('0')
+  const [discountType, setDiscountType] = useState<'none' | 'senior' | 'pwd' | 'philhealth'>('none')
   const [philhealthCoverage, setPhilhealthCoverage] = useState('0')
-  const [billingPaymentMethod, setBillingPaymentMethod] = useState<'cash' | 'gcash' | 'credit_card' | 'paymaya' | 'hmo'>('cash')
+  const [billingPaymentMethod, setBillingPaymentMethod] = useState<'cash' | 'gcash' | 'credit_card' | 'paymaya'>('cash')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [customPrice, setCustomPrice] = useState<string>('0')
+
+  // Reset custom price when appointment changes
+  useEffect(() => {
+    if (appointment?.services?.price) {
+      setCustomPrice(appointment.services.price.toString())
+    } else {
+      setCustomPrice('0')
+    }
+  }, [appointment])
+
+  const calculateTotal = () => {
+    const subtotal = parseFloat(customPrice) || 0
+    let discountAmount = 0
+    if (discountType === 'senior' || discountType === 'pwd') {
+      discountAmount = parseFloat((subtotal * 0.2).toFixed(2))
+    }
+    const philhealthAmount = parseFloat(philhealthCoverage) || 0
+    const downpayment = appointment?.downpayment || 0
+    return Math.max(0, subtotal - discountAmount - philhealthAmount - downpayment)
+  }
 
   const handleCompleteAndInvoice = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,7 +74,7 @@ export default function AppointmentBillingModal({
         service_id: service.id,
         description: `Dental Service: ${service.name}`,
         quantity: 1,
-        unit_price: service.price
+        unit_price: parseFloat(customPrice) || 0
       }
     ]
 
@@ -64,10 +84,9 @@ export default function AppointmentBillingModal({
       clinic_id: clinicId,
       items,
       discount_type: discountType,
-      hmo_coverage: parseFloat(hmoCoverage) || 0,
       philhealth_coverage: parseFloat(philhealthCoverage) || 0,
       payment_method: billingPaymentMethod,
-      payment_status: billingPaymentMethod === 'hmo' ? 'partial' : 'paid'
+      payment_status: 'paid'
     })
 
     setIsSubmitting(false)
@@ -97,16 +116,26 @@ export default function AppointmentBillingModal({
           <div className="bg-slate-50 p-4 rounded-xl border border-gray-150 space-y-2 text-sm text-slate-700">
             <p><strong>Patient:</strong> {appointment.patients ? `${appointment.patients.first_name} ${appointment.patients.last_name}` : 'Unknown'}</p>
             <p><strong>Treatment / Service:</strong> {appointment.services?.name}</p>
-            <p className="flex justify-between border-t border-gray-200 pt-2 font-semibold text-slate-900">
-              <span>Service Fee:</span>
-              <span>₱{appointment.services?.price.toLocaleString()}</span>
-            </p>
+            <div className="flex items-center justify-between border-t border-gray-200 pt-2">
+              <span className="font-semibold text-slate-900">Service Fee (₱):</span>
+              <input
+                type="number"
+                min="0"
+                className="w-28 px-2.5 py-1 bg-white border border-gray-200 rounded-lg outline-none text-right font-semibold text-slate-900 focus:ring-1 focus:ring-blue-500"
+                value={customPrice}
+                onChange={(e) => setCustomPrice(e.target.value)}
+              />
+            </div>
             {appointment.downpayment > 0 && (
               <p className="flex justify-between text-xs text-indigo-650 font-medium">
                 <span>Downpayment paid:</span>
                 <span>- ₱{appointment.downpayment.toLocaleString()}</span>
               </p>
             )}
+            <p className="flex justify-between border-t border-gray-250 pt-2 font-bold text-slate-950 text-sm">
+              <span>Total Payable:</span>
+              <span>₱{calculateTotal().toLocaleString()}</span>
+            </p>
           </div>
 
           {/* Discount selection */}
@@ -121,7 +150,6 @@ export default function AppointmentBillingModal({
                 <option value="none">No Discount</option>
                 <option value="senior">Senior Citizen (20%)/PWD</option>
                 <option value="pwd">PWD (20%)</option>
-                <option value="hmo">HMO Coverage</option>
                 <option value="philhealth">PhilHealth Coverage</option>
               </select>
             </div>
@@ -137,25 +165,9 @@ export default function AppointmentBillingModal({
                 <option value="gcash">GCash</option>
                 <option value="paymaya">PayMaya</option>
                 <option value="credit_card">Credit Card</option>
-                <option value="hmo">HMO Billout</option>
               </select>
             </div>
           </div>
-
-          {discountType === 'hmo' && (
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-600 block">HMO Covered Amount (₱)</label>
-              <input
-                type="number"
-                required
-                min="0"
-                placeholder="Enter amount"
-                className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none"
-                value={hmoCoverage}
-                onChange={e => setHmoCoverage(e.target.value)}
-              />
-            </div>
-          )}
 
           {discountType === 'philhealth' && (
             <div className="space-y-1">

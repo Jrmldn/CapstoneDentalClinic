@@ -27,12 +27,11 @@ export const getStaffDashboardData = cache(async (clinicId: number, today: strin
       .not('status', 'in', '(cancelled,no_show)')
       .order('scheduled_at', { ascending: true }),
 
-    // Total patients (registered at this clinic)
+    // Total patients (central directory)
     supabaseAdmin
-      .from('clinic_patients')
-      .select('patient_id')
-      .eq('clinic_id', clinicId)
-      .eq('is_active', true),
+      .from('patients')
+      .select('id')
+      .eq('is_guest', false),
 
     // Low stock inventory items
     supabaseAdmin

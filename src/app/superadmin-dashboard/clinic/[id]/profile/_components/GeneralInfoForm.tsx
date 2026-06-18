@@ -65,7 +65,7 @@ export default function GeneralInfoForm({ clinicId, clinic }: Props) {
             readOnly
             className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-400 text-sm cursor-not-allowed"
           />
-          <p className="text-xs text-gray-400 mt-1">Contact superadmin to change the clinic name.</p>
+          <p className="text-xs text-gray-400 mt-1">Edit the clinic name from the main Clinics & Branches page.</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

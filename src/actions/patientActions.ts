@@ -4,6 +4,65 @@ import { supabaseAdmin } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/serverSSR'
 import { revalidatePath } from 'next/cache'
 
+export async function resolveUpdaterInfo() {
+  let updatedBy = 'System'
+  let branchName = 'Central'
+
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (user) {
+      const { data: profile } = await supabaseAdmin
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      if (profile) {
+        if (profile.role === 'dentist') {
+          const { data: dentist } = await supabaseAdmin
+            .from('dentists')
+            .select('first_name, last_name, clinics ( name )')
+            .eq('user_id', user.id)
+            .single()
+          if (dentist) {
+            updatedBy = `Dr. ${dentist.first_name} ${dentist.last_name}`
+            branchName = (dentist.clinics as any)?.name || 'Central'
+          }
+        } else if (profile.role === 'staff') {
+          const { data: staff } = await supabaseAdmin
+            .from('clinic_staff')
+            .select('first_name, last_name, clinics ( name )')
+            .eq('user_id', user.id)
+            .single()
+          if (staff) {
+            updatedBy = `${staff.first_name} ${staff.last_name}`
+            branchName = (staff.clinics as any)?.name || 'Central'
+          }
+        } else if (profile.role === 'superadmin') {
+          updatedBy = 'Superadmin'
+          branchName = 'Central Business'
+        } else if (profile.role === 'patient') {
+          const { data: patient } = await supabaseAdmin
+            .from('patients')
+            .select('first_name, last_name')
+            .eq('user_id', user.id)
+            .single()
+          if (patient) {
+            updatedBy = `${patient.first_name} ${patient.last_name} (Patient)`
+            branchName = 'Patient Portal'
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error resolving updater info:', err)
+  }
+
+  return { updatedBy, branchName }
+}
+
 // ─────────────────────────────────────────────────────────────
 // TYPES
 // ─────────────────────────────────────────────────────────────
@@ -118,37 +177,6 @@ export async function registerPatient(data: RegisterPatientData) {
     }
 
     // Uses onConflict to safely handle re-registration of an existing patient
-    // uq_clinic_patient ensures (clinic_id, patient_id) is unique
-    if (data.clinic_id) {
-      let enrolledByUserId: string | null = data.enrolled_by || null
-
-      if (!enrolledByUserId) {
-        try {
-          const supabase = await createClient()
-          const { data: { user } } = await supabase.auth.getUser()
-          if (user) enrolledByUserId = user.id
-        } catch (authErr) {
-          console.warn('Could not resolve enrolled_by user automatically:', authErr)
-        }
-      }
-
-      const { error: junctionError } = await supabaseAdmin
-        .from('clinic_patients')
-        .upsert(
-          [{
-            clinic_id: data.clinic_id,
-            patient_id: patient.id,
-            is_active: true,
-            enrolled_by: enrolledByUserId,
-          }],
-          { onConflict: 'clinic_id,patient_id', ignoreDuplicates: true }
-        )
-
-      if (junctionError) {
-        throw new Error(`Failed to link patient to clinic: ${junctionError.message}`)
-      }
-    }
-
     revalidatePath('/staff-dashboard/patients')
     revalidatePath('/staff-dashboard/appointments')
     return { success: true, patient }
@@ -187,7 +215,8 @@ export async function fetchPatientRecord(
         tooth_conditions (
           id, tooth_number, tooth_type, condition, surface, notes, recorded_at
         ),
-        dentists ( id, first_name, last_name )
+        dentists ( id, first_name, last_name ),
+        clinics ( id, name )
       `)
       .eq('patient_id', patientId)
       .order('created_at', { ascending: false })
@@ -197,7 +226,8 @@ export async function fetchPatientRecord(
       .select(`
         *,
         services ( id, name ),
-        dentists ( id, first_name, last_name )
+        dentists ( id, first_name, last_name ),
+        clinics ( id, name )
       `)
       .eq('patient_id', patientId)
       .order('performed_at', { ascending: false })
@@ -215,7 +245,8 @@ export async function fetchPatientRecord(
       .from('prescriptions')
       .select(`
         *,
-        dentists ( id, first_name, last_name )
+        dentists ( id, first_name, last_name ),
+        clinics ( id, name )
       `)
       .eq('patient_id', patientId)
       .order('prescribed_at', { ascending: false })
@@ -250,9 +281,10 @@ export async function fetchPatientRecord(
     let appointmentsQuery = supabaseAdmin
       .from('appointments')
       .select(`
-        id, clinic_id, scheduled_at, end_at, status, is_walk_in, downpayment, payment_status, notes,
+        id, clinic_id, scheduled_at, end_at, status, is_walk_in, downpayment, payment_status, notes, booked_at,
         services ( id, name, price ),
-        dentists ( id, first_name, last_name )
+        dentists ( id, first_name, last_name ),
+        clinics ( id, name )
       `)
       .eq('patient_id', patientId)
       .order('scheduled_at', { ascending: false })
@@ -376,45 +408,35 @@ export async function fetchPatientsByClinic(
 ) {
   try {
     let query = supabaseAdmin
-      .from('clinic_patients')
-      .select(`
-        is_active,
-        patients!inner (
-          id,
-          first_name,
-          last_name,
-          phone,
-          email,
-          birthdate,
-          gender,
-          is_guest,
-          created_at
-        )
-      `)
-      .eq('clinic_id', clinicId)
+      .from('patients')
+      .select('*')
 
     if (!includeGuests) {
-      query = query.eq('patients.is_guest', false)
+      query = query.eq('is_guest', false)
     }
 
     if (search) {
       const cleanSearch = `%${search.trim()}%`
       query = query.or(
-        `first_name.ilike.${cleanSearch},last_name.ilike.${cleanSearch},phone.ilike.${cleanSearch}`,
-        { foreignTable: 'patients' }
+        `first_name.ilike.${cleanSearch},last_name.ilike.${cleanSearch},phone.ilike.${cleanSearch}`
       )
     }
 
-    const { data, error } = await query
+    const { data: patientsData, error } = await query
 
     if (error) throw new Error(error.message)
 
-    const patients = ((data || []) as ClinicPatientRow[])
-      .map((row) => {
-        const p = row.patients
-        return Array.isArray(p) ? p[0] : p
-      })
-      .filter((patient): patient is PatientSummary => patient !== null && patient !== undefined)
+    const patients = (patientsData || []).map((p: any) => ({
+      id: p.id,
+      first_name: p.first_name,
+      last_name: p.last_name,
+      phone: p.phone,
+      email: p.email,
+      birthdate: p.birthdate,
+      gender: p.gender,
+      is_guest: p.is_guest,
+      created_at: p.created_at
+    }))
 
     patients.sort((a: PatientSummary, b: PatientSummary) => {
       const lastA = (a.last_name || '').toLowerCase()
@@ -555,10 +577,11 @@ export async function updatePatientProfile(
     guardian_name?: string | null
     guardian_address?: string | null
     guardian_phone?: string | null
-    hmo_cards?: string[] | null
   }
 ) {
   try {
+    const { updatedBy, branchName } = await resolveUpdaterInfo()
+
     const { data: updatedPatient, error } = await supabaseAdmin
       .from('patients')
       .update({
@@ -572,13 +595,42 @@ export async function updatePatientProfile(
         guardian_name: data.guardian_name ?? null,
         guardian_address: data.guardian_address ?? null,
         guardian_phone: data.guardian_phone ?? null,
-        hmo_cards: data.hmo_cards ?? [],
+        updated_at: new Date().toISOString(),
       })
       .eq('id', patientId)
       .select()
       .single()
 
     if (error) throw new Error(error.message)
+
+    // Store patient profile audit details inside patient_medical_history detailed_info
+    try {
+      const { data: existingHist } = await supabaseAdmin
+        .from('patient_medical_history')
+        .select('detailed_info')
+        .eq('patient_id', patientId)
+        .maybeSingle()
+
+      const detailedInfo = {
+        ...(existingHist?.detailed_info || {}),
+        profile_updated_by: updatedBy,
+        profile_updated_by_branch: branchName,
+        profile_updated_at: new Date().toISOString()
+      }
+
+      await supabaseAdmin
+        .from('patient_medical_history')
+        .upsert(
+          {
+            patient_id: patientId,
+            detailed_info: detailedInfo,
+            updated_at: new Date().toISOString()
+          },
+          { onConflict: 'patient_id' }
+        )
+    } catch (histErr) {
+      console.warn('Failed to write profile update audit to medical history:', histErr)
+    }
 
     revalidatePath('/patient-dashboard')
     return { success: true, patient: updatedPatient }
@@ -609,6 +661,8 @@ export async function updatePatientMedicalHistory(
   data: PatientMedicalHistoryData
 ) {
   try {
+    const { updatedBy, branchName } = await resolveUpdaterInfo()
+
     const { data: updated, error } = await supabaseAdmin
       .from('patient_medical_history')
       .upsert(
@@ -623,7 +677,13 @@ export async function updatePatientMedicalHistory(
           previous_surgeries: data.previous_surgeries ?? null,
           is_pregnant: data.is_pregnant ?? false,
           is_smoker: data.is_smoker ?? false,
-          detailed_info: data.detailed_info ?? {},
+          updated_at: new Date().toISOString(),
+          detailed_info: {
+            ...(data.detailed_info || {}),
+            updated_by: updatedBy,
+            updated_by_branch: branchName,
+            last_updated_at: new Date().toISOString()
+          },
         },
         { onConflict: 'patient_id' }
       )
@@ -657,7 +717,6 @@ export interface TreatmentRecordData {
   notes?: string
   performed_at?: string
 }
-
 export async function addTreatmentRecord(data: TreatmentRecordData) {
   try {
     const { data: record, error } = await supabaseAdmin

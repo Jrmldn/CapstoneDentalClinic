@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/serverSSR'
+import { supabaseAdmin } from '@/lib/supabase/server'
 import { enforceRole } from '@/lib/auth/protection'
 import { getStaffClinicId } from '@/lib/auth/getClinicId'
 import { fetchClinicTransactions } from '@/actions/billingActions'
@@ -8,7 +8,6 @@ export const metadata = { title: 'Billing & Invoices — AppoinDent' }
 
 export default async function BillingPage() {
   const authUser = await enforceRole('staff')
-  const supabase = await createClient()
 
   // Resolve clinicId
   const clinicId = await getStaffClinicId(authUser.id)
@@ -23,49 +22,40 @@ export default async function BillingPage() {
   // Fetch initial clinic transactions, appointments, services, products, and patients for billing creation in parallel (Class A Optimization)
   const [txRes, appointmentsRes, servicesRes, productsRes, patientsRes] = await Promise.all([
     fetchClinicTransactions(clinicId),
-    supabase
+    supabaseAdmin
       .from('appointments')
       .select(`
         id,
         scheduled_at,
         status,
         payment_status,
+        downpayment,
         patients ( id, first_name, last_name ),
         services ( id, name, price )
       `)
       .eq('clinic_id', clinicId)
       .not('status', 'in', '(cancelled,no_show)')
       .order('scheduled_at', { ascending: false }),
-    supabase
+    supabaseAdmin
       .from('services')
       .select('id, name, price')
       .eq('clinic_id', clinicId)
       .eq('is_active', true),
-    supabase
+    supabaseAdmin
       .from('products')
       .select('id, name, price')
       .eq('clinic_id', clinicId)
       .eq('is_active', true),
-    supabase
-      .from('clinic_patients')
-      .select(`
-        is_active,
-        patients!inner (
-          id,
-          first_name,
-          last_name
-        )
-      `)
-      .eq('clinic_id', clinicId)
-      .eq('is_active', true)
+    supabaseAdmin
+      .from('patients')
+      .select('id, first_name, last_name')
+      .eq('is_guest', false)
   ])
 
   const initialTransactions = txRes.transactions || []
 
   // Map and flatten active patients
-  const activePatients = (patientsRes.data || [])
-    .map((item: any) => item.patients)
-    .filter((p): p is any => p !== null)
+  const activePatients = patientsRes.data || []
 
   // Sort by last name and then first name
   activePatients.sort((a: any, b: any) => {
@@ -80,7 +70,7 @@ export default async function BillingPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">Billing &amp; Transactions</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Record payments, issue invoices, apply discounts (senior/PWD/HMO), and track invoice histories.
+          Record payments, issue invoices, apply discounts (senior/PWD), and track invoice histories.
         </p>
       </div>
 

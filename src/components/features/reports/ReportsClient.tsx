@@ -66,7 +66,6 @@ export default function ReportsClient({
     totalRevenue: 0,
     totalSubtotal: 0,
     totalDiscounts: 0,
-    totalHmo: 0,
     totalPhilHealth: 0
   }
 
@@ -163,9 +162,9 @@ export default function ReportsClient({
                 </span>
               </div>
               <div className="bg-slate-50 p-4 rounded-xl border border-gray-100">
-                <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">HMO/PhilHealth Cover</span>
+                <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">PhilHealth Cover</span>
                 <span className="text-xl font-black text-blue-600 block mt-1">
-                  ₱{Number(salesSummary.totalHmo + salesSummary.totalPhilHealth).toLocaleString([], { minimumFractionDigits: 2 })}
+                  ₱{Number((salesSummary as any).totalPhilHealth || 0).toLocaleString([], { minimumFractionDigits: 2 })}
                 </span>
               </div>
               <div className="bg-slate-50 p-4 rounded-xl border border-gray-100 bg-gradient-to-br from-emerald-50 to-teal-50/20 border-emerald-250">

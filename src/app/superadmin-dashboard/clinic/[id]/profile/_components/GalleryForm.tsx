@@ -114,7 +114,7 @@ export default function GalleryForm({ clinicId, gallery }: Props) {
               </div>
 
               {/* URL truncated */}
-              <p className="flex-1 text-xs text-gray-600 truncate">{img.url}</p>
+              <p className="flex-1 text-xs text-gray-650 truncate">{img.url}</p>
 
               {/* Order badge */}
               <span className="text-[10px] font-semibold px-2 py-0.5 bg-white border border-gray-200 rounded-full text-gray-500">

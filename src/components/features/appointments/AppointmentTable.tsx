@@ -10,6 +10,7 @@ interface AppointmentTableProps {
   onReschedule: (appt: Appointment) => void
   onOpenBilling: (appt: Appointment) => void
   onNoShow: (id: number) => void
+  onCancel: (id: number) => void
 }
 
 function getStatusBadgeClass(status: string): string {
@@ -32,6 +33,7 @@ export default function AppointmentTable({
   onReschedule,
   onOpenBilling,
   onNoShow,
+  onCancel,
 }: AppointmentTableProps) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
@@ -146,6 +148,12 @@ export default function AppointmentTable({
                           >
                             <DollarSign className="w-3.5 h-3.5" />
                             Complete &amp; Bill
+                          </button>
+                          <button
+                            onClick={() => onCancel(appt.id)}
+                            className="px-2 py-1 text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100 text-xs font-semibold"
+                          >
+                            Cancel
                           </button>
                           {/* No-show: only show when appointment scheduled time has passed */}
                           {(() => {

@@ -1,11 +1,57 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Building2, Users, Stethoscope, UserCircle, ArrowRight } from 'lucide-react'
+import { Building2, Users, Stethoscope, UserCircle, ArrowRight, Loader2 } from 'lucide-react'
 import { getSuperadminStats } from '@/actions/dashboardActions'
 import Link from 'next/link'
 import { SuperadminStats } from '@/types/dashboard'
 
+const colorMap = {
+  blue: { card: 'bg-blue-50', icon: 'text-blue-600', text: 'text-blue-700' },
+  emerald: { card: 'bg-emerald-50', icon: 'text-emerald-600', text: 'text-emerald-700' },
+  purple: { card: 'bg-purple-50', icon: 'text-purple-600', text: 'text-purple-700' },
+  amber: { card: 'bg-amber-50', icon: 'text-amber-500', text: 'text-amber-700' },
+}
+
+function StatCard({
+  label, value, icon: Icon, color, href,
+}: {
+  label: string
+  value: string | number
+  icon: React.ElementType
+  color: keyof typeof colorMap
+  href?: string
+}) {
+  const c = colorMap[color]
+  const cardContent = (
+    <>
+      <div className="flex items-start justify-between">
+        <div className={`w-10 h-10 rounded-lg ${c.card} flex items-center justify-center flex-shrink-0`}>
+          <Icon className={`w-5 h-5 ${c.icon}`} />
+        </div>
+        {href && <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition mt-1" />}
+      </div>
+      <div className="mt-4">
+        <p className="text-2xl font-bold text-slate-900 leading-none">{value}</p>
+        <p className="mt-2 text-xs font-semibold text-gray-500">{label}</p>
+      </div>
+    </>
+  )
+
+  if (href) {
+    return (
+      <Link href={href} className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow group flex flex-col justify-between">
+        {cardContent}
+      </Link>
+    )
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex flex-col justify-between">
+      {cardContent}
+    </div>
+  )
+}
 
 export default function SuperadminDashboardView() {
   const [stats, setStats] = useState<SuperadminStats | null>(null)
@@ -24,102 +70,100 @@ export default function SuperadminDashboardView() {
 
   if (isLoading) {
     return (
-      <div className="p-8 flex justify-center items-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900 font-bold"></div>
+      <div className="p-8 flex flex-col justify-center items-center min-h-[60vh] text-slate-400">
+        <Loader2 className="animate-spin h-8 w-8 text-blue-600 mb-2" />
+        <p className="text-xs font-medium">Loading platform statistics...</p>
       </div>
     )
   }
 
+  const now = new Date()
+  const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 18 ? 'Good afternoon' : 'Good evening'
+  const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+
   return (
-    <div className="p-8 w-full">
+    <div className="p-6 md:p-8 space-y-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 font-sans">Platform Overview</h1>
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">
+          {greeting}, Superadmin!
+        </h1>
         <p className="text-sm text-gray-500 mt-1">
-          Welcome back, Superadmin. Here is what is happening across AppointDent today.
+          {dateStr} &bull; Platform Overview
         </p>
       </div>
 
       {/* Metrics Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {/* Card 1 */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm flex items-center gap-5">
-          <div className="w-12 h-12 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
-            <Building2 className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-gray-500">Total Clinics</p>
-            <h3 className="text-2xl font-bold text-slate-900">{stats?.totalClinics}</h3>
-          </div>
-        </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+        <StatCard
+          label="Total Branches"
+          value={stats?.totalClinics ?? 0}
+          icon={Building2}
+          color="blue"
+          href="/superadmin-dashboard/clinic"
+        />
 
-        {/* Card 2 */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm flex items-center gap-5">
-          <div className="w-12 h-12 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-            <Users className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-gray-500">Active Staff</p>
-            <h3 className="text-2xl font-bold text-slate-900">{stats?.totalStaff}</h3>
-          </div>
-        </div>
+        <StatCard
+          label="Active Staff"
+          value={stats?.totalStaff ?? 0}
+          icon={Users}
+          color="emerald"
+          href="/superadmin-dashboard/personnel"
+        />
 
-        {/* Card 3 */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm flex items-center gap-5">
-          <div className="w-12 h-12 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
-            <Stethoscope className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-gray-500">Dentists</p>
-            <h3 className="text-2xl font-bold text-slate-900">{stats?.totalDentists}</h3>
-          </div>
-        </div>
+        <StatCard
+          label="Dentists"
+          value={stats?.totalDentists ?? 0}
+          icon={Stethoscope}
+          color="purple"
+          href="/superadmin-dashboard/personnel"
+        />
 
-        {/* Card 4 */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm flex items-center gap-5">
-          <div className="w-12 h-12 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
-            <UserCircle className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-gray-500">Registered Patients</p>
-            <h3 className="text-2xl font-bold text-slate-900">{stats?.totalPatients}</h3>
-          </div>
-        </div>
+        <StatCard
+          label="Registered Patients"
+          value={stats?.totalPatients ?? 0}
+          icon={UserCircle}
+          color="amber"
+        />
       </div>
 
       {/* Bottom Section: Recent Clinics */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-        <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-[#f8f9fa]">
-          <h2 className="text-base font-semibold text-slate-900">Recently Added Clinics</h2>
+        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-slate-50/50">
+          <h2 className="text-sm font-semibold text-slate-800">Recently Added Branches</h2>
           <Link 
             href="/superadmin-dashboard/clinic" 
-            className="text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1 transition"
+            className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition"
           >
-            View all <ArrowRight className="w-4 h-4" />
+            View all <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="text-[11px] uppercase tracking-wider font-semibold text-gray-500 border-b border-gray-100">
+            <thead className="text-[11px] uppercase tracking-wider font-semibold text-gray-500 border-b border-gray-100 bg-white">
               <tr>
-                <th className="px-6 py-4">Clinic Name</th>
-                <th className="px-6 py-4">Date Added</th>
-                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-3.5">Branch Name</th>
+                <th className="px-6 py-3.5">Date Added</th>
+                <th className="px-6 py-3.5">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50 text-gray-600">
+            <tbody className="divide-y divide-gray-100 text-gray-600 bg-white">
               {stats?.recentClinics && stats.recentClinics.length > 0 ? (
                 stats.recentClinics.map((clinic) => (
                   <tr key={clinic.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-slate-900">{clinic.name}</td>
-                    <td className="px-6 py-4">
-                      {clinic.created_at ? new Date(clinic.created_at).toLocaleDateString() : 'N/A'}
+                    <td className="px-6 py-3.5 font-semibold text-slate-800">{clinic.name}</td>
+                    <td className="px-6 py-3.5 text-xs">
+                      {clinic.created_at ? new Date(clinic.created_at).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      }) : 'N/A'}
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 rounded-md text-[11px] font-medium ${
+                    <td className="px-6 py-3.5">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${
                         clinic.is_active 
-                          ? 'bg-emerald-50 text-emerald-700' 
-                          : 'bg-red-50 text-red-700'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                          : 'bg-red-50 text-red-700 border-red-200'
                       }`}>
                         {clinic.is_active ? 'Active' : 'Inactive'}
                       </span>
@@ -128,8 +172,8 @@ export default function SuperadminDashboardView() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={3} className="px-6 py-8 text-center text-gray-500">
-                    No clinics have been added yet.
+                  <td colSpan={3} className="px-6 py-10 text-center text-gray-400 text-xs font-medium">
+                    No branch clinics have been added yet.
                   </td>
                 </tr>
               )}

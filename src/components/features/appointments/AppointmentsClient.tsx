@@ -64,7 +64,23 @@ export default function AppointmentsClient({
     }
   }
 
-
+  const handleCancel = async (apptId: number) => {
+    if (!confirm('Are you sure you want to cancel this appointment?')) return
+    const res = await updateAppointmentStatus(
+      apptId,
+      'cancelled',
+      userId,
+      'staff',
+      'Cancelled by staff'
+    )
+    if (res.success) {
+      setAppointments(prev =>
+        prev.map(a => (a.id === apptId ? { ...a, status: 'cancelled' } : a))
+      )
+    } else {
+      alert(res.error || 'Failed to cancel appointment.')
+    }
+  }
 
   const handleNoShow = async (apptId: number) => {
     if (!confirm('Mark this appointment as No-Show?')) return
@@ -157,6 +173,7 @@ export default function AppointmentsClient({
         onReschedule={setReschedulingAppt}
         onOpenBilling={setBillingAppt}
         onNoShow={handleNoShow}
+        onCancel={handleCancel}
       />
 
       {/* MODAL: Book Appointment */}

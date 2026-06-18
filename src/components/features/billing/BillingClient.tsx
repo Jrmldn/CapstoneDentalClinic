@@ -10,6 +10,7 @@ import CollectPaymentModal from './CollectPaymentModal'
 export interface AppointmentOption {
   id: number
   scheduled_at: string
+  downpayment?: number | null
   patients: { id: number; first_name: string; last_name: string } | { id: number; first_name: string; last_name: string }[] | null
   services: { id: number; name: string; price: number } | { id: number; name: string; price: number }[] | null
 }

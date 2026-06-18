@@ -10,7 +10,7 @@ import GalleryForm from './GalleryForm'
 const TABS = [
   { key: 'general', label: 'General Info', icon: Building2 },
   { key: 'hours', label: 'Operating Hours', icon: Clock },
-  { key: 'hmo', label: 'HMOs & Specialties', icon: Shield },
+  { key: 'specialties', label: 'Specialties', icon: Shield },
   { key: 'gallery', label: 'Gallery', icon: ImageIcon },
 ]
 
@@ -18,13 +18,12 @@ interface Props {
   clinicId: number
   clinic: Record<string, unknown>
   operatingHours: Record<string, unknown>[]
-  hmos: Record<string, unknown>[]
   specialties: Record<string, unknown>[]
   gallery: Record<string, unknown>[]
 }
 
 export default function ProfileTabs({
-  clinicId, clinic, operatingHours, hmos, specialties, gallery
+  clinicId, clinic, operatingHours, specialties, gallery
 }: Props) {
   const [active, setActive] = useState('general')
 
@@ -56,7 +55,7 @@ export default function ProfileTabs({
       <div className="p-6">
         {active === 'general' && <GeneralInfoForm clinicId={clinicId} clinic={clinic} />}
         {active === 'hours' && <OperatingHoursForm clinicId={clinicId} operatingHours={operatingHours} />}
-        {active === 'hmo' && <HMOsSpecialtiesForm clinicId={clinicId} hmos={hmos} specialties={specialties} />}
+        {active === 'specialties' && <HMOsSpecialtiesForm clinicId={clinicId} specialties={specialties} />}
         {active === 'gallery' && <GalleryForm clinicId={clinicId} gallery={gallery} />}
       </div>
     </div>
