@@ -23,3 +23,16 @@ Access the application at http://localhost:3000.
 
 ### 5. Stop the App
 docker compose down
+-----------------
+Dialogflow
+```bash
+DIALOGFLOW_PROJECT_ID="your-project-id-from-json"
+DIALOGFLOW_AGENT_ID="your-agent-id-from-cx-url"
+DIALOGFLOW_LOCATION="global"
+DIALOGFLOW_CLIENT_EMAIL="your-service-account-email"
+DIALOGFLOW_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYourKeyHere...\n-----END PRIVATE KEY-----\n"
+```
+Google SDK something
+```bash
+npm install @google-cloud/dialogflow-cx
+```
