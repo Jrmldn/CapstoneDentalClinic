@@ -1,14 +1,33 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { logLogin } from '@/actions/logLogin'
+
+const callbackParamsSchema = z.object({
+  code:       z.string().optional(),
+  token_hash: z.string().optional(),
+  type:       z.enum(['recovery', 'email_change', 'email', 'signup', 'magiclink']).optional(),
+  next:       z.string().regex(/^\//).optional(),  // must be a relative path
+  clinic:     z.string().regex(/^\d+$/).optional(), // numeric string
+})
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
-  const code = searchParams.get('code')
-  const tokenHash = searchParams.get('token_hash') // ◄ Catch native email token hashes
-  const type = searchParams.get('type')
-  const next = searchParams.get('next')
+
+  const parsed = callbackParamsSchema.safeParse({
+    code:       searchParams.get('code')       ?? undefined,
+    token_hash: searchParams.get('token_hash') ?? undefined,
+    type:       searchParams.get('type')       ?? undefined,
+    next:       searchParams.get('next')       ?? undefined,
+    clinic:     searchParams.get('clinic')     ?? undefined,
+  })
+
+  if (!parsed.success) {
+    return NextResponse.redirect(new URL('/login?error=INVALID_PARAMS', request.url))
+  }
+
+  const { code, token_hash: tokenHash, type, next, clinic: attemptedClinicId } = parsed.data
   const cookieStore = await cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -75,12 +94,9 @@ export async function GET(request: NextRequest) {
   // 2. Intercept and Route Password Resets Immediately
   if (sessionUser && (next === '/update-password' || type === 'recovery' || isRecoveryFlow)) {
     const updateUrl = new URL('/update-password', request.url)
-    const clinic = searchParams.get('clinic')
-
-    if (clinic) {
-      updateUrl.searchParams.set('clinic', clinic)
+    if (attemptedClinicId) {
+      updateUrl.searchParams.set('clinic', attemptedClinicId)
     }
-
     return NextResponse.redirect(updateUrl)
   }
 
@@ -93,7 +109,6 @@ export async function GET(request: NextRequest) {
       .maybeSingle()
 
     const role = userData?.role
-    const attemptedClinicId = searchParams.get('clinic')
 
     if (role === 'superadmin') {
       await logLogin(sessionUser.id, sessionUser.email ?? '', 'superadmin')

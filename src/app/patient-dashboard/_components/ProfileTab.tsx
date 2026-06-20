@@ -6,7 +6,7 @@ import { User, ShieldAlert, CheckCircle2, Info } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { updatePatientProfile } from '@/actions/patientActions'
+import { updatePatientProfile } from '@/actions/patientCoreActions'
 import { PatientRecord } from './types'
 import { isPlaceholderPhone, formatPhone } from '@/utils/phone-helpers'
 

@@ -1,6 +1,6 @@
 import { enforceRole } from '@/lib/auth/protection'
 import { getStaffClinicId } from '@/lib/auth/getClinicId'
-import { fetchInventory } from '@/actions/managementActions'
+import { fetchInventory } from '@/actions/inventoryActions'
 import InventoryClient from '@/components/features/inventory/InventoryClient'
 
 

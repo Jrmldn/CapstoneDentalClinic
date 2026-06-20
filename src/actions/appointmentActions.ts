@@ -1,28 +1,20 @@
 'use server'
 
+import { sanitizeServerError } from '@/lib/errors/sanitizeError'
+
 import { revalidatePath } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase/server'
-import { createClient } from '@/lib/supabase/serverSSR'
+import { ensureRole } from '@/lib/auth/ensureRole'
 import {
   getAppointmentsByDateRange,
-  getClinicHoliday,
-  getClinicOperatingHours,
-  getDentistAvailability,
-  getDentistBlockedSlots,
-  getServiceById,
-  getActiveAppointmentsForSlots,
-  getClinicCapacity,
   insertAppointment,
   insertAppointmentLog,
   getAppointmentStatus,
   updateAppointmentDetails,
   updateClinicMaxLimit
 } from '@/services/appointmentService'
-import { generateTimeSlots } from '@/utils/appointment-helpers'
 
-// ─────────────────────────────────────────────────────────────
 // TYPES
-// ─────────────────────────────────────────────────────────────
 
 export type AppointmentStatus =
   | 'pending'
@@ -50,17 +42,12 @@ export interface CreateAppointmentData {
   payment_method?: PaymentMethod
 }
 
-export interface TimeSlot {
-  start: string   // "HH:mm"
-  end: string     // "HH:mm"
-  available: boolean
-}
-
-// ─────────────────────────────────────────────────────────────
 // FETCH APPOINTMENTS BY DATE (with related data)
-// ─────────────────────────────────────────────────────────────
 
 export async function fetchAppointmentsByDate(clinicId: number, date: string) {
+  const auth = await ensureRole('staff', 'dentist', 'superadmin')
+  if (!auth.success) return { success: false, error: auth.error, appointments: [] }
+
   try {
     const dayStart = `${date}T00:00:00+00:00`
     const dayEnd   = `${date}T23:59:59+00:00`
@@ -74,133 +61,34 @@ export async function fetchAppointmentsByDate(clinicId: number, date: string) {
     console.error('Error in fetchAppointmentsByDate:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch appointments',
+      error: sanitizeServerError(error),
       appointments: [],
     }
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// GET AVAILABLE SLOTS
-// ─────────────────────────────────────────────────────────────
-
-export async function getAvailableSlots(
-  clinicId: number,
-  dentistId: number,
-  serviceId: number,
-  date: string   // "YYYY-MM-DD"
-): Promise<{ success: boolean; slots?: TimeSlot[]; error?: string }> {
-  try {
-    const dayOfWeek = new Date(date).getDay() // 0=Sun … 6=Sat
-    const dayStart = `${date}T00:00:00`
-    const dayEnd   = `${date}T23:59:59`
-
-    // Run all database fetches in parallel (Class A Optimization)
-    const [
-      holidayRes,
-      opHoursRes,
-      dentistHoursRes,
-      blockedSlotsRes,
-      serviceRes,
-      existingApptsRes,
-      clinicRes,
-    ] = await Promise.all([
-      getClinicHoliday(clinicId, date),
-      getClinicOperatingHours(clinicId, dayOfWeek),
-      getDentistAvailability(dentistId, dayOfWeek),
-      getDentistBlockedSlots(dentistId, date),
-      getServiceById(serviceId),
-      getActiveAppointmentsForSlots(clinicId, dentistId, dayStart, dayEnd),
-      getClinicCapacity(clinicId),
-    ])
-
-    const holiday = holidayRes.data
-    const opHours = opHoursRes.data
-    const opError = opHoursRes.error
-    const dentistHours = dentistHoursRes.data
-    const blockedSlots = blockedSlotsRes.data
-    const service = serviceRes.data
-    const serviceError = serviceRes.error
-    const existingAppts = existingApptsRes.data
-    const clinic = clinicRes.data
-
-    // 1. Check for clinic holiday / closure
-    if (holiday && !holiday.is_special_day) {
-      return { success: true, slots: [] } // clinic is closed that day
-    }
-
-    // 2. Clinic operating hours for the weekday
-    if (opError) throw new Error(opError.message)
-    if (!opHours || opHours.is_closed) return { success: true, slots: [] }
-
-    // 3. Dentist availability for the weekday
-    // Use dentist hours if defined, otherwise fall back to clinic hours
-    const windowStart = dentistHours?.start_time ?? opHours.open_time
-    const windowEnd   = dentistHours?.end_time   ?? opHours.close_time
-
-    // 4. Dentist blocked slots for that specific date (already fetched)
-
-    // 5. Service duration
-    if (serviceError || !service) throw new Error('Service not found')
-    const duration = service.slot_duration_min
-
-    // 6. Existing appointments for that dentist on that date (not cancelled/no-show) (already fetched)
-
-    // 7. Check max appointments per day
-    const maxPerDay = clinic?.max_appointments_per_day ?? Infinity
-    const bookedCount = existingAppts?.length ?? 0
-
-    if (bookedCount >= maxPerDay) return { success: true, slots: [] }
-
-    // 8. Generate slots using helpers
-    const slots = generateTimeSlots(
-      windowStart,
-      windowEnd,
-      duration,
-      existingAppts ?? [],
-      blockedSlots ?? []
-    )
-
-    return { success: true, slots }
-  } catch (error) {
-    console.error('Error in getAvailableSlots:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to get available slots',
-    }
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
 // CREATE APPOINTMENT
-// ─────────────────────────────────────────────────────────────
 
 export async function createAppointment(data: CreateAppointmentData) {
+  const auth = await ensureRole('patient', 'staff', 'dentist', 'superadmin')
+  if (!auth.success) return { success: false, error: auth.error }
+
   try {
-    // Resolve authenticated user and their role
-    let performedBy: string | null = null
-    let performedByRole: string | null = null
-    try {
-      const supabase = await createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        performedBy = user.id
-        const { data: userData } = await supabaseAdmin
-          .from('users')
-          .select('role')
-          .eq('id', user.id)
-          .maybeSingle()
-        if (userData) {
-          performedByRole = userData.role
-        }
+    // If patient, enforce that they can only book for themselves
+    if (auth.role === 'patient') {
+      const { data: patientRecord } = await supabaseAdmin
+        .from('patients')
+        .select('id')
+        .eq('user_id', auth.userId)
+        .maybeSingle()
+
+      if (!patientRecord || patientRecord.id !== data.patient_id) {
+        return { success: false, error: 'Patients can only book appointments for themselves' }
       }
-    } catch (authErr) {
-      console.warn('Could not resolve auth user details in createAppointment:', authErr)
     }
 
-    if (!performedByRole) {
-      performedByRole = data.is_walk_in ? 'staff' : 'patient'
-    }
+    const performedBy = auth.userId
+    const performedByRole = auth.role
 
     const { data: appointment, error } = await insertAppointment({
       clinic_id:      data.clinic_id,
@@ -240,29 +128,48 @@ export async function createAppointment(data: CreateAppointmentData) {
     console.error('Error in createAppointment:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to create appointment',
+      error: sanitizeServerError(error),
     }
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// UPDATE APPOINTMENT STATUS  (with audit log)
-// ─────────────────────────────────────────────────────────────
+// UPDATE APPOINTMENT STATUS (with audit log)
 
 export async function updateAppointmentStatus(
   appointmentId: number,
   newStatus: AppointmentStatus,
-  performedBy: string,   // user UUID
-  role: string,
+  _performedBy: string,   // ignored — derived server-side
+  _role: string,          // ignored — derived server-side
   notes?: string,
   rescheduledAt?: string,  // provide when rescheduling
   rescheduledEnd?: string
 ) {
+  // patients can confirm/decline reschedules and cancel their own appointments
+  const auth = await ensureRole('staff', 'dentist', 'patient', 'superadmin')
+  if (!auth.success) return { success: false, error: auth.error }
+
+  // Use server-derived identity, ignoring client-supplied values
+  const performedBy = auth.userId
+  const role = auth.role
+
   try {
     // Fetch current status (and reschedule tracking fields) for the log
     const { data: current, error: fetchError } = await getAppointmentStatus(appointmentId)
 
     if (fetchError || !current) throw new Error('Appointment not found')
+
+    // Patients may only update their own appointments
+    if (role === 'patient') {
+      const { data: patientRecord } = await supabaseAdmin
+        .from('patients')
+        .select('id')
+        .eq('user_id', performedBy)
+        .maybeSingle()
+
+      if (!patientRecord || (current as any).patient_id !== patientRecord.id) {
+        return { success: false, error: 'Insufficient permissions' }
+      }
+    }
 
     // A2: Enforce reschedule limits for patients
     const isPatientReschedule = role === 'patient' && rescheduledAt
@@ -300,7 +207,7 @@ export async function updateAppointmentStatus(
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle()
-        
+
         if (latestLog && latestLog.notes) {
           const match = latestLog.notes.match(/\[Original: ([^|]+) \| ([^\]]+)\]/)
           if (match) {
@@ -360,16 +267,17 @@ export async function updateAppointmentStatus(
     console.error('Error in updateAppointmentStatus:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update appointment status',
+      error: sanitizeServerError(error),
     }
   }
 }
 
-// ─────────────────────────────────────────────────────────────
 // SET MAX APPOINTMENTS PER DAY
-// ─────────────────────────────────────────────────────────────
 
 export async function updateMaxAppointments(clinicId: number, max: number) {
+  const auth = await ensureRole('superadmin')
+  if (!auth.success) return { success: false, error: auth.error }
+
   try {
     const { error } = await updateClinicMaxLimit(clinicId, max)
 
@@ -381,188 +289,7 @@ export async function updateMaxAppointments(clinicId: number, max: number) {
     console.error('Error in updateMaxAppointments:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update max appointments',
-    }
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-// DENTIST BLOCKED SLOTS ACTIONS
-// ─────────────────────────────────────────────────────────────
-
-export async function addBlockedSlot(
-  dentistId: number,
-  blockedDate: string,
-  startTime: string | null,
-  endTime: string | null,
-  reason: string | null
-) {
-  try {
-    const { data, error } = await supabaseAdmin
-      .from('dentist_blocked_slots')
-      .insert([{
-        dentist_id: dentistId,
-        blocked_date: blockedDate,
-        start_time: startTime || null,
-        end_time: endTime || null,
-        reason: reason || 'Blocked',
-      }])
-      .select()
-      .single()
-
-    if (error) throw new Error(error.message)
-
-    revalidatePath('/dentist-dashboard/availability')
-    return { success: true, blockedSlot: data }
-  } catch (error) {
-    console.error('Error in addBlockedSlot:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to add blocked slot',
-    }
-  }
-}
-
-export async function deleteBlockedSlot(blockedSlotId: number) {
-  try {
-    const { error } = await supabaseAdmin
-      .from('dentist_blocked_slots')
-      .delete()
-      .eq('id', blockedSlotId)
-
-    if (error) throw new Error(error.message)
-
-    revalidatePath('/dentist-dashboard/availability')
-    return { success: true }
-  } catch (error) {
-    console.error('Error in deleteBlockedSlot:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to delete blocked slot',
-    }
-  }
-}
-
-export async function fetchBlockedSlots(dentistId: number) {
-  try {
-    const { data, error } = await supabaseAdmin
-      .from('dentist_blocked_slots')
-      .select('*')
-      .eq('dentist_id', dentistId)
-
-    if (error) throw new Error(error.message)
-
-    return { success: true, blockedSlots: data || [] }
-  } catch (error) {
-    console.error('Error in fetchBlockedSlots:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch blocked slots',
-      blockedSlots: [],
-    }
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-// DENTIST WORKING HOURS ACTIONS
-// ─────────────────────────────────────────────────────────────
-
-export interface DentistAvailabilityInput {
-  day_of_week: number
-  start_time: string
-  end_time: string
-}
-
-export async function updateDentistWorkingHours(
-  dentistId: number,
-  availabilities: DentistAvailabilityInput[]
-) {
-  try {
-    // Delete existing availability for dentist
-    const { error: deleteErr } = await supabaseAdmin
-      .from('dentist_availability')
-      .delete()
-      .eq('dentist_id', dentistId)
-
-    if (deleteErr) throw new Error(deleteErr.message)
-
-    // Insert new availability
-    if (availabilities.length > 0) {
-      const insertData = availabilities.map(av => ({
-        dentist_id: dentistId,
-        day_of_week: av.day_of_week,
-        start_time: av.start_time,
-        end_time: av.end_time,
-      }))
-
-      const { error: insertErr } = await supabaseAdmin
-        .from('dentist_availability')
-        .insert(insertData)
-
-      if (insertErr) throw new Error(insertErr.message)
-    }
-
-    revalidatePath('/dentist-dashboard/settings')
-    return { success: true }
-  } catch (error) {
-    console.error('Error in updateDentistWorkingHours:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to update working hours',
-    }
-  }
-}
-
-export async function fetchDentistWorkingHours(dentistId: number) {
-  try {
-    const { data, error } = await supabaseAdmin
-      .from('dentist_availability')
-      .select('*')
-      .eq('dentist_id', dentistId)
-      .order('day_of_week', { ascending: true })
-
-    if (error) throw new Error(error.message)
-
-    return { success: true, workingHours: data || [] }
-  } catch (error) {
-    console.error('Error in fetchDentistWorkingHours:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch working hours',
-      workingHours: [],
-    }
-  }
-}
-
-export async function updateDentistProfile(
-  dentistId: number,
-  data: {
-    first_name: string
-    last_name: string
-    specialty?: string | null
-    license_no?: string | null
-  }
-) {
-  try {
-    const { error } = await supabaseAdmin
-      .from('dentists')
-      .update({
-        first_name: data.first_name,
-        last_name: data.last_name,
-        specialty: data.specialty,
-        license_no: data.license_no,
-      })
-      .eq('id', dentistId)
-
-    if (error) throw new Error(error.message)
-
-    revalidatePath('/dentist-dashboard/settings')
-    return { success: true }
-  } catch (error) {
-    console.error('Error in updateDentistProfile:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to update profile',
+      error: sanitizeServerError(error),
     }
   }
 }

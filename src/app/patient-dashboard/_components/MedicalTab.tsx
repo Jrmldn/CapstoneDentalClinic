@@ -5,7 +5,7 @@ import { ClipboardList, FileText, HeartPulse, Edit2, Check, X, RefreshCw, AlertC
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { PatientRecord } from './types'
 import { formatDate } from './utils'
-import { updatePatientMedicalHistory } from '@/actions/patientActions'
+import { updatePatientMedicalHistory } from '@/actions/patientMedicalActions'
 import { useRouter } from 'next/navigation'
 
 interface MedicalTabProps {

@@ -2,19 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, X, ChevronDown, ChevronUp, Calendar, BookOpen, User } from 'lucide-react'
-import { addTreatmentRecord } from '@/actions/patientActions'
+import { addTreatmentRecord } from '@/actions/clinicalRecordActions'
 import { fetchServices } from '@/actions/serviceActions'
-
-export interface TreatmentHistory {
-  id: number
-  performed_at: string | null
-  treatment: string
-  notes: string | null
-  tooth_number: number | null
-  service_id: number | null
-  services: { id: number; name: string } | { id: number; name: string }[] | null
-  dentists: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null
-}
+import type { TreatmentHistory } from './types'
 
 interface TreatmentTabProps {
   patientId: number

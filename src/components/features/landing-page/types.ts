@@ -1,8 +1,3 @@
-/**
- * Type Definitions for Clinic Discovery & Map
- * Extracted to ensure strict typing across components and hooks.
- */
-
 export interface ClinicSpecialty {
   specialty_name: string;
 }

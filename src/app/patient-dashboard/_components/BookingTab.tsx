@@ -14,7 +14,8 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { createAppointment, getAvailableSlots, updateAppointmentStatus, TimeSlot } from '@/actions/appointmentActions'
+import { createAppointment, updateAppointmentStatus } from '@/actions/appointmentActions'
+import { getAvailableSlots, TimeSlot } from '@/actions/slotAvailabilityActions'
 import { getBranchData, BranchDentist, BranchService } from '@/actions/bookingActions'
 import { PatientRecord } from './types'
 
@@ -49,17 +50,17 @@ export function BookingTab({
     ? record.appointments.find(a => a.id === rescheduleApptId)
     : null
 
-  // ── Branch selection step ──────────────────────────────────
+  // Branch selection step
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null)
   const [branchLoading, setBranchLoading] = useState(false)
   const [branchError, setBranchError] = useState<string | null>(null)
 
-  // ── Branch-specific data (loaded after branch is selected) ──
+  // Branch-specific data (loaded after branch is selected)
   const [dentists, setDentists] = useState<BranchDentist[]>([])
   const [services, setServices] = useState<BranchService[]>([])
   const [defaultDownpaymentAmount, setDefaultDownpaymentAmount] = useState(0)
 
-  // ── Booking form state ─────────────────────────────────────
+  // Booking form state
   const [bookingStatus, setBookingStatus] = useState<{ success?: boolean; error?: string; loading?: boolean }>({})
   const [bookingDentist, setBookingDentist] = useState('')
   const [bookingService, setBookingService] = useState('')

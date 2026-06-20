@@ -13,11 +13,6 @@ interface AddPersonnelModalProps {
   fixedClinicId?: number
 }
 
-/**
- * AddPersonnelModal Component
- * Renders the modal overlay form for adding new staff members or dentists.
- * State management and submit transitions are delegated to the useAddPersonnel hook.
- */
 export default function AddPersonnelModal({ isOpen, onClose, onSuccess, type, fixedClinicId }: AddPersonnelModalProps) {
   const {
     clinics,

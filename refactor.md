@@ -1,5 +1,3 @@
-You are an elite principal software engineer specializing in system architecture, clean code, type safety, visual layout optimization, and codebase maintainability. 
-
 I want you to scan this entire repository/workspace and perform a systemic refactor across all relevant files to drastically improve code readability, eliminate technical debt, and ensure consistent architectural patterns.
 
 ### SCOPE: WHOLE-CODEBASE / PROJECT-WIDE APPLICATION

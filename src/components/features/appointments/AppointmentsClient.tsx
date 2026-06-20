@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Search, Plus, Calendar } from 'lucide-react'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
 import type {
@@ -23,6 +24,7 @@ export default function AppointmentsClient({
   services,
   dentists
 }: AppointmentsClientProps) {
+  const router = useRouter()
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments)
 
   // Filters
@@ -42,9 +44,8 @@ export default function AppointmentsClient({
   const [reschedulingAppt, setReschedulingAppt] = useState<Appointment | null>(null)
   const [billingAppt, setBillingAppt] = useState<Appointment | null>(null)
 
-  // Refetch appointments after actions
   const refreshAppointments = () => {
-    window.location.reload()
+    router.refresh()
   }
 
   // Action handlers

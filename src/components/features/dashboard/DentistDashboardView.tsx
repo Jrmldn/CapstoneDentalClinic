@@ -17,9 +17,11 @@ import {
   ChevronUp,
   ShieldAlert
 } from 'lucide-react'
-import PatientRecordModal, { PatientRecord } from '../patients/PatientRecordModal'
+import PatientRecordModal from '../patients/PatientRecordModal'
+import type { PatientRecord } from '../patients/types'
+import StatCard from './components/StatCard'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
-import { fetchPatientRecord } from '@/actions/patientActions'
+import { fetchPatientRecord } from '@/actions/patientMedicalActions'
 
 export interface Appointment {
   id: number
@@ -54,38 +56,6 @@ interface DentistDashboardViewProps {
   }
 }
 
-const colorMap = {
-  blue: { card: 'bg-blue-50', icon: 'text-blue-600', text: 'text-blue-700' },
-  emerald: { card: 'bg-emerald-50', icon: 'text-emerald-600', text: 'text-emerald-700' },
-  amber: { card: 'bg-amber-50', icon: 'text-amber-550', text: 'text-amber-700' },
-  rose: { card: 'bg-rose-50', icon: 'text-rose-500', text: 'text-rose-700' },
-}
-
-function StatCard({
-  label, value, sub, icon: Icon, color, href,
-}: {
-  label: string
-  value: string | number
-  sub: string
-  icon: React.ElementType
-  color: keyof typeof colorMap
-  href: string
-}) {
-  const c = colorMap[color]
-  return (
-    <Link href={href} className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow group">
-      <div className="flex items-start justify-between">
-        <div className={`w-10 h-10 rounded-lg ${c.card} flex items-center justify-center flex-shrink-0`}>
-          <Icon className={`w-5 h-5 ${c.icon}`} />
-        </div>
-        <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition mt-1" />
-      </div>
-      <p className="mt-4 text-2xl font-bold text-slate-900 leading-none">{value}</p>
-      <p className="mt-1 text-xs font-medium text-gray-500">{label}</p>
-      <p className="mt-0.5 text-[11px] text-gray-400">{sub}</p>
-    </Link>
-  )
-}
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {

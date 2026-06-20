@@ -1,6 +1,6 @@
 import { enforceRole } from '@/lib/auth/protection'
 import { getStaffClinicId } from '@/lib/auth/getClinicId'
-import { fetchPatientsByClinic } from '@/actions/patientActions'
+import { fetchPatientsByClinic } from '@/actions/patientCoreActions'
 import PatientsClient from '@/components/features/patients/PatientsClient'
 
 export const metadata = { title: 'Patients — AppoinDent' }

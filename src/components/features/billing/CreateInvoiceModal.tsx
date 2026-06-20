@@ -16,7 +16,7 @@ import {
   PaymentStatus,
   TransactionItem
 } from '@/actions/billingActions'
-import { AppointmentOption, Service, Product, Patient, Transaction } from './BillingClient'
+import type { AppointmentOption, Service, Product, Patient, Transaction } from './types'
 
 const SENIOR_PWD_DISCOUNT_RATE = 0.2
 

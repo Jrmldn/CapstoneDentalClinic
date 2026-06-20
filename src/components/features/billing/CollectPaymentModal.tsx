@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { X, RefreshCw } from 'lucide-react'
 import { processPayment, PaymentMethod, PaymentStatus } from '@/actions/billingActions'
-import { Transaction } from './BillingClient'
+import type { Transaction } from './types'
 
 interface CollectPaymentModalProps {
   transaction: Transaction | null

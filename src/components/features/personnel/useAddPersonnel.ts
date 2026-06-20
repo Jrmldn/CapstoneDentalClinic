@@ -10,10 +10,6 @@ interface UseAddPersonnelProps {
   fixedClinicId?: number
 }
 
-/**
- * Custom Hook: useAddPersonnel
- * Manages the state, clinic list fetching, and form submission for adding new personnel.
- */
 export const useAddPersonnel = ({ isOpen, onClose, onSuccess, type, fixedClinicId }: UseAddPersonnelProps) => {
   const [clinics, setClinics] = useState<{ id: number; name: string }[]>([])
   

@@ -2,20 +2,11 @@
 
 import { useState } from 'react'
 import { Plus, Package, Search, AlertTriangle, History, ArrowUpDown } from 'lucide-react'
-import { fetchInventory } from '@/actions/managementActions'
+import { fetchInventory } from '@/actions/inventoryActions'
 import AddInventoryModal from '@/components/features/inventory/AddInventoryModal'
 import UpdateStockModal from '@/components/features/inventory/UpdateStockModal'
 import InventoryLogsModal from '@/components/features/inventory/InventoryLogsModal'
-
-
-export interface InventoryItem {
-  id: number
-  name: string
-  unit: string
-  quantity: number
-  alert_threshold: number
-  updated_at: string
-}
+import type { InventoryItem } from './types'
 
 interface InventoryClientProps {
   clinicId: number
@@ -91,7 +82,7 @@ export default function InventoryClient({ clinicId, initialItems, userId }: Inve
               className={`bg-white rounded-xl border ${isLow ? 'border-red-200 shadow-red-50/50' : 'border-gray-100'} shadow-sm p-5 hover:shadow-md transition-all group relative overflow-hidden`}
             >
               {isLow && <div className="absolute top-0 right-0 w-16 h-16 bg-red-500/5 rotate-45 translate-x-8 -translate-y-8" />}
-              
+
               <div className="flex justify-between items-start mb-4">
                 <div className={`p-2 rounded-lg ${isLow ? 'bg-red-100 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
                   <Package className="w-5 h-5" />

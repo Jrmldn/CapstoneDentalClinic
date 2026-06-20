@@ -3,25 +3,8 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus, X, ClipboardCheck, Pill, Printer } from 'lucide-react'
-import { addPrescription } from '@/actions/patientActions'
-
-export interface Prescription {
-  id: number
-  prescribed_at: string | null
-  medication: string
-  dosage: string
-  frequency: string
-  duration: string | null
-  notes?: string | null
-  dentists: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null
-}
-
-export interface PatientInfo {
-  first_name: string
-  last_name: string
-  birthdate?: string
-  gender?: string
-}
+import { addPrescription } from '@/actions/clinicalRecordActions'
+import type { Prescription, PatientInfo } from './types'
 
 interface PrescriptionsTabProps {
   patientId: number

@@ -1,6 +1,6 @@
 import { enforceRole } from '@/lib/auth/protection'
 import { getDentistRecordByUserId } from '@/services/dashboardService'
-import { fetchPatientsByClinic } from '@/actions/patientActions'
+import { fetchPatientsByClinic } from '@/actions/patientCoreActions'
 import PatientsClient from '@/components/features/patients/PatientsClient'
 import { AlertCircle } from 'lucide-react'
 

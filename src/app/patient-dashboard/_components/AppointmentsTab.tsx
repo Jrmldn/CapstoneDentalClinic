@@ -6,7 +6,7 @@ import { Calendar, ChevronRight, CalendarClock, AlertCircle, Star, MessageSquare
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
-import { submitFeedback } from '@/actions/patientActions'
+import { submitFeedback } from '@/actions/patientCoreActions'
 import { PatientRecord } from './types'
 import { formatDate, formatTime, getStatusBadge } from './utils'
 

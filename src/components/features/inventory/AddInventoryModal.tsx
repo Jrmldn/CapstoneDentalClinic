@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { X } from 'lucide-react'
-import { addInventoryItem } from '@/actions/managementActions'
+import { addInventoryItem } from '@/actions/inventoryActions'
 
 interface AddInventoryModalProps {
   isOpen: boolean

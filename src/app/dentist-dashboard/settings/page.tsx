@@ -1,6 +1,6 @@
 import { enforceRole } from '@/lib/auth/protection'
 import { getDentistRecordByUserId } from '@/services/dashboardService'
-import { fetchDentistWorkingHours } from '@/actions/appointmentActions'
+import { fetchDentistWorkingHours } from '@/actions/dentistScheduleActions'
 import { createClient } from '@/lib/supabase/serverSSR'
 import SettingsClient from './SettingsClient'
 

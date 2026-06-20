@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { Plus, RefreshCw, Layers } from 'lucide-react'
-import { DentalChart, ToothCondition } from './PatientRecordModal'
-import { updateDentalChart, ToothConditionData } from '@/actions/patientActions'
+import type { DentalChart, ToothCondition } from './types'
+import { updateDentalChart, ToothConditionData } from '@/actions/dentalChartActions'
 
 interface DentalChartTabProps {
   patientId: number

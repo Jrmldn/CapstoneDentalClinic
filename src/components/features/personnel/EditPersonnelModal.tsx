@@ -16,11 +16,6 @@ interface EditPersonnelModalProps {
   fixedClinicId?: number
 }
 
-/**
- * EditPersonnelModal Component
- * Renders the modal overlay form for editing existing staff members or dentists.
- * State management and submit transitions are delegated to the useEditPersonnel hook.
- */
 export default function EditPersonnelModal({ 
   isOpen, 
   onClose, 

@@ -1,8 +1,3 @@
-/**
- * Type Definitions for Services Module
- * Extracted to ensure strict typing across components and hooks.
- */
-
 export interface Service {
   id: number
   name: string

@@ -1,6 +1,6 @@
 import { enforceRole } from '@/lib/auth/protection'
 import { getStaffClinicId } from '@/lib/auth/getClinicId'
-import { fetchCalendarData } from '@/actions/managementActions'
+import { fetchCalendarData } from '@/actions/calendarActions'
 import CalendarClient from '@/components/features/calendar/CalendarClient'
 
 export const metadata = { title: 'Calendar — AppoinDent' }

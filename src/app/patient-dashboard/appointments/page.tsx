@@ -1,7 +1,7 @@
 import React from 'react'
 import { enforceRole } from '@/lib/auth/protection'
 import { redirect } from 'next/navigation'
-import { fetchPatientRecord } from '@/actions/patientActions'
+import { fetchPatientRecord } from '@/actions/patientMedicalActions'
 import { createClient } from '@/lib/supabase/serverSSR'
 import { AppointmentsTab } from '../_components/AppointmentsTab'
 

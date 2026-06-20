@@ -1,6 +1,6 @@
 import { enforceRole } from '@/lib/auth/protection'
 import { getDentistRecordByUserId } from '@/services/dashboardService'
-import { fetchBlockedSlots } from '@/actions/appointmentActions'
+import { fetchBlockedSlots } from '@/actions/dentistScheduleActions'
 import AvailabilityClient from './AvailabilityClient'
 
 export const metadata = { title: 'Availability Management — Dentist Portal' }

@@ -4,28 +4,12 @@ import { useState } from 'react'
 import { Stethoscope, Package } from 'lucide-react'
 import ServicesTable from '@/components/features/clinic-services/ServicesTable'
 import ProductsTable from '@/components/features/clinic-services/ProductsTable'
-
-
+import type { Service, Product } from './types'
 
 const TABS = [
   { key: 'services', label: 'Dental Services', icon: Stethoscope },
   { key: 'products', label: 'Products', icon: Package },
 ]
-
-interface Service {
-  id: number
-  name: string
-  price: number
-  slot_duration_min: number
-  is_active: boolean
-}
-
-interface Product {
-  id: number
-  name: string
-  price: number
-  is_active: boolean
-}
 
 interface Props {
   clinicId: number

@@ -2,13 +2,9 @@
 
 import { useState } from 'react'
 import { X, RefreshCw } from 'lucide-react'
-import {
-  updateAppointmentStatus,
-  getAvailableSlots
-} from '@/actions/appointmentActions'
+import { updateAppointmentStatus } from '@/actions/appointmentActions'
+import { useAvailableSlots, MILLISECONDS_PER_MINUTE } from './hooks/useAvailableSlots'
 import type { Appointment } from './AppointmentTypes'
-
-const MILLISECONDS_PER_MINUTE = 60_000
 
 interface RescheduleModalProps {
   appointment: Appointment | null
@@ -26,17 +22,9 @@ export default function RescheduleModal({
   onSuccess
 }: RescheduleModalProps) {
   const [rescheduleDate, setRescheduleDate] = useState('')
-  const [rescheduleSlots, setRescheduleSlots] = useState<{ start: string; end: string; available: boolean }[]>([])
+  const { slots: rescheduleSlots, fetchSlots } = useAvailableSlots(clinicId)
   const [selectedRescheduleSlot, setSelectedRescheduleSlot] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const handleFetchSlots = async (dentistId: number, serviceId: number, date: string) => {
-    if (!dentistId || !serviceId || !date) return
-    const slotsResult = await getAvailableSlots(clinicId, dentistId, serviceId, date)
-    if (slotsResult.success && slotsResult.slots) {
-      setRescheduleSlots(slotsResult.slots)
-    }
-  }
 
   const handleRescheduleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -100,7 +88,7 @@ export default function RescheduleModal({
                 setRescheduleDate(e.target.value)
                 setSelectedRescheduleSlot('')
                 if (appointment.dentists?.id && appointment.services?.id) {
-                  handleFetchSlots(appointment.dentists.id, appointment.services.id, e.target.value)
+                  fetchSlots(appointment.dentists.id, appointment.services.id, e.target.value)
                 }
               }}
             />

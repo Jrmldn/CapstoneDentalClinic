@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { User, Clock, Check, RefreshCw } from 'lucide-react'
-import { updateDentistWorkingHours, updateDentistProfile } from '@/actions/appointmentActions'
+import { updateDentistWorkingHours, updateDentistProfile } from '@/actions/dentistScheduleActions'
 
 export interface WorkingHour {
   day_of_week: number

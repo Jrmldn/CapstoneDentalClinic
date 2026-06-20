@@ -1,7 +1,7 @@
 'use client'
 
 import { DollarSign, Receipt } from 'lucide-react'
-import { Transaction } from './BillingClient'
+import type { Transaction } from './types'
 
 interface TransactionTableProps {
   filteredTransactions: Transaction[]

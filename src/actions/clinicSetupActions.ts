@@ -1,4 +1,6 @@
-'use server'
+﻿'use server'
+
+import { sanitizeServerError } from '@/lib/errors/sanitizeError'
 
 import { supabaseAdmin } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
@@ -38,7 +40,7 @@ export async function updateClinicProfile(
     console.error('Error in updateClinicProfile:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update clinic profile',
+      error: sanitizeServerError(error),
     }
   }
 }
@@ -75,7 +77,7 @@ export async function updateOperatingHours(clinicId: number, hours: OperatingHou
     console.error('Error in updateOperatingHours:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update operating hours',
+      error: sanitizeServerError(error),
     }
   }
 }
@@ -108,7 +110,7 @@ export async function manageClinicSpecialties(clinicId: number, specialties: str
     console.error('Error in manageClinicSpecialties:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to manage specialties',
+      error: sanitizeServerError(error),
     }
   }
 }
@@ -141,7 +143,8 @@ export async function manageClinicGallery(clinicId: number, imageUrls: { url: st
     console.error('Error in manageClinicGallery:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to manage gallery',
+      error: sanitizeServerError(error),
     }
   }
 }
+

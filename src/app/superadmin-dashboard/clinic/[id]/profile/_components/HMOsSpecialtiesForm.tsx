@@ -16,7 +16,7 @@ export default function HMOsSpecialtiesForm({ clinicId, specialties }: Props) {
   const [isPendingSpec, startSpec] = useTransition()
   const [msgSpec, setMsgSpec] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
-  // ── Specialty helpers ──
+  // Specialty helpers
   const addSpec = () => {
     const v = specInput.trim()
     if (v && !specList.includes(v)) setSpecList(p => [...p, v])

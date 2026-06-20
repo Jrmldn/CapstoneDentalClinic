@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { Building2, Loader2, ArrowRight, Settings } from 'lucide-react'
 import ServicesTabs from './ServicesTabs'
 import { fetchServices, fetchProducts } from '@/actions/serviceActions'
+import type { Service, Product } from './types'
 
 interface ClinicOption {
   id: number
@@ -16,8 +17,8 @@ interface SuperadminServicesViewProps {
 
 export default function SuperadminServicesView({ clinics }: SuperadminServicesViewProps) {
   const [selectedClinicId, setSelectedClinicId] = useState<number | ''>('')
-  const [services, setServices] = useState<any[]>([])
-  const [products, setProducts] = useState<any[]>([])
+  const [services, setServices] = useState<Service[]>([])
+  const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
   const handleClinicChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {

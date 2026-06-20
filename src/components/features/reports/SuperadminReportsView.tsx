@@ -7,7 +7,7 @@ import {
   generateSalesReport,
   generateAppointmentSummary,
   generateServiceFrequency
-} from '@/actions/managementActions'
+} from '@/actions/reportActions'
 
 interface ClinicOption {
   id: number

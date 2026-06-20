@@ -9,10 +9,6 @@ interface UseClinicFiltersProps {
   availableSpecialties?: string[]
 }
 
-/**
- * Custom Hook: useClinicFilters
- * Manages all filtering logic, state, and side-effects for the Clinic Map and sidebar.
- */
 export const useClinicFilters = ({
   clinics,
   availableSpecialties,

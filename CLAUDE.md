@@ -1,3 +1,5 @@
+# CLAUDE.md
+
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
@@ -64,83 +66,82 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ---
 
-# Project-Specific Guidance
+# Project
 
-Dental clinic management app. Stack: Next.js 16 (App Router), React 19, TypeScript, Supabase, Tailwind v4, Framer Motion. Four role dashboards: `patient`, `dentist`, `staff`, `superadmin`.
+Dental clinic management app. Stack: **Next.js 16 (App Router), React 19, TypeScript, Supabase, Tailwind v4, Framer Motion**. Four roles: `patient`, `dentist`, `staff`, `superadmin`.
 
-## 5. Tech Stack & Supabase Clients
-
-**Pick the right Supabase client for the context — there are three, and they are not interchangeable.**
-
-- `@/lib/supabase/client` (`supabase`): browser/`'use client'` only, anon key, respects RLS.
-- `@/lib/supabase/serverSSR` (`createClient()`): server components/route handlers, reads the user session from cookies. Use for `supabase.auth.getUser()`. Async — `await createClient()`.
-- `@/lib/supabase/server` (`supabaseAdmin`): service-role key, **bypasses RLS**. Server actions / `'use server'` only. Never import into a client component (leaks the secret key).
-
-Why: RLS is the security boundary. Using `supabaseAdmin` to dodge an RLS failure silently removes that boundary. Confirm the user/role with `createClient()` first, then use `supabaseAdmin` for the privileged write.
-
-```ts
-const supabase = await createClient()
-const { data: { user } } = await supabase.auth.getUser()
-const { data } = await supabaseAdmin.from('patients').select('...').eq('user_id', user.id)
+```bash
+npm run dev    # http://localhost:3000
+npm run build  # Production build
+npm run lint   # Must pass clean before any PR
 ```
 
-## 6. Server Actions: Contract & Return Shape
+No test suite — verification is manual (see §Verification).
 
-**Every mutating server action lives in `src/actions/*Actions.ts`, starts with `'use server'`, and returns `{ success: boolean, ... }` — never throws to the client.** Wrap the body in try/catch, log `console.error('Error in <fn>:', error)`, return `{ success: false, error: error instanceof Error ? error.message : 'Fallback' }`.
+## Auth & Routing
 
-Why: The UI branches on `res.success` (see `PrescriptionsTab.handleSave`). A thrown action breaks that contract and the form's loading/error handling.
+1. **`middleware.ts`** — edge JWT check via `supabase.auth.getUser()`; reads role from `user_metadata`.
+2. **`src/app/auth/callback/route.ts`** — PKCE exchange, sets `clinic_id` cookie, routes role to dashboard.
+3. **`enforceRole(role)`** in `src/lib/auth/protection.ts` — DB-authoritative check at the top of every layout/page (uses React `cache()` to dedupe). Call this; never assume the session.
+4. **On failure** — `enforceRole` redirects rather than throwing. [TODO: confirm exact redirect target — login? a 403 page?] Pages calling it should not wrap it in try/catch expecting a thrown error.
 
-```ts
-export async function addThing(data: ThingData) {
-  try {
-    const { data: row, error } = await supabaseAdmin.from('things').insert([{...}]).select().single()
-    if (error) throw new Error(error.message)
-    revalidatePath('/staff-dashboard/patients')
-    revalidatePath('/dentist-dashboard/patients')
-    return { success: true, thing: row }
-  } catch (error) {
-    console.error('Error in addThing:', error)
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to add thing' }
-  }
-}
-```
+Two-layer design: middleware = low-latency edge guard; `enforceRole` = catches forged JWTs via `users` table query.
 
-Co-locate the action's input `interface` (e.g. `PrescriptionData`, `RegisterPatientData`) in the same file and `export` it; clients import it from there.
+## Supabase Clients — Not Interchangeable
 
-## 7. Code Organization
+| Client | Import | Context | RLS |
+|--------|--------|---------|-----|
+| `supabase` | `@/lib/supabase/client` | `'use client'` only | Enforced |
+| `createClient()` | `@/lib/supabase/serverSSR` | Server components / route handlers | Enforced |
+| `supabaseAdmin` | `@/lib/supabase/server` | `'use server'` only — **never import client-side** | **Bypassed** |
 
-**Two component homes — keep them straight.** Route-private UI → `src/app/<dashboard>/_components/` (underscore = not a route). Cross-dashboard reusable feature UI → `src/components/features/<domain>/`. Design-system primitives (`Button`, `Card`, `Badge`) → `src/components/ui/`, using CVA + `cn()` from `@/lib/utils`.
+Always confirm user with `createClient()` first, then use `supabaseAdmin` for privileged writes.
 
-Why: `PatientsClient`, `FollowupsTab` etc. are shared by both dentist and staff patient pages, so they belong in `features/patients/`. Burying shared UI under one dashboard's `_components` forces cross-route imports.
+## Server Actions
 
-Conventions: components `PascalCase.tsx` (default export); actions `camelCaseActions.ts`; read-only fetchers in `src/services/*Service.ts`; query builders in `src/lib/queries/`. Import alias `@/` → `src/`.
+Every mutating action lives in `src/actions/*Actions.ts`, starts with `'use server'`, and returns `{ success: boolean, ... }` — **never throws to client**. Wrap in try/catch; log errors; return `{ success: false, error: string }` on failure. Co-locate input interfaces in the same file and export them.
 
-## 8. Page Pattern: Server Page → Client Island
+Function naming: verb-first camelCase describing the mutation, e.g. `updateAppointmentStatus`, `manageClinicHolidays`. One domain per file — don't mix e.g. appointment actions and billing actions in the same `*Actions.ts` file.
 
-**Dashboard pages are async Server Components that (1) authorize, (2) resolve the role's clinic/profile, (3) fetch initial data, (4) hand it to a `*Client` component as props.** Guard with `enforceRole('<role>')` from `@/lib/auth/protection`; never assume the session.
+## Code Organization
 
-Why: Keeps secrets and data fetching on the server while interactivity stays in a focused client island. Mirrors `app/dentist-dashboard/patients/page.tsx`.
+- **Route-private UI** → `src/app/<dashboard>/_components/` (underscore = not a route)
+- **Shared feature UI** → `src/components/features/<domain>/` — flat structure, no nested `hooks/` or `components/` subfolders. Extracted hooks, sub-components, and types live alongside existing files in the same domain folder (e.g. `usePatientRecord.ts` next to `PatientRecordModal.tsx`, not in a `patients/hooks/` subfolder).
+- **Cross-domain shared hooks** (used by 2+ feature folders) → `src/hooks/`
+- **Design-system primitives** → `src/components/ui/` (CVA + `cn()` from `@/lib/utils`)
+- **Read-only fetchers** → `src/services/*Service.ts`; **mutations** → `src/actions/*Actions.ts`; **query builders** → `src/lib/queries/`
+- Import alias: `@/` → `src/`
 
-```tsx
-export default async function PatientsPage() {
-  const authUser = await enforceRole('dentist')
-  const { data: dentistRecord } = await getDentistRecordByUserId(authUser.id)
-  if (!dentistRecord?.clinic_id) return <div className="p-8 text-center text-gray-400">No clinic assigned…</div>
-  const patientsRes = await fetchPatientsByClinic(dentistRecord.clinic_id, '', true)
-  return <PatientsClient clinicId={dentistRecord.clinic_id} initialPatients={patientsRes.patients || []} dentistId={dentistRecord.id} viewerRole="dentist" />
-}
-```
+## Page Pattern: Server Page → Client Island
 
-## 9. Client Component Patterns (forms, loading, refresh)
+Async Server Component: (1) `enforceRole`, (2) resolve clinic/profile, (3) fetch data, (4) pass as props to a `*Client` component. Never re-derive auth client-side.
 
-**Follow the established tab pattern for any data-entry form:** local `useState` per field + an `isSubmitting` flag; disable submit while submitting; on `res.success` reset fields and call parent-provided `onRefresh()`; on failure surface `res.error`. Pass `viewerRole`, `clinicId`, `dentistId`/`patientId` down as props rather than re-deriving client-side.
+Data-heavy pages (calendar, services list, anything with unbounded Supabase queries) need `export const dynamic = 'force-dynamic'` to avoid stale prefetch caching — see ongoing performance work.
 
-Why: Consistent with `PrescriptionsTab`/`FollowupsTab`/`TreatmentTab`. Refresh is owned by the parent via `onRefresh: () => Promise<void>`, so children don't re-fetch independently and lists stay in sync.
+## Client Component Patterns
 
-Notes: a Supabase joined relation may type as `T | T[] | null` (e.g. `dentists`) — normalize before rendering. Modals use `createPortal` gated behind a `mounted` flag to stay SSR-safe. Inline `alert()` exists for quick validation, but prefer surfacing `res.error` in the UI for new work.
+Follow the tab pattern: `useState` per field + `isSubmitting` flag; disable submit while submitting; on `res.success` reset + call `onRefresh()`; on failure surface `res.error`. Pass `viewerRole`, `clinicId`, `dentistId`/`patientId` as props. Supabase joined relations may type as `T | T[] | null` — normalize before rendering (e.g. a shared `normalizeRelation<T>()` util, not repeated inline `Array.isArray` checks). Modals use `createPortal` gated behind a `mounted` flag (SSR-safe).
 
-## 10. Verification
+**No native dialogs** — never use `alert()`, `confirm()`, or `window.location.reload()`. Use [TODO: confirm — toast library? a shared `<ConfirmDialog>` component?] for user-facing success/error messages and confirmations.
 
-**No test suite exists — verify manually against the dev server and lint.** Run `npm run lint` (must pass clean) and `npm run dev`, then exercise the exact role/dashboard you changed (log in as a dentist → Patients → the affected tab → submit → confirm the list refreshes). Bash is sandboxed here; run commands via the PowerShell tool.
+**Conditional className logic** — if a className ternary chain has more than 2 branches, extract it into a small named function (e.g. `getDayCellStyles(holiday, isToday, isSelected)`) returning the resolved classes, rather than inlining the chain in JSX.
 
-Why: UI/data-flow regressions only surface by walking the real role flow. State success as a concrete click-path ("submit prescription → row appears after `onRefresh`"), not "make it work". Confirm `revalidatePath` covers every dashboard that renders the mutated data.
+## Dates
+
+[TODO: confirm canonical date util/timezone convention — e.g. is `scheduled_at` stored UTC? Is there a shared `toDateKey()` / date-formatting helper, or should one be created in `src/lib/`? Multiple components currently hand-roll `${y}-${pad(m)}-${pad(d)}` construction inline — this should be centralized.]
+
+## Verification
+
+Run `npm run lint` (must pass clean), then walk the exact role/dashboard changed. State success as a concrete click-path (e.g., "submit prescription → row appears after `onRefresh`"). Confirm `revalidatePath` covers every dashboard that renders the mutated data. Run commands via the PowerShell tool (bash is sandboxed).
+
+## Supabase
+
+- Always use the local Supabase CLI for database schema changes and migrations.
+- Migration files: `supabase/migrations/<timestamp>_<verb_noun>.sql` (e.g. `20260621_add_billing_records.sql`).
+- Never execute destructive commands like `db reset` on a `--linked` remote instance.
+- Ensure all custom functions follow a verb_noun naming format.
+
+## Comments
+
+- Never use decorative section dividers like ─────, ═════, or ****
+- Just use simple single-line comments: // My comment

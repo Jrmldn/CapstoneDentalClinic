@@ -1,20 +1,20 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
   Calendar as CalendarIcon,
   Plus,
-  X,
   Trash2,
-  AlertCircle,
   RefreshCw,
   Clock
 } from 'lucide-react'
-import { fetchCalendarData, manageClinicHolidays } from '@/actions/managementActions'
+import { fetchCalendarData, manageClinicHolidays } from '@/actions/calendarActions'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
+import type { Appointment as RescheduleAppt } from '../appointments/AppointmentTypes'
 import RescheduleModal from '../appointments/RescheduleModal'
+import AddHolidayModal from './components/AddHolidayModal'
 
 interface Holiday {
   id: number
@@ -72,14 +72,10 @@ export default function CalendarClient({
 
   // Status updates & rescheduling state
   const [isUpdatingStatus, setIsUpdatingStatus] = useState<number | null>(null)
-  const [reschedulingAppointment, setReschedulingAppointment] = useState<any | null>(null)
+  const [reschedulingAppointment, setReschedulingAppointment] = useState<RescheduleAppt | null>(null)
 
   // Holiday Modal State
   const [isHolidayModalOpen, setIsHolidayModalOpen] = useState(false)
-  const [holidayDate, setHolidayDate] = useState('')
-  const [holidayDesc, setHolidayDesc] = useState('')
-  const [isSpecialDay, setIsSpecialDay] = useState(false) // false = clinic closed, true = special (open but notable)
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Fetch data when year/month changes
   const loadMonthData = async (targetYear: number, targetMonth: number) => {
@@ -126,31 +122,6 @@ export default function CalendarClient({
     setMonth(newMonth)
     setYear(newYear)
     loadMonthData(newYear, newMonth)
-  }
-
-  // Manage Holiday submit
-  const handleHolidaySubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!holidayDate || !holidayDesc) return
-    setIsSubmitting(true)
-
-    const addHolidayResult = await manageClinicHolidays(clinicId, 'add', {
-      date: holidayDate,
-      description: holidayDesc,
-      is_special_day: isSpecialDay
-    })
-
-    setIsSubmitting(false)
-    if (addHolidayResult.success) {
-      alert('Holiday/Closure added successfully!')
-      setIsHolidayModalOpen(false)
-      setHolidayDate('')
-      setHolidayDesc('')
-      setIsSpecialDay(false)
-      loadMonthData(year, month)
-    } else {
-      alert(addHolidayResult.error || 'Failed to add holiday')
-    }
   }
 
   const handleDeleteHoliday = async (holidayId: number) => {
@@ -384,14 +355,14 @@ export default function CalendarClient({
                       })
                       const patientObj = Array.isArray(appt.patients) ? appt.patients[0] : appt.patients
                       const serviceObj = Array.isArray(appt.services) ? appt.services[0] : appt.services
-                      const dentistObj = Array.isArray((appt as any).dentists) ? (appt as any).dentists[0] : (appt as any).dentists
+                      const dentistObj = Array.isArray(appt.dentists) ? appt.dentists[0] : appt.dentists
 
                       const normAppt = {
                         ...appt,
                         patients: patientObj,
                         services: serviceObj,
                         dentists: dentistObj
-                      }
+                      } as RescheduleAppt
 
                       const showActions = userId && role && (appt.status === 'pending' || appt.status === 'confirmed' || appt.status === 'rescheduled')
 
@@ -442,74 +413,12 @@ export default function CalendarClient({
           </div>
         </div>
 
-        {/* MODAL: Add Clinic Holiday/Closure */}
         {isHolidayModalOpen && (
-          <div className="fixed inset-0 bg-black/55 z-55 flex items-center justify-center p-4 backdrop-blur-xs animate-in zoom-in-95 duration-150">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-              <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
-                <h3 className="font-bold text-slate-900 text-lg">Set Clinic Holiday / Closure</h3>
-                <button onClick={() => setIsHolidayModalOpen(false)} className="p-1 hover:bg-gray-200 rounded-full transition">
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
-              <form onSubmit={handleHolidaySubmit} className="p-6 space-y-4">
-                <div className="space-y-1">
-                  <label className="text-sm font-semibold text-slate-800">Date *</label>
-                  <input
-                    type="date"
-                    required
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500 text-slate-700"
-                    value={holidayDate}
-                    onChange={e => setHolidayDate(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-sm font-semibold text-slate-800">Holiday / Closure Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Independence Day, Clinic Renovations"
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500 text-slate-750"
-                    value={holidayDesc}
-                    onChange={e => setHolidayDesc(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2.5 pt-2">
-                  <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="rounded border-gray-300 focus:ring-blue-500 w-4 h-4"
-                      checked={isSpecialDay}
-                      onChange={e => setIsSpecialDay(e.target.checked)}
-                    />
-                    <span>Special Event (Clinic remains open)</span>
-                  </label>
-                  <p className="text-[10px] text-gray-400 italic">
-                    * If unchecked, the clinic will be marked as closed, and patients will not be able to book appointments on this date.
-                  </p>
-                </div>
-
-                <div className="border-t border-gray-100 pt-4 flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsHolidayModalOpen(false)}
-                    className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-semibold hover:bg-gray-50 transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting || !holidayDate || !holidayDesc}
-                    className="px-5 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition font-semibold text-sm disabled:opacity-50 flex items-center gap-2"
-                  >
-                    {isSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Set Date'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
+          <AddHolidayModal
+            clinicId={clinicId}
+            onClose={() => setIsHolidayModalOpen(false)}
+            onSuccess={() => loadMonthData(year, month)}
+          />
         )}
 
         {reschedulingAppointment && (

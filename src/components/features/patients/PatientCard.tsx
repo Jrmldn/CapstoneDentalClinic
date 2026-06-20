@@ -1,7 +1,7 @@
 'use client'
 
 import { User, Phone, Calendar, FileText, ClipboardList } from 'lucide-react'
-import type { PatientSummary } from './PatientsClient'
+import type { PatientSummary } from './types'
 import { formatPhone } from '@/utils/phone-helpers'
 
 interface PatientCardProps {

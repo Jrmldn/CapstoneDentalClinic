@@ -145,7 +145,7 @@ export default function AppointmentBillingModal({
               <select
                 className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none"
                 value={discountType}
-                onChange={e => setDiscountType(e.target.value as any)}
+                onChange={e => setDiscountType(e.target.value as typeof discountType)}
               >
                 <option value="none">No Discount</option>
                 <option value="senior">Senior Citizen (20%)/PWD</option>
@@ -159,7 +159,7 @@ export default function AppointmentBillingModal({
               <select
                 className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none"
                 value={billingPaymentMethod}
-                onChange={e => setBillingPaymentMethod(e.target.value as any)}
+                onChange={e => setBillingPaymentMethod(e.target.value as typeof billingPaymentMethod)}
               >
                 <option value="cash">Cash</option>
                 <option value="gcash">GCash</option>

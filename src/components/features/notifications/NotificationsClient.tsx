@@ -11,26 +11,9 @@ import {
   Smartphone,
   Play
 } from 'lucide-react'
-import { retriggerNotification, fetchNotifications } from '@/actions/managementActions'
+import { retriggerNotification, fetchNotifications } from '@/actions/notificationActions'
 import { formatPhone } from '@/utils/phone-helpers'
-
-interface Notification {
-  id: number
-  appointment_id: number
-  patient_id: number
-  type: string
-  status: string
-  message_body: string
-  error_message?: string | null
-  created_at: string
-  patients: { id: number; first_name: string; last_name: string; phone: string } | null
-  appointments: { id: number; scheduled_at: string } | null
-}
-
-interface NotificationsClientProps {
-  clinicId: number
-  initialNotifications: Notification[]
-}
+import type { Notification, NotificationsClientProps } from './types'
 
 export default function NotificationsClient({
   clinicId,

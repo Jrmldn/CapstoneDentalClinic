@@ -1,7 +1,11 @@
-'use server'
+﻿'use server'
+
+import { sanitizeServerError } from '@/lib/errors/sanitizeError'
 
 import { revalidatePath } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase/server'
+import { ensureRole } from '@/lib/auth/ensureRole'
+import { validatePatientAccess } from '@/lib/auth/validatePatientAccess'
 import {
   insertTransactionHeader,
   insertTransactionItems,
@@ -14,9 +18,7 @@ import {
 } from '@/services/billingService'
 import { calculateTransactionAmounts } from '@/utils/billing-helpers'
 
-// ─────────────────────────────────────────────────────────────
 // TYPES
-// ─────────────────────────────────────────────────────────────
 
 export type DiscountType = 'none' | 'senior' | 'pwd' | 'philhealth'
 export type PaymentMethod = 'cash' | 'gcash' | 'credit_card' | 'paymaya'
@@ -41,11 +43,12 @@ export interface CreateTransactionData {
   payment_status: PaymentStatus
 }
 
-// ─────────────────────────────────────────────────────────────
 // CREATE TRANSACTION
-// ─────────────────────────────────────────────────────────────
 
 export async function createTransaction(data: CreateTransactionData) {
+  const auth = await ensureRole('staff', 'dentist')
+  if (!auth.success) return { success: false, error: auth.error }
+
   try {
     // Fetch downpayment if appointment_id is linked to deduct consultation fee
     let downpayment = 0
@@ -116,19 +119,20 @@ export async function createTransaction(data: CreateTransactionData) {
     console.error('Error in createTransaction:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to create transaction',
+      error: sanitizeServerError(error),
     }
   }
 }
 
-// ─────────────────────────────────────────────────────────────
 // FETCH PATIENT BILLING HISTORY
-// ─────────────────────────────────────────────────────────────
 
 export async function fetchPatientBillingHistory(
   patientId: number,
   clinicId?: number   // optional: scope to a specific clinic
 ) {
+  const access = await validatePatientAccess(patientId)
+  if (!access.allowed) return { success: false, error: access.reason, transactions: [], treatmentHistory: [] }
+
   try {
     const [transactionsResult, treatmentHistoryResult] = await Promise.all([
       getTransactionsByPatient(patientId, clinicId),
@@ -150,22 +154,23 @@ export async function fetchPatientBillingHistory(
     console.error('Error in fetchPatientBillingHistory:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch billing history',
+      error: sanitizeServerError(error),
       transactions: [],
       treatmentHistory: [],
     }
   }
 }
 
-// ─────────────────────────────────────────────────────────────
 // PROCESS PAYMENT
-// ─────────────────────────────────────────────────────────────
 
 export async function processPayment(
   transactionId: number,
   paymentMethod: PaymentMethod,
   paymentStatus: PaymentStatus
 ) {
+  const auth = await ensureRole('staff', 'dentist')
+  if (!auth.success) return { success: false, error: auth.error }
+
   try {
     // Update the transaction
     const { data: transaction, error: txError } = await updateTransactionPayment(
@@ -191,20 +196,21 @@ export async function processPayment(
     console.error('Error in processPayment:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to process payment',
+      error: sanitizeServerError(error),
     }
   }
 }
 
-// ─────────────────────────────────────────────────────────────
 // FETCH CLINIC TRANSACTIONS
-// ─────────────────────────────────────────────────────────────
 
 export async function fetchClinicTransactions(
   clinicId: number,
   from?: string,   // "YYYY-MM-DD"
   to?:   string    // "YYYY-MM-DD"
 ) {
+  const auth = await ensureRole('staff', 'dentist')
+  if (!auth.success) return { success: false, error: auth.error, transactions: [] }
+
   try {
     const { data: transactions, error } = await getTransactionsByClinic(clinicId, from, to)
     if (error) throw new Error(error.message)
@@ -214,8 +220,9 @@ export async function fetchClinicTransactions(
     console.error('Error in fetchClinicTransactions:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch transactions',
+      error: sanitizeServerError(error),
       transactions: [],
     }
   }
 }
+

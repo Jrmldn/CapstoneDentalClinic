@@ -1,4 +1,4 @@
-import { TimeSlot } from '@/actions/appointmentActions'
+import { TimeSlot } from '@/actions/slotAvailabilityActions'
 
 /**
  * Convert "HH:mm:ss" or "HH:mm" → minutes from midnight

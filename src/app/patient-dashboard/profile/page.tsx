@@ -1,7 +1,7 @@
 import React, { Suspense } from 'react'
 import { enforceRole } from '@/lib/auth/protection'
 import { redirect } from 'next/navigation'
-import { fetchPatientRecord } from '@/actions/patientActions'
+import { fetchPatientRecord } from '@/actions/patientMedicalActions'
 import { createClient } from '@/lib/supabase/serverSSR'
 import { ProfileTab } from '../_components/ProfileTab'
 import { PatientRecord } from '../_components/types'

@@ -1,4 +1,6 @@
-'use server'
+﻿'use server'
+
+import { sanitizeServerError } from '@/lib/errors/sanitizeError'
 
 import { supabaseAdmin } from '@/lib/supabase/server'
 
@@ -68,7 +70,8 @@ export async function getBranchData(clinicId: number): Promise<{
       dentists: [],
       services: [],
       settings: { default_downpayment_amount: 0 },
-      error: error instanceof Error ? error.message : 'Failed to load branch data',
+      error: sanitizeServerError(error),
     }
   }
 }
+

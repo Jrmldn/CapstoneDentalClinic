@@ -57,6 +57,7 @@ export default function SuperadminDashboardView() {
   const [stats, setStats] = useState<SuperadminStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  // ARCH VIOLATION: stats should be fetched in the server page and passed as props, not fetched client-side via useEffect
   useEffect(() => {
     const fetchStats = async () => {
       const result = await getSuperadminStats()

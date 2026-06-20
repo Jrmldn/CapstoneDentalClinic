@@ -15,113 +15,29 @@ import {
   Calendar,
   Camera
 } from 'lucide-react'
-import type { PatientSummary } from './PatientsClient'
-import { fetchPatientRecord, addClinicalAssessment, updatePatientMedicalHistory } from '@/actions/patientActions'
+import { fetchPatientRecord, updatePatientMedicalHistory } from '@/actions/patientMedicalActions'
+import { addClinicalAssessment } from '@/actions/clinicalRecordActions'
 import { formatPhone } from '@/utils/phone-helpers'
 import DentalChartTab from './DentalChartTab'
 import TreatmentTab from './TreatmentTab'
 import PrescriptionsTab from './PrescriptionsTab'
-import PeriodontalTab, { PeriodontalScreening, TmjAssessment } from './PeriodontalTab'
+import PeriodontalTab from './PeriodontalTab'
 import FollowupsTab from './FollowupsTab'
 import PhotosTab from './PhotosTab'
-
-export type RecordTab = 'chart' | 'treatments' | 'prescriptions' | 'info' | 'periodontal' | 'followups' | 'photos'
-
-export interface FullPatientDetail extends PatientSummary {
-  address: string | null
-  updated_at?: string
-}
-
-export interface MedicalHistory {
-  blood_type: string | null
-  allergies: string[]
-  current_medications: string[]
-  medical_conditions: string[]
-  previous_surgeries: string | null
-  is_pregnant: boolean
-  is_smoker: boolean
-  blood_pressure: string | null
-  medical_flags: string | null
-  detailed_info?: any
-  updated_at?: string
-}
-
-export interface ToothCondition {
-  id: number
-  tooth_number: number
-  tooth_type: string
-  condition: string
-  surface: string | null
-  notes: string | null
-  recorded_at: string
-}
-
-export interface DentalChart {
-  id: number
-  tooth_conditions: ToothCondition[]
-  created_at?: string
-  updated_at?: string
-  dentists?: { id: number; first_name: string; last_name: string } | { id: number; first_name: string; last_name: string }[] | null
-  clinics?: { id: number; name: string } | { id: number; name: string }[] | null
-}
-
-export interface TreatmentHistory {
-  id: number
-  performed_at: string | null
-  treatment: string
-  notes: string | null
-  tooth_number: number | null
-  service_id: number | null
-  services: { id: number; name: string } | { id: number; name: string }[] | null
-  dentists: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null
-  clinics?: { id: number; name: string } | { id: number; name: string }[] | null
-}
-
-export interface Assessment {
-  id: number
-  assessed_at: string
-  chief_complaint: string
-  diagnosis: string
-  treatment_plan: string
-  notes: string | null
-  dentists: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null
-}
-
-export interface Prescription {
-  id: number
-  prescribed_at: string | null
-  medication: string
-  dosage: string
-  frequency: string
-  duration: string | null
-  notes?: string | null
-  dentists: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null
-  clinics?: { id: number; name: string } | { id: number; name: string }[] | null
-}
-
-export interface AppointmentRecord {
-  id: number
-  scheduled_at: string
-  status: string
-  notes: string | null
-  services: { name: string } | { name: string }[] | null
-  dentists: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null
-  clinics?: { id: number; name: string } | { id: number; name: string }[] | null
-  booked_at?: string
-}
-
-export interface PatientRecord {
-  patient: FullPatientDetail
-  medicalHistory: MedicalHistory | null
-  dentalCharts: DentalChart[]
-  treatmentHistory: TreatmentHistory[]
-  assessments: Assessment[]
-  prescriptions: Prescription[]
-  periodontalScreenings: PeriodontalScreening[]
-  tmjAssessments: TmjAssessment[]
-  oralSurgeryRecords: unknown[]
-  appointments: AppointmentRecord[]
-}
+import type {
+  RecordTab,
+  FullPatientDetail,
+  MedicalHistory,
+  ToothCondition,
+  DentalChart,
+  TreatmentHistory,
+  Assessment,
+  Prescription,
+  AppointmentRecord,
+  PatientRecord,
+  PeriodontalScreening,
+  TmjAssessment
+} from './types'
 
 interface PatientRecordModalProps {
   record: PatientRecord | null
@@ -132,6 +48,7 @@ interface PatientRecordModalProps {
 }
 
 export default function PatientRecordModal({ record, onClose, dentistId, clinicId, viewerRole = 'dentist' }: PatientRecordModalProps) {
+  const now = Date.now()
   const [activeRecordTab, setActiveRecordTab] = useState<RecordTab>('chart')
   const [localRecord, setLocalRecord] = useState<PatientRecord | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -356,7 +273,7 @@ export default function PatientRecordModal({ record, onClose, dentistId, clinicI
                 {(() => {
                   const birthdateStr = localRecord.patient.birthdate
                   const isMinor = birthdateStr
-                    ? Math.floor((Date.now() - new Date(birthdateStr).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) < 18
+                    ? Math.floor((now - new Date(birthdateStr).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) < 18
                     : false
                   if (!isMinor) return null
                   return (
@@ -387,8 +304,8 @@ export default function PatientRecordModal({ record, onClose, dentistId, clinicI
                   {localRecord.medicalHistory && (
                     <span className="text-[10px] text-gray-400 font-medium">
                       Last updated: {localRecord.medicalHistory.updated_at ? new Date(localRecord.medicalHistory.updated_at).toLocaleString() : '—'}
-                      {(localRecord.medicalHistory as any).detailed_info?.updated_by && ` by ${(localRecord.medicalHistory as any).detailed_info.updated_by}`}
-                      {(localRecord.medicalHistory as any).detailed_info?.updated_by_branch && ` (${(localRecord.medicalHistory as any).detailed_info.updated_by_branch})`}
+                      {localRecord.medicalHistory.detailed_info?.updated_by && ` by ${localRecord.medicalHistory.detailed_info.updated_by}`}
+                      {localRecord.medicalHistory.detailed_info?.updated_by_branch && ` (${localRecord.medicalHistory.detailed_info.updated_by_branch})`}
                     </span>
                   )}
                 </div>

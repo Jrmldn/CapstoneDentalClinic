@@ -1,4 +1,6 @@
-'use server'
+﻿'use server'
+
+import { sanitizeServerError } from '@/lib/errors/sanitizeError'
 
 import { supabaseAdmin } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
@@ -33,7 +35,7 @@ export async function addService(data: ServiceData) {
     console.error('Error in addService:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to add service',
+      error: sanitizeServerError(error),
     }
   }
 }
@@ -54,7 +56,7 @@ export async function updateService(serviceId: number, data: Partial<ServiceData
     console.error('Error in updateService:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update service',
+      error: sanitizeServerError(error),
     }
   }
 }
@@ -76,7 +78,7 @@ export async function deleteService(serviceId: number) {
     console.error('Error in deleteService:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to delete service',
+      error: sanitizeServerError(error),
     }
   }
 }
@@ -97,7 +99,7 @@ export async function fetchServices(clinicId: number) {
     console.error('Error in fetchServices:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch services',
+      error: sanitizeServerError(error),
       services: []
     }
   }
@@ -132,7 +134,7 @@ export async function addProduct(data: ProductData) {
     console.error('Error in addProduct:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to add product',
+      error: sanitizeServerError(error),
     }
   }
 }
@@ -153,7 +155,7 @@ export async function updateProduct(productId: number, data: Partial<ProductData
     console.error('Error in updateProduct:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update product',
+      error: sanitizeServerError(error),
     }
   }
 }
@@ -173,7 +175,7 @@ export async function deleteProduct(productId: number) {
     console.error('Error in deleteProduct:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to delete product',
+      error: sanitizeServerError(error),
     }
   }
 }
@@ -194,8 +196,9 @@ export async function fetchProducts(clinicId: number) {
     console.error('Error in fetchProducts:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch products',
+      error: sanitizeServerError(error),
       products: []
     }
   }
 }
+
