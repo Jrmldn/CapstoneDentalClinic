@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
+import TermsModal from './TermsModal'
 
 interface SignUpFormData {
   email: string
@@ -21,6 +22,7 @@ interface FormErrors {
   first_name?: string
   last_name?: string
   date_of_birth?: string
+  terms?: string
   general?: string
 }
 
@@ -42,6 +44,8 @@ export default function SignUpForm({ redirectTo, onSwitchToSignIn }: SignUpFormP
   const [errors, setErrors] = useState<FormErrors>({})
   const [isLoading, setIsLoading] = useState(false)
   const [signUpSuccess, setSignUpSuccess] = useState(false)
+  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [showTerms, setShowTerms] = useState(false)
 
   function validate(): boolean {
     const e: FormErrors = {}
@@ -82,6 +86,8 @@ export default function SignUpForm({ redirectTo, onSwitchToSignIn }: SignUpFormP
     } else if (form.password !== form.confirmPassword) {
       e.confirmPassword = 'Passwords do not match'
     }
+
+    if (!termsAccepted) e.terms = 'You must agree to the Terms and Conditions'
 
     setErrors(e)
     return Object.keys(e).length === 0
@@ -298,6 +304,31 @@ export default function SignUpForm({ redirectTo, onSwitchToSignIn }: SignUpFormP
           )}
         </div>
 
+        <div>
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={termsAccepted}
+              onChange={e => {
+                setTermsAccepted(e.target.checked)
+                if (errors.terms) setErrors(prev => ({ ...prev, terms: undefined }))
+              }}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600"
+            />
+            <span className="text-sm text-gray-600">
+              I agree to the{' '}
+              <button
+                type="button"
+                onClick={() => setShowTerms(true)}
+                className="text-blue-600 hover:text-blue-700 font-medium underline"
+              >
+                Terms and Conditions
+              </button>
+            </span>
+          </label>
+          {errors.terms && <p className="mt-1 text-xs text-red-500">{errors.terms}</p>}
+        </div>
+
         <button
           onClick={handleSignUp}
           disabled={isLoading}
@@ -307,6 +338,8 @@ export default function SignUpForm({ redirectTo, onSwitchToSignIn }: SignUpFormP
           {isLoading ? 'Creating account...' : 'Create Account'}
         </button>
       </div>
+
+      <TermsModal isOpen={showTerms} onClose={() => setShowTerms(false)} />
 
       <p className="text-center text-sm text-gray-500 mt-4">
         Already have an account?{' '}

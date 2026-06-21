@@ -1,7 +1,9 @@
 import { enforceRole } from '@/lib/auth/protection'
 import { getDentistRecordByUserId, getDentistDashboardData } from '@/services/dashboardService'
+import { fetchServices } from '@/actions/serviceActions'
 import DentistDashboardView, { Appointment } from '@/components/features/dashboard/DentistDashboardView'
 import { DentistRawAppointment } from '@/components/features/dashboard/types'
+import type { Service } from '@/components/features/billing/types'
 import { normalizeRelation } from '@/lib/utils'
 import { AlertCircle } from 'lucide-react'
 
@@ -42,21 +44,31 @@ export default async function DentistDashboardPage() {
   const upcomingApptsRaw = (upcomingApptsRes.data ?? []) as DentistRawAppointment[]
   const allApptsRaw = (allApptsRes.data ?? []) as { patient_id: number }[]
 
-  const todayAppts: Appointment[] = todayApptsRaw.map(appt => ({
-    id: appt.id,
-    scheduled_at: appt.scheduled_at,
-    status: appt.status,
-    patients: normalizeRelation(appt.patients),
-    services: normalizeRelation(appt.services),
-  }))
+  const todayAppts: Appointment[] = todayApptsRaw
+    .map(appt => ({
+      id: appt.id,
+      scheduled_at: appt.scheduled_at,
+      status: appt.status,
+      payment_status: appt.payment_status,
+      is_walk_in: appt.is_walk_in,
+      downpayment: appt.downpayment,
+      patients: normalizeRelation(appt.patients),
+      services: normalizeRelation(appt.services),
+    }))
+    .filter(a => a.payment_status !== 'unpaid' || a.is_walk_in)
 
-  const upcomingAppts: Appointment[] = upcomingApptsRaw.map(appt => ({
-    id: appt.id,
-    scheduled_at: appt.scheduled_at,
-    status: appt.status,
-    patients: normalizeRelation(appt.patients),
-    services: normalizeRelation(appt.services),
-  }))
+  const upcomingAppts: Appointment[] = upcomingApptsRaw
+    .map(appt => ({
+      id: appt.id,
+      scheduled_at: appt.scheduled_at,
+      status: appt.status,
+      payment_status: appt.payment_status,
+      is_walk_in: appt.is_walk_in,
+      downpayment: appt.downpayment,
+      patients: normalizeRelation(appt.patients),
+      services: normalizeRelation(appt.services),
+    }))
+    .filter(a => a.payment_status !== 'unpaid' || a.is_walk_in)
 
   // Calculate statistics
   const completedToday = todayAppts.filter(a => a.status === 'completed').length
@@ -77,6 +89,9 @@ export default async function DentistDashboardPage() {
   const dentistName = `${dentistRecord.first_name} ${dentistRecord.last_name}`
   const specialty = dentistRecord.specialty
 
+  const servicesRes = await fetchServices(clinicId)
+  const services = (servicesRes.services ?? []) as Service[]
+
   return (
     <DentistDashboardView
       dentistId={dentistId}
@@ -87,6 +102,7 @@ export default async function DentistDashboardPage() {
       todayAppts={todayAppts}
       upcomingAppts={upcomingAppts}
       stats={stats}
+      services={services}
     />
   )
 }

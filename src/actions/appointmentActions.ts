@@ -101,7 +101,7 @@ export async function createAppointment(data: CreateAppointmentData) {
       is_walk_in:     data.is_walk_in ?? false,
       downpayment:    data.downpayment ?? 0,
       payment_method: data.payment_method ?? null,
-      payment_status: data.downpayment && data.downpayment > 0 ? 'partial' : 'unpaid',
+      payment_status: 'unpaid',
       status:         'pending',
     })
 

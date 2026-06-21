@@ -5,6 +5,7 @@ export interface TransactionHeaderInsertData {
   clinic_id: number
   patient_id: number
   appointment_id?: number | null
+  billing_status?: string
   subtotal: number
   discount_type: string
   discount_amount: number
@@ -155,7 +156,8 @@ export const getTransactionsByClinic = cache(async (
         services ( id, name ),
         products ( id, name )
       ),
-      patients ( id, first_name, last_name )
+      patients ( id, first_name, last_name ),
+      appointments ( scheduled_at, downpayment, dentists ( first_name, last_name ) )
     `)
     .eq('clinic_id', clinicId)
     .order('created_at', { ascending: false })

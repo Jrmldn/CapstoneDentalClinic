@@ -16,6 +16,7 @@ interface SuperadminServicesViewProps {
 }
 
 export default function SuperadminServicesView({ clinics }: SuperadminServicesViewProps) {
+  const allClinicIds = clinics.map(c => c.id)
   const [selectedClinicId, setSelectedClinicId] = useState<number | ''>('')
   const [services, setServices] = useState<Service[]>([])
   const [products, setProducts] = useState<Product[]>([])
@@ -95,6 +96,8 @@ export default function SuperadminServicesView({ clinics }: SuperadminServicesVi
             clinicId={selectedClinicId}
             initialServices={services}
             initialProducts={products}
+            viewerRole="superadmin"
+            allClinicIds={allClinicIds}
           />
         </div>
       ) : (

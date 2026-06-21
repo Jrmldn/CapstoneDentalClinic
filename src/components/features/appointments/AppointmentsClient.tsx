@@ -95,6 +95,8 @@ export default function AppointmentsClient({
 
   // Filter logic
   const filteredAppointments = appointments.filter(appt => {
+    // Hide unpaid online bookings until downpayment is confirmed
+    if (appt.payment_status === 'unpaid' && !appt.is_walk_in) return false
     const patientName = `${appt.patients?.first_name || ''} ${appt.patients?.last_name || ''}`.toLowerCase()
     const dentistName = `${appt.dentists?.first_name || ''} ${appt.dentists?.last_name || ''}`.toLowerCase()
     const matchesSearch = patientName.includes(searchTerm.toLowerCase()) || dentistName.includes(searchTerm.toLowerCase())
@@ -105,8 +107,8 @@ export default function AppointmentsClient({
       const apptDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
       matchesDate = apptDateStr === dateFilter
     }
-    const matchesType = typeFilter === 'all' || 
-      (typeFilter === 'walk_in' && appt.is_walk_in) || 
+    const matchesType = typeFilter === 'all' ||
+      (typeFilter === 'walk_in' && appt.is_walk_in) ||
       (typeFilter === 'online' && !appt.is_walk_in)
     return matchesSearch && matchesStatus && matchesDate && matchesType
   })

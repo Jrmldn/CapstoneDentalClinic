@@ -9,7 +9,8 @@ import {
   User,
   Image as ImageIcon,
   Clock,
-  Settings
+  Settings,
+  ClipboardList,
 } from 'lucide-react'
 
 const menuGroups = [
@@ -23,6 +24,7 @@ const menuGroups = [
   {
     label: 'Clinical',
     items: [
+      { label: 'Appointments',  href: '/dentist-dashboard/appointments',   icon: ClipboardList, key: 'appointments' },
       { label: 'Patients',      href: '/dentist-dashboard/patients',       icon: Users,         key: 'patients' },
       { label: 'Availability',  href: '/dentist-dashboard/availability',   icon: Clock,         key: 'availability' },
     ],

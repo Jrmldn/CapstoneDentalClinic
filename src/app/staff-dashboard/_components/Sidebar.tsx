@@ -12,6 +12,7 @@ import {
   Settings,
   Bell,
   Image as ImageIcon,
+  History,
 } from 'lucide-react'
 
 const menuGroups = [
@@ -33,6 +34,7 @@ const menuGroups = [
     label: 'Finance',
     items: [
       { label: 'Billing',       href: '/staff-dashboard/billing',        icon: Receipt,       key: 'billing' },
+      { label: 'Transactions',  href: '/staff-dashboard/transactions',   icon: History,       key: 'transactions' },
     ],
   },
   {

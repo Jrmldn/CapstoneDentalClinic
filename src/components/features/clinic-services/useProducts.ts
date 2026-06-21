@@ -1,21 +1,15 @@
 import { useState, useTransition } from 'react'
-import { addProduct, updateProduct, deleteProduct } from '@/actions/serviceActions'
+import { addProduct, addProductToAllBranches, updateProduct, deleteProduct } from '@/actions/serviceActions'
 import { Product } from '@/components/features/clinic-services/types'
 import { EMPTY_PRODUCT_FORM } from '@/components/features/clinic-services/constants'
-
-
 
 interface UseProductsProps {
   clinicId: number
   initialProducts: Product[]
+  allClinicIds?: number[]
 }
 
-/**
- * Custom Hook: useProducts
- * Manages form state, products list updates (including optimistic sorting), 
- * messages, and server actions transitions for the products view.
- */
-export const useProducts = ({ clinicId, initialProducts }: UseProductsProps) => {
+export const useProducts = ({ clinicId, initialProducts, allClinicIds = [] }: UseProductsProps) => {
   const [products, setProducts] = useState<Product[]>(initialProducts)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -23,8 +17,10 @@ export const useProducts = ({ clinicId, initialProducts }: UseProductsProps) => 
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target
+    setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
+  }
 
   const openAdd = () => {
     setEditingId(null)
@@ -34,8 +30,17 @@ export const useProducts = ({ clinicId, initialProducts }: UseProductsProps) => 
   }
 
   const openEdit = (p: Product) => {
+    const isRange =
+      p.price_min != null && p.price_max != null && p.price_min !== p.price_max
     setEditingId(p.id)
-    setForm({ name: p.name, price: String(p.price) })
+    setForm({
+      name: p.name,
+      price: String(p.price),
+      price_type: isRange ? 'range' : 'fixed',
+      price_min: p.price_min != null ? String(p.price_min) : String(p.price),
+      price_max: p.price_max != null ? String(p.price_max) : String(p.price),
+      addToAllBranches: false,
+    })
     setShowForm(true)
     setMsg(null)
   }
@@ -50,15 +55,22 @@ export const useProducts = ({ clinicId, initialProducts }: UseProductsProps) => 
     e.preventDefault()
     setMsg(null)
     startTransition(async () => {
+      const isRange = form.price_type === 'range'
+      const price = isRange ? Number(form.price_min) : Number(form.price)
       const payload = {
         clinic_id: clinicId,
         name: form.name.trim(),
-        price: Number(form.price),
+        price,
+        price_min: isRange ? Number(form.price_min) : null,
+        price_max: isRange ? Number(form.price_max) : null,
       }
 
       let result
       if (editingId) {
         result = await updateProduct(editingId, payload)
+      } else if (form.addToAllBranches && allClinicIds.length > 0) {
+        const { name, price, price_min, price_max } = payload
+        result = await addProductToAllBranches({ name, price, price_min, price_max }, allClinicIds)
       } else {
         result = await addProduct(payload)
       }
@@ -72,11 +84,16 @@ export const useProducts = ({ clinicId, initialProducts }: UseProductsProps) => 
         setProducts(prev =>
           prev.map(p => (p.id === editingId ? { ...p, ...payload } : p))
         )
+        setMsg({ type: 'success', text: 'Product updated.' })
+      } else if (form.addToAllBranches) {
+        setMsg({ type: 'success', text: 'Product added to all branches.' })
       } else {
         const newProduct = (result as { success: true; product: Product }).product
-        setProducts(prev => [...prev, newProduct].sort((a, b) => a.name.localeCompare(b.name)))
+        if (newProduct) {
+          setProducts(prev => [...prev, newProduct].sort((a, b) => a.name.localeCompare(b.name)))
+        }
+        setMsg({ type: 'success', text: 'Product added.' })
       }
-      setMsg({ type: 'success', text: editingId ? 'Product updated.' : 'Product added.' })
       handleCancel()
     })
   }

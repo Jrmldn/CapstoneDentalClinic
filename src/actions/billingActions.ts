@@ -16,7 +16,8 @@ import {
   updateTransactionPayment,
   getTransactionsByClinic
 } from '@/services/billingService'
-import { calculateTransactionAmounts } from '@/utils/billing-helpers'
+import { calculateTransactionAmounts, DISCOUNT_RATES } from '@/utils/billing-helpers'
+import { addTreatmentRecords } from '@/actions/clinicalRecordActions'
 
 // TYPES
 
@@ -121,6 +122,165 @@ export async function createTransaction(data: CreateTransactionData) {
       success: false,
       error: sanitizeServerError(error),
     }
+  }
+}
+
+// CREATE DRAFT INVOICE (dentist handoff)
+
+export interface DraftLineItem extends TransactionItem {
+  tooth_number?: number | null
+  treatment_notes?: string | null
+}
+
+export interface CreateDraftInvoiceData {
+  appointment_id: number
+  patient_id: number
+  clinic_id: number
+  dentist_id: number
+  items: DraftLineItem[]
+}
+
+export async function createDraftInvoice(data: CreateDraftInvoiceData) {
+  const auth = await ensureRole('dentist', 'staff')
+  if (!auth.success) return { success: false, error: auth.error }
+
+  try {
+    let downpayment = 0
+    const { data: appt } = await supabaseAdmin
+      .from('appointments')
+      .select('downpayment')
+      .eq('id', data.appointment_id)
+      .maybeSingle()
+    if (appt?.downpayment) downpayment = appt.downpayment
+
+    const { subtotal, discount_amount, total_amount } = calculateTransactionAmounts(
+      data.items,
+      'none',
+      0,
+      downpayment
+    )
+
+    const { data: transaction, error: txError } = await insertTransactionHeader({
+      appointment_id: data.appointment_id,
+      patient_id: data.patient_id,
+      clinic_id: data.clinic_id,
+      billing_status: 'draft',
+      subtotal,
+      discount_type: 'none',
+      discount_amount,
+      hmo_coverage: 0,
+      philhealth_coverage: 0,
+      total_amount,
+      payment_method: 'cash',
+      payment_status: 'unpaid',
+    })
+    if (txError) throw new Error(txError.message)
+
+    const itemsData = data.items.map(lineItem => ({
+      transaction_id: transaction.id,
+      service_id:     lineItem.service_id  ?? null,
+      product_id:     lineItem.product_id  ?? null,
+      description:    lineItem.description,
+      quantity:       lineItem.quantity,
+      unit_price:     lineItem.unit_price,
+      total_price:    parseFloat((lineItem.unit_price * lineItem.quantity).toFixed(2)),
+    }))
+    const { error: itemsError } = await insertTransactionItems(itemsData)
+    if (itemsError) throw new Error(itemsError.message)
+
+    // Populate the clinical record for every treated line (encrypted writer).
+    // Non-fatal: the draft invoice is the critical artifact.
+    const treatmentRows = data.items
+      .filter(line => line.service_id != null)
+      .map(line => ({
+        appointment_id: data.appointment_id,
+        clinic_id: data.clinic_id,
+        dentist_id: data.dentist_id,
+        patient_id: data.patient_id,
+        service_id: line.service_id ?? null,
+        tooth_number: line.tooth_number ?? null,
+        treatment: line.description,
+        notes: line.treatment_notes ?? undefined,
+      }))
+    if (treatmentRows.length > 0) {
+      const treatmentResult = await addTreatmentRecords(treatmentRows)
+      if (!treatmentResult.success) {
+        console.error('createDraftInvoice: treatment_history write failed:', treatmentResult.error)
+      }
+    }
+
+    revalidatePath('/staff-dashboard/billing')
+    revalidatePath('/patient-dashboard/clinicrecord')
+    return { success: true, transaction: { ...transaction, items: itemsData } }
+  } catch (error) {
+    console.error('Error in createDraftInvoice:', error)
+    return { success: false, error: sanitizeServerError(error) }
+  }
+}
+
+// FINALIZE DRAFT INVOICE (staff checkout)
+
+export interface FinalizeDraftData {
+  discount_type: DiscountType
+  philhealth_coverage?: number
+  payment_method: PaymentMethod
+  payment_status: PaymentStatus
+}
+
+export async function finalizeDraftInvoice(transactionId: number, data: FinalizeDraftData) {
+  const auth = await ensureRole('staff')
+  if (!auth.success) return { success: false, error: auth.error }
+
+  try {
+    const { data: tx } = await supabaseAdmin
+      .from('transactions')
+      .select('appointment_id, subtotal')
+      .eq('id', transactionId)
+      .single()
+    if (!tx) throw new Error('Transaction not found')
+
+    let downpayment = 0
+    if (tx.appointment_id) {
+      const { data: appt } = await supabaseAdmin
+        .from('appointments')
+        .select('downpayment')
+        .eq('id', tx.appointment_id)
+        .maybeSingle()
+      if (appt?.downpayment) downpayment = appt.downpayment
+    }
+
+    const discountRate = DISCOUNT_RATES[data.discount_type]
+    const discount_amount = parseFloat((tx.subtotal * discountRate).toFixed(2))
+    const philhealth = data.philhealth_coverage ?? 0
+    const total_amount = parseFloat(
+      Math.max(0, tx.subtotal - discount_amount - philhealth - downpayment).toFixed(2)
+    )
+
+    const { error: updateError } = await supabaseAdmin
+      .from('transactions')
+      .update({
+        billing_status:      'issued',
+        discount_type:       data.discount_type,
+        discount_amount,
+        philhealth_coverage: philhealth,
+        total_amount,
+        payment_method:      data.payment_method,
+        payment_status:      data.payment_status,
+      })
+      .eq('id', transactionId)
+    if (updateError) throw new Error(updateError.message)
+
+    if (tx.appointment_id) {
+      await syncAppointmentPaymentDetails(tx.appointment_id, data.payment_status, data.payment_method)
+    }
+
+    revalidatePath('/staff-dashboard/billing')
+    revalidatePath('/staff-dashboard/transactions')
+    revalidatePath('/patient-dashboard/transactions')
+    return { success: true }
+  } catch (error) {
+    console.error('Error in finalizeDraftInvoice:', error)
+    return { success: false, error: sanitizeServerError(error) }
   }
 }
 

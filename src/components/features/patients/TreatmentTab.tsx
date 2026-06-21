@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Plus, X, ChevronDown, ChevronUp, Calendar, BookOpen, User } from 'lucide-react'
 import { addTreatmentRecord } from '@/actions/clinicalRecordActions'
 import { fetchServices } from '@/actions/serviceActions'
+import { toothInputToNumber, toothNumberToLabel } from '@/utils/teeth'
 import type { TreatmentHistory } from './types'
 
 interface TreatmentTabProps {
@@ -78,7 +79,7 @@ export default function TreatmentTab({
       clinic_id: clinicId,
       dentist_id: dentistId || 0,
       service_id: selectedServiceId,
-      tooth_number: toothNumber ? parseInt(toothNumber) : null,
+      tooth_number: toothInputToNumber(toothNumber),
       treatment: treatmentName,
       notes: serializedNotes,
       performed_at: performedAt ? new Date(performedAt).toISOString() : undefined,
@@ -108,15 +109,6 @@ export default function TreatmentTab({
       }
     } catch (e) {}
     return { clinical_notes: notesStr || '—', prescription_notes: '—' }
-  }
-
-  // Alpha translation for child teeth representation
-  const getToothLabel = (num: number | null): string => {
-    if (!num) return '—'
-    if (num >= 101 && num <= 120) {
-      return String.fromCharCode(num - 36) // 101 -> A
-    }
-    return num.toString()
   }
 
   return (
@@ -245,7 +237,7 @@ export default function TreatmentTab({
             const isExpanded = expandedCardId === treat.id
             const parsedNotes = parseNotesObj(treat.notes)
             const dentistObj = Array.isArray(treat.dentists) ? treat.dentists[0] : treat.dentists
-            const toothLabel = getToothLabel(treat.tooth_number)
+            const toothLabel = toothNumberToLabel(treat.tooth_number)
 
             // TR code (mock code, e.g. TR-001, TR-002, etc.)
             const trCode = `TR-${(treatments.length - idx).toString().padStart(3, '0')}`

@@ -147,6 +147,53 @@ export async function addTreatmentRecord(data: TreatmentRecordData) {
   }
 }
 
+// ADD MULTIPLE TREATMENT RECORDS (batch, encrypted)
+// Used by the dentist billing handoff to log every treated line at once.
+// No ensureRole here — the caller (createDraftInvoice) is already role-gated.
+
+export async function addTreatmentRecords(rows: TreatmentRecordData[]) {
+  if (rows.length === 0) return { success: true, records: [] }
+
+  try {
+    const encryptedRows = await Promise.all(
+      rows.map(async (data) => {
+        const [enc_treatment, enc_treat_notes] = await Promise.all([
+          encryptMedicalData(data.treatment),
+          data.notes ? encryptMedicalData(data.notes) : Promise.resolve(null),
+        ])
+        return {
+          patient_id: data.patient_id,
+          clinic_id: data.clinic_id,
+          dentist_id: data.dentist_id,
+          appointment_id: data.appointment_id ?? null,
+          service_id: data.service_id ?? null,
+          tooth_number: data.tooth_number ?? null,
+          treatment: enc_treatment,
+          notes: enc_treat_notes,
+          performed_at: data.performed_at ?? new Date().toISOString(),
+        }
+      })
+    )
+
+    const { data: records, error } = await supabaseAdmin
+      .from('treatment_history')
+      .insert(encryptedRows)
+      .select()
+
+    if (error) throw new Error(error.message)
+
+    revalidatePath('/staff-dashboard/patients')
+    revalidatePath('/dentist-dashboard/patients')
+    return { success: true, records }
+  } catch (error) {
+    console.error('Error in addTreatmentRecords:', error)
+    return {
+      success: false,
+      error: sanitizeServerError(error),
+    }
+  }
+}
+
 // ADD PRESCRIPTION
 
 export async function addPrescription(data: PrescriptionData) {

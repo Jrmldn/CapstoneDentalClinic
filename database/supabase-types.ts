@@ -1461,6 +1461,7 @@ export type Database = {
       transactions: {
         Row: {
           appointment_id: number
+          billing_status: string
           clinic_id: number
           created_at: string | null
           discount_amount: number | null
@@ -1476,6 +1477,7 @@ export type Database = {
         }
         Insert: {
           appointment_id: number
+          billing_status?: string | null
           clinic_id: number
           created_at?: string | null
           discount_amount?: number | null
@@ -1491,6 +1493,7 @@ export type Database = {
         }
         Update: {
           appointment_id?: number
+          billing_status?: string | null
           clinic_id?: number
           created_at?: string | null
           discount_amount?: number | null

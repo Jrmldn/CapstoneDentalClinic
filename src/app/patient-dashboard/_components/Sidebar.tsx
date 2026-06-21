@@ -10,6 +10,8 @@ import {
   Plus,
   LayoutGrid,
   ClipboardList,
+  CreditCard,
+  History,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -36,6 +38,13 @@ const menuGroups = [
     items: [
       { label: 'My Calendar', href: '/patient-dashboard/calendar', icon: CalendarDays, key: 'calendar' },
       { label: 'Clinical Records', href: '/patient-dashboard/clinicrecord', icon: ClipboardList, key: 'clinicrecord' },
+    ],
+  },
+  {
+    label: 'Payments',
+    items: [
+      { label: 'Installments',  href: '/patient-dashboard/payments',      icon: CreditCard, key: 'payments' },
+      { label: 'Transactions',  href: '/patient-dashboard/transactions',  icon: History,    key: 'transactions' },
     ],
   },
   {

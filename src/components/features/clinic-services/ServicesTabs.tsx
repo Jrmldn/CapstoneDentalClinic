@@ -15,14 +15,15 @@ interface Props {
   clinicId: number
   initialServices: Service[]
   initialProducts: Product[]
+  viewerRole: 'superadmin' | 'staff'
+  allClinicIds?: number[]
 }
 
-export default function ServicesTabs({ clinicId, initialServices, initialProducts }: Props) {
+export default function ServicesTabs({ clinicId, initialServices, initialProducts, viewerRole, allClinicIds }: Props) {
   const [activeTab, setActiveTab] = useState<'services' | 'products'>('services')
 
   return (
     <div>
-      {/* Tab bar */}
       <div className="flex gap-1 border-b border-gray-200 mb-6">
         {TABS.map(tab => {
           const Icon = tab.icon
@@ -44,10 +45,20 @@ export default function ServicesTabs({ clinicId, initialServices, initialProduct
       </div>
 
       {activeTab === 'services' && (
-        <ServicesTable clinicId={clinicId} initialServices={initialServices} />
+        <ServicesTable
+          clinicId={clinicId}
+          initialServices={initialServices}
+          viewerRole={viewerRole}
+          allClinicIds={allClinicIds}
+        />
       )}
       {activeTab === 'products' && (
-        <ProductsTable clinicId={clinicId} initialProducts={initialProducts} />
+        <ProductsTable
+          clinicId={clinicId}
+          initialProducts={initialProducts}
+          viewerRole={viewerRole}
+          allClinicIds={allClinicIds}
+        />
       )}
     </div>
   )

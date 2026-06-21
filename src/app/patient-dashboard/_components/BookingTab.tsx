@@ -18,6 +18,7 @@ import { createAppointment, updateAppointmentStatus } from '@/actions/appointmen
 import { getAvailableSlots, TimeSlot } from '@/actions/slotAvailabilityActions'
 import { getBranchData, BranchDentist, BranchService } from '@/actions/bookingActions'
 import { PatientRecord } from './types'
+import PaymentModal from '@/components/features/billing/PaymentModal'
 
 interface Branch {
   id: number
@@ -69,8 +70,11 @@ export function BookingTab({
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null)
   const [bookingNotes, setBookingNotes] = useState('')
   const [slotsLoading, setSlotsLoading] = useState(false)
-  const [paymentType, setPaymentType] = useState<'downpayment' | 'full'>('downpayment')
-  const [paymentMethod, setPaymentMethod] = useState<'gcash' | 'paymaya' | 'credit_card'>('gcash')
+  const [pendingPayment, setPendingPayment] = useState<{
+    appointmentId: number
+    amount: number
+    description: string
+  } | null>(null)
 
   // Load branch data when a branch is selected
   const handleBranchSelect = async (branchId: number) => {
@@ -176,8 +180,7 @@ export function BookingTab({
     if (!selectedServiceObj) return
 
     const servicePrice = selectedServiceObj.price
-    const downpaymentAmount = Math.min(defaultDownpaymentAmount, servicePrice) || servicePrice
-    const finalDownpayment = paymentType === 'full' ? servicePrice : downpaymentAmount
+    const finalDownpayment = Math.min(defaultDownpaymentAmount, servicePrice) || servicePrice
 
     try {
       const res = await createAppointment({
@@ -189,18 +192,15 @@ export function BookingTab({
         end_at: new Date(endAtStr).toISOString(),
         notes: bookingNotes,
         downpayment: finalDownpayment,
-        payment_method: paymentMethod,
       })
 
       if (res.success) {
-        setBookingStatus({ success: true })
-        setBookingDentist('')
-        setBookingService('')
-        setBookingDate('')
-        setAvailableTimeSlots([])
-        setSelectedTimeSlot(null)
-        setBookingNotes('')
-        setTimeout(() => router.push('/patient-dashboard/appointments'), 1500)
+        setPendingPayment({
+          appointmentId: res.appointment.id,
+          amount: finalDownpayment,
+          description: `${selectedServiceObj.name} — Appointment`,
+        })
+        setBookingStatus({})
       } else {
         setBookingStatus({ error: res.error || 'Failed to schedule appointment.' })
       }
@@ -407,77 +407,20 @@ export function BookingTab({
                   </div>
                 )}
 
-                {/* Payment options */}
+                {/* Downpayment summary */}
                 {!rescheduleMode && bookingService && (() => {
                   const activeService = services.find(s => s.id === parseInt(bookingService, 10))
                   if (!activeService) return null
-                  const servicePrice = activeService.price
-                  const downpaymentAmount = Math.min(defaultDownpaymentAmount, servicePrice) || servicePrice
+                  const downpaymentAmount = Math.min(defaultDownpaymentAmount, activeService.price) || activeService.price
 
                   return (
-                    <div className="space-y-3 border-t border-slate-100 pt-4">
+                    <div className="space-y-2 border-t border-slate-100 pt-4">
                       <label className="block text-xs font-bold uppercase text-slate-500">
-                        Choose Payment Option
+                        Booking Downpayment
                       </label>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setPaymentType('downpayment')}
-                          className={cn(
-                            'p-4 rounded-xl border text-left transition-all duration-150 flex flex-col justify-between h-24 relative overflow-hidden cursor-pointer',
-                            paymentType === 'downpayment'
-                              ? 'border-blue-600 bg-blue-50/50 shadow-sm ring-1 ring-blue-500'
-                              : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/30'
-                          )}
-                        >
-                          <div>
-                            <span className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Downpayment</span>
-                            <span className="block text-xl font-black text-slate-900 mt-1">₱{downpaymentAmount.toLocaleString()}</span>
-                          </div>
-                          <span className="text-xs text-slate-500 font-medium">Pay partial amount to reserve slot</span>
-                          {paymentType === 'downpayment' && (
-                            <div className="absolute right-2.5 top-2.5 bg-blue-600 text-white rounded-full p-0.5">
-                              <CheckCircle2 className="w-4 h-4" />
-                            </div>
-                          )}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setPaymentType('full')}
-                          className={cn(
-                            'p-4 rounded-xl border text-left transition-all duration-150 flex flex-col justify-between h-24 relative overflow-hidden cursor-pointer',
-                            paymentType === 'full'
-                              ? 'border-blue-600 bg-blue-50/50 shadow-sm ring-1 ring-blue-500'
-                              : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/30'
-                          )}
-                        >
-                          <div>
-                            <span className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Full Payment</span>
-                            <span className="block text-xl font-black text-slate-900 mt-1">₱{servicePrice.toLocaleString()}</span>
-                          </div>
-                          <span className="text-xs text-slate-500 font-medium">Pay full price of consultation</span>
-                          {paymentType === 'full' && (
-                            <div className="absolute right-2.5 top-2.5 bg-blue-600 text-white rounded-full p-0.5">
-                              <CheckCircle2 className="w-4 h-4" />
-                            </div>
-                          )}
-                        </button>
-                      </div>
-
-                      <div className="mt-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                        <label className="block text-xs font-bold uppercase text-slate-500">
-                          Select Payment Method
-                        </label>
-                        <select
-                          value={paymentMethod}
-                          onChange={(e) => setPaymentMethod(e.target.value as any)}
-                          className="w-full border border-slate-200 rounded-lg p-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-slate-700 text-sm cursor-pointer"
-                        >
-                          <option value="gcash">GCash</option>
-                          <option value="paymaya">Maya</option>
-                          <option value="credit_card">Card</option>
-                        </select>
+                      <div className="p-4 rounded-xl border border-blue-600 bg-blue-50/50 shadow-sm ring-1 ring-blue-500 flex flex-col gap-1">
+                        <span className="text-xl font-black text-slate-900">₱{downpaymentAmount.toLocaleString()}</span>
+                        <span className="text-xs text-slate-500 font-medium">Pay partial amount to reserve your slot</span>
                       </div>
                     </div>
                   )
@@ -520,6 +463,31 @@ export function BookingTab({
           </div>
         )}
       </CardContent>
+
+      {pendingPayment && (
+        <PaymentModal
+          isOpen
+          onClose={() => {
+            setPendingPayment(null)
+            router.push('/patient-dashboard/appointments')
+          }}
+          amount={pendingPayment.amount}
+          description={pendingPayment.description}
+          contextType="appointment"
+          contextId={pendingPayment.appointmentId}
+          patientId={record.patient.id}
+          onSuccess={() => {
+            setPendingPayment(null)
+            setBookingDentist('')
+            setBookingService('')
+            setBookingDate('')
+            setAvailableTimeSlots([])
+            setSelectedTimeSlot(null)
+            setBookingNotes('')
+            router.push('/patient-dashboard/appointments')
+          }}
+        />
+      )}
     </Card>
   )
 }

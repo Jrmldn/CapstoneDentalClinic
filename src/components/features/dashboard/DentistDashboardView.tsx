@@ -18,7 +18,9 @@ import {
   ShieldAlert
 } from 'lucide-react'
 import PatientRecordModal from '../patients/PatientRecordModal'
+import DentistCompleteBillingModal from '../appointments/DentistCompleteBillingModal'
 import type { PatientRecord } from '../patients/types'
+import type { Service } from '../billing/types'
 import StatCard from './components/StatCard'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
 import { fetchPatientRecord } from '@/actions/patientMedicalActions'
@@ -27,16 +29,21 @@ export interface Appointment {
   id: number
   scheduled_at: string
   status: string
+  payment_status: string
+  is_walk_in: boolean
+  downpayment: number
   patients: {
     id: number
     first_name: string
     last_name: string
-    phone: string
-    birthdate: string
-    gender: string
+    phone?: string
+    birthdate?: string
+    gender?: string
   } | null
   services: {
+    id: number
     name: string
+    price: number
   } | null
 }
 
@@ -54,6 +61,7 @@ interface DentistDashboardViewProps {
     pending: number
     patientsCount: number
   }
+  services: Service[]
 }
 
 
@@ -84,7 +92,8 @@ export default function DentistDashboardView({
   clinicId,
   todayAppts,
   upcomingAppts,
-  stats
+  stats,
+  services
 }: DentistDashboardViewProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -92,6 +101,7 @@ export default function DentistDashboardView({
   const [isLoadingRecord, setIsLoadingRecord] = useState(false)
   const [updatingApptId, setUpdatingApptId] = useState<number | null>(null)
   const [expandedApptId, setExpandedApptId] = useState<number | null>(null)
+  const [completingAppt, setCompletingAppt] = useState<Appointment | null>(null)
   const [patientNotesMap, setPatientNotesMap] = useState<Record<number, { lastVisit: string; bloodPressure: string; medicalFlags: string }>>({})
 
   useEffect(() => {
@@ -357,13 +367,23 @@ export default function DentistDashboardView({
                                 Approve
                               </button>
                             )}
-                            <button
-                              onClick={() => handleStatusUpdate(appt.id, 'completed')}
-                              disabled={isBusy}
-                              className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-2xs transition disabled:opacity-50"
-                            >
-                              Complete Appointment
-                            </button>
+                            {appt.status === 'confirmed' ? (
+                              <button
+                                onClick={() => setCompletingAppt(appt)}
+                                disabled={isBusy}
+                                className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-2xs transition disabled:opacity-50"
+                              >
+                                Complete &amp; Send to Billing
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleStatusUpdate(appt.id, 'completed')}
+                                disabled={isBusy}
+                                className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-2xs transition disabled:opacity-50"
+                              >
+                                Complete Appointment
+                              </button>
+                            )}
                             <button
                               onClick={() => handleStatusUpdate(appt.id, 'no_show')}
                               disabled={isBusy}
@@ -451,6 +471,20 @@ export default function DentistDashboardView({
           </div>
         </div>
       )}
+
+      {/* Complete & Send to Billing Modal */}
+      <DentistCompleteBillingModal
+        appointment={completingAppt}
+        onClose={() => setCompletingAppt(null)}
+        clinicId={clinicId}
+        dentistUserId={dentistUserId}
+        dentistId={dentistId}
+        services={services}
+        onSuccess={() => {
+          setCompletingAppt(null)
+          startTransition(() => router.refresh())
+        }}
+      />
 
       {/* Patient EHR Modal */}
       <PatientRecordModal

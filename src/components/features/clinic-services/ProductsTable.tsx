@@ -2,19 +2,18 @@
 
 import React from 'react'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
-import { ProductsTableProps } from '@/components/features/clinic-services/types'
+import { ProductsTableProps, Product } from '@/components/features/clinic-services/types'
 import { useProducts } from '@/components/features/clinic-services/useProducts'
 import ProductForm from '@/components/features/clinic-services/ProductForm'
 
+function displayPrice(p: Product) {
+  if (p.price_min != null && p.price_max != null && p.price_min !== p.price_max) {
+    return `₱${Number(p.price_min).toLocaleString()} – ₱${Number(p.price_max).toLocaleString()}`
+  }
+  return `₱${Number(p.price).toLocaleString()}`
+}
 
-
-/**
- * ProductsTable Component
- * Refactored to act as a presentational UI shell.
- * Business logic and state management are delegated to the useProducts hook.
- * The inline form is delegated to the ProductForm component.
- */
-export default function ProductsTable({ clinicId, initialProducts }: ProductsTableProps) {
+export default function ProductsTable({ clinicId, initialProducts, viewerRole, allClinicIds }: ProductsTableProps) {
   const {
     products,
     showForm,
@@ -28,15 +27,13 @@ export default function ProductsTable({ clinicId, initialProducts }: ProductsTab
     handleCancel,
     handleSubmit,
     handleDelete,
-  } = useProducts({ clinicId, initialProducts })
+  } = useProducts({ clinicId, initialProducts, allClinicIds })
 
   return (
     <div>
-      {/* Toolbar */}
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-gray-500">{products.length} active product{products.length !== 1 ? 's' : ''}</p>
         <button
-          id="add-product-btn"
           onClick={openAdd}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition"
         >
@@ -45,9 +42,9 @@ export default function ProductsTable({ clinicId, initialProducts }: ProductsTab
         </button>
       </div>
 
-      {/* Inline form */}
       {showForm && (
         <ProductForm
+          viewerRole={viewerRole}
           editingId={editingId}
           form={form}
           isPending={isPending}
@@ -55,10 +52,10 @@ export default function ProductsTable({ clinicId, initialProducts }: ProductsTab
           handleChange={handleChange}
           handleSubmit={handleSubmit}
           handleCancel={handleCancel}
+          showAllBranchesOption={!!allClinicIds && allClinicIds.length > 1}
         />
       )}
 
-      {/* Global error outside form */}
       {msg && !showForm && (
         <div className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium ${
           msg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
@@ -67,7 +64,6 @@ export default function ProductsTable({ clinicId, initialProducts }: ProductsTab
         </div>
       )}
 
-      {/* Table */}
       {products.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <p className="text-sm">No products yet. Click &quot;Add Product&quot; to get started.</p>
@@ -86,7 +82,7 @@ export default function ProductsTable({ clinicId, initialProducts }: ProductsTab
               {products.map(p => (
                 <tr key={p.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-5 py-3.5 font-medium text-slate-700">{p.name}</td>
-                  <td className="px-5 py-3.5 text-gray-600">₱{Number(p.price).toLocaleString()}</td>
+                  <td className="px-5 py-3.5 text-gray-600">{displayPrice(p)}</td>
                   <td className="px-5 py-3.5 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button
