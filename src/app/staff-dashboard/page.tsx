@@ -5,15 +5,9 @@ import {
 } from '@/services/dashboardService'
 import { calculateStaffDashboardStats } from '@/utils/dashboard-helpers'
 import StaffDashboardView, { Appointment } from '@/components/features/dashboard/StaffDashboardView'
+import { StaffRawAppointment } from '@/components/features/dashboard/types'
+import { normalizeRelation } from '@/lib/utils'
 import { AlertCircle } from 'lucide-react'
-
-interface RawAppointment {
-  id: number
-  scheduled_at: string
-  status: string
-  patients: { first_name: string; last_name: string } | Array<{ first_name: string; last_name: string }> | null
-  services: { name: string } | Array<{ name: string }> | null
-}
 
 export default async function StaffDashboardPage() {
   const authUser = await enforceRole('staff')
@@ -44,23 +38,18 @@ export default async function StaffDashboardPage() {
     pendingTxRes,
   ] = await getStaffDashboardData(clinicId, today)
 
-  const todayApptsRaw = (todayApptsRes.data ?? []) as RawAppointment[]
+  const todayApptsRaw = (todayApptsRes.data ?? []) as StaffRawAppointment[]
   const patientsAppts = patientsRes.data ?? []
   const allInventory = stockAlertRes.data ?? []
   const pendingTx = pendingTxRes.data ?? []
 
-  // Map joined relations correctly whether they return as object or array
-  const todayAppts: Appointment[] = todayApptsRaw.map((appt) => {
-    const rawPatient = appt.patients
-    const rawService = appt.services
-    return {
-      id: appt.id,
-      scheduled_at: appt.scheduled_at,
-      status: appt.status,
-      patients: Array.isArray(rawPatient) ? rawPatient[0] : rawPatient,
-      services: Array.isArray(rawService) ? rawService[0] : rawService,
-    }
-  })
+  const todayAppts: Appointment[] = todayApptsRaw.map((appt) => ({
+    id: appt.id,
+    scheduled_at: appt.scheduled_at,
+    status: appt.status,
+    patients: normalizeRelation(appt.patients),
+    services: normalizeRelation(appt.services),
+  }))
 
   // Calculate statistics
   const stats = calculateStaffDashboardStats(todayAppts, patientsAppts, allInventory, pendingTx)
