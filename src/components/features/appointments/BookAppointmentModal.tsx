@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X, AlertCircle, RefreshCw } from 'lucide-react'
 import { createAppointment, PaymentMethod } from '@/actions/appointmentActions'
 import { useAvailableSlots, MILLISECONDS_PER_MINUTE } from './hooks/useAvailableSlots'
@@ -150,9 +151,12 @@ export default function BookAppointmentModal({
     }
   }
 
-  if (!isOpen) return null
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
 
-  return (
+  if (!mounted || !isOpen) return null
+
+  return createPortal(
     <div className="fixed inset-0 bg-black/55 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-150">
         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
@@ -438,6 +442,7 @@ export default function BookAppointmentModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
