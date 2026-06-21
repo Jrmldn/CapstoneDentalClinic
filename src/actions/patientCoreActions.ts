@@ -1,6 +1,7 @@
 'use server'
 
 import { sanitizeServerError } from '@/lib/errors/sanitizeError'
+import { normalizeRelation } from '@/lib/utils'
 
 import { revalidatePath } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase/server'
@@ -9,6 +10,8 @@ import { ensureRole } from '@/lib/auth/ensureRole'
 import { validatePatientAccess } from '@/lib/auth/validatePatientAccess'
 import { encryptMedicalData } from '@/lib/encryption/medicalEncryption'
 
+interface ClinicName { name: string }
+
 export async function resolveUpdaterInfo() {
   let updatedBy = 'System'
   let branchName = 'Central'
@@ -16,49 +19,47 @@ export async function resolveUpdaterInfo() {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { updatedBy, branchName }
 
-    if (user) {
-      const { data: profile } = await supabaseAdmin
-        .from('users')
-        .select('role')
-        .eq('id', user.id)
+    const { data: profile } = await supabaseAdmin
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    if (!profile) return { updatedBy, branchName }
+
+    if (profile.role === 'dentist') {
+      const { data: dentist } = await supabaseAdmin
+        .from('dentists')
+        .select('first_name, last_name, clinics ( name )')
+        .eq('user_id', user.id)
         .single()
-
-      if (profile) {
-        if (profile.role === 'dentist') {
-          const { data: dentist } = await supabaseAdmin
-            .from('dentists')
-            .select('first_name, last_name, clinics ( name )')
-            .eq('user_id', user.id)
-            .single()
-          if (dentist) {
-            updatedBy = `Dr. ${dentist.first_name} ${dentist.last_name}`
-            branchName = (dentist.clinics as any)?.name || 'Central'
-          }
-        } else if (profile.role === 'staff') {
-          const { data: staff } = await supabaseAdmin
-            .from('clinic_staff')
-            .select('first_name, last_name, clinics ( name )')
-            .eq('user_id', user.id)
-            .single()
-          if (staff) {
-            updatedBy = `${staff.first_name} ${staff.last_name}`
-            branchName = (staff.clinics as any)?.name || 'Central'
-          }
-        } else if (profile.role === 'superadmin') {
-          updatedBy = 'Superadmin'
-          branchName = 'Central Business'
-        } else if (profile.role === 'patient') {
-          const { data: patient } = await supabaseAdmin
-            .from('patients')
-            .select('first_name, last_name')
-            .eq('user_id', user.id)
-            .single()
-          if (patient) {
-            updatedBy = `${patient.first_name} ${patient.last_name} (Patient)`
-            branchName = 'Patient Portal'
-          }
-        }
+      if (dentist) {
+        updatedBy = `Dr. ${dentist.first_name} ${dentist.last_name}`
+        branchName = normalizeRelation(dentist.clinics as ClinicName | ClinicName[] | null)?.name || 'Central'
+      }
+    } else if (profile.role === 'staff') {
+      const { data: staff } = await supabaseAdmin
+        .from('clinic_staff')
+        .select('first_name, last_name, clinics ( name )')
+        .eq('user_id', user.id)
+        .single()
+      if (staff) {
+        updatedBy = `${staff.first_name} ${staff.last_name}`
+        branchName = normalizeRelation(staff.clinics as ClinicName | ClinicName[] | null)?.name || 'Central'
+      }
+    } else if (profile.role === 'superadmin') {
+      updatedBy = 'Superadmin'
+      branchName = 'Central Business'
+    } else if (profile.role === 'patient') {
+      const { data: patient } = await supabaseAdmin
+        .from('patients')
+        .select('first_name, last_name')
+        .eq('user_id', user.id)
+        .single()
+      if (patient) {
+        updatedBy = `${patient.first_name} ${patient.last_name} (Patient)`
+        branchName = 'Patient Portal'
       }
     }
   } catch (err) {
