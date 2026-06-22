@@ -1,4 +1,6 @@
-'use server'
+﻿'use server'
+
+import { sanitizeServerError } from '@/lib/errors/sanitizeError'
 
 import { supabaseAdmin } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
@@ -31,7 +33,7 @@ export async function addClinic(data: AddClinicData) {
     console.error('Error in addClinic:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to add clinic',
+      error: sanitizeServerError(error),
     }
   }
 }
@@ -78,7 +80,7 @@ export async function fetchClinics(
     console.error('Error in fetchClinics:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch clinics',
+      error: sanitizeServerError(error),
       clinics: [],
       totalCount: 0,
     }
@@ -100,7 +102,7 @@ export async function deleteClinic(clinicId: number) {
     console.error('Error in deleteClinic:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to delete clinic',
+      error: sanitizeServerError(error),
     }
   }
 }
@@ -120,7 +122,7 @@ export async function updateClinicStatus(clinicId: number, isActive: boolean) {
     console.error('Error in updateClinicStatus:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update clinic status',
+      error: sanitizeServerError(error),
     }
   }
 }
@@ -149,7 +151,8 @@ export async function updateClinic(clinicId: number, data: AddClinicData) {
     console.error('Error in updateClinic:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update clinic',
+      error: sanitizeServerError(error),
     }
   }
 }
+

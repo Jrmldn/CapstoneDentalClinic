@@ -2,22 +2,11 @@
 
 import { useState } from 'react'
 import { Search, Plus, User, RefreshCw } from 'lucide-react'
-import { fetchPatientRecord } from '@/actions/patientActions'
+import { fetchPatientRecord } from '@/actions/patientMedicalActions'
 import RegisterPatientModal from './RegisterPatientModal'
 import PatientCard from './PatientCard'
-import PatientRecordModal, { PatientRecord } from './PatientRecordModal'
-
-export interface PatientSummary {
-  id: number
-  first_name: string
-  last_name: string
-  phone: string
-  email: string | null
-  birthdate: string
-  gender: string
-  is_guest: boolean
-  created_at: string
-}
+import PatientRecordModal from './PatientRecordModal'
+import type { PatientSummary, PatientRecord } from './types'
 
 interface PatientsClientProps {
   clinicId: number

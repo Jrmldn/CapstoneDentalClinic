@@ -1,10 +1,4 @@
-/**
- * Constants for Clinic Discovery & Map Filtering
- * Extracted to maintain a clean separation of concerns and ease of updates.
- */
-
 export const DEFAULT_SPECIALTY = "All Specialties";
-export const DEFAULT_HMO = "All HMOs";
 
 export const RATING_OPTIONS = [
   { value: 0, label: "All Ratings" },

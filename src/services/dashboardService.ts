@@ -27,12 +27,11 @@ export const getStaffDashboardData = cache(async (clinicId: number, today: strin
       .not('status', 'in', '(cancelled,no_show)')
       .order('scheduled_at', { ascending: true }),
 
-    // Total patients (registered at this clinic)
+    // Total patients (central directory)
     supabaseAdmin
-      .from('clinic_patients')
-      .select('patient_id')
-      .eq('clinic_id', clinicId)
-      .eq('is_active', true),
+      .from('patients')
+      .select('id')
+      .eq('is_guest', false),
 
     // Low stock inventory items
     supabaseAdmin
@@ -85,7 +84,7 @@ export const getDentistDashboardData = cache(async (dentistId: number, clinicId:
     // Today's appointments for this dentist
     supabaseAdmin
       .from('appointments')
-      .select('id, scheduled_at, status, patients ( id, first_name, last_name, phone ), services ( name )')
+      .select('id, scheduled_at, status, payment_status, is_walk_in, downpayment, patients ( id, first_name, last_name, phone ), services ( id, name, price )')
       .eq('dentist_id', dentistId)
       .eq('clinic_id', clinicId)
       .gte('scheduled_at', `${today}T00:00:00+08:00`)
@@ -95,7 +94,7 @@ export const getDentistDashboardData = cache(async (dentistId: number, clinicId:
     // Upcoming appointments for this dentist
     supabaseAdmin
       .from('appointments')
-      .select('id, scheduled_at, status, patients ( id, first_name, last_name, phone ), services ( name )')
+      .select('id, scheduled_at, status, payment_status, is_walk_in, downpayment, patients ( id, first_name, last_name, phone ), services ( id, name, price )')
       .eq('dentist_id', dentistId)
       .eq('clinic_id', clinicId)
       .gt('scheduled_at', `${today}T23:59:59+08:00`)

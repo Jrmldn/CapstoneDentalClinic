@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { X, RefreshCw, AlertTriangle } from 'lucide-react'
-import { registerPatient } from '@/actions/patientActions'
-import { PatientSummary } from './PatientsClient'
+import { registerPatient } from '@/actions/patientCoreActions'
+import type { PatientSummary } from './types'
 
 interface RegisterPatientModalProps {
   isOpen: boolean

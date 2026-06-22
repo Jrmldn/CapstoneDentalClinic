@@ -19,7 +19,6 @@ interface Clinic {
   manual_status: string | null
   latitude: number | null
   longitude: number | null
-  clinic_hmo: { hmo_name: string }[]
   clinic_specialties: { specialty_name: string }[]
   clinic_operating_hours: { day_of_week: number; open_time: string; close_time: string; is_closed: boolean }[]
   clinic_gallery: { image_url: string; sort_order: number }[]
@@ -36,7 +35,6 @@ export default async function Home() {
   const [
     clinicsRes,
     specialtiesRes,
-    hmosRes,
     dentistsRes,
     patientsCountRes,
     feedbackRes,
@@ -45,7 +43,6 @@ export default async function Home() {
       .from('clinics')
       .select(`
         id, name, address, phone, manual_status, latitude, longitude,
-        clinic_hmo(hmo_name),
         clinic_specialties(specialty_name),
         clinic_operating_hours(day_of_week, open_time, close_time, is_closed),
         clinic_gallery(image_url, sort_order),
@@ -56,10 +53,6 @@ export default async function Home() {
     supabase
       .from('clinic_specialties')
       .select('specialty_name'),
-
-    supabase
-      .from('clinic_hmo')
-      .select('hmo_name'),
 
     supabase
       .from('dentists')
@@ -76,7 +69,6 @@ export default async function Home() {
 
   const clinics = clinicsRes.data
   const allSpecialties = specialtiesRes.data
-  const allHMOs = hmosRes.data
   const dentistSpecialties = dentistsRes.data
   const patientsCountResult = patientsCountRes.count
   const allFeedback = feedbackRes.data as { rating: number }[] | null
@@ -103,8 +95,6 @@ export default async function Home() {
     ...(allSpecialties || []).map(s => s.specialty_name),
     ...(dentistSpecialties || []).map(d => d.specialty)
   ])).filter(Boolean).sort()
-
-  const hmoOptions = Array.from(new Set((allHMOs || []).map(h => h.hmo_name))).filter(Boolean).sort()
 
   return (
     <div className="relative min-h-screen bg-background antialiased">
@@ -138,7 +128,6 @@ export default async function Home() {
             <ClinicMap 
               clinics={clinicsList} 
               availableSpecialties={specialtyOptions}
-              availableHMOs={hmoOptions}
             />
           </div>
         </section>

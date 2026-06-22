@@ -2,8 +2,6 @@ import React from 'react'
 import { enforceRole } from '@/lib/auth/protection'
 import { handleLogout } from '@/actions/handleLogout'
 import { createClient } from '@/lib/supabase/serverSSR'
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
 import PatientSidebar from './_components/Sidebar'
 import PatientTopBar from './_components/TopBar'
 import MobileTabs from './_components/MobileTabs'
@@ -14,12 +12,6 @@ interface PatientLayoutProps {
 
 export default async function PatientLayout({ children }: PatientLayoutProps) {
   const authUser = await enforceRole('patient')
-  const cookieStore = await cookies()
-  const clinicId = cookieStore.get('clinic_id')?.value
-
-  if (!clinicId) {
-    redirect('/')
-  }
 
   const supabase = await createClient()
 
@@ -30,14 +22,6 @@ export default async function PatientLayout({ children }: PatientLayoutProps) {
     .eq('user_id', authUser.id)
     .maybeSingle()
 
-  // Fetch clinic name
-  const { data: clinicData } = await supabase
-    .from('clinics')
-    .select('name')
-    .eq('id', clinicId)
-    .maybeSingle()
-
-  const clinicName = clinicData?.name || 'Dental Portal'
   const patientName = patientData?.first_name || 'Patient'
   const user = { email: authUser.email || '' }
   const logoutAction = async () => {
@@ -53,7 +37,7 @@ export default async function PatientLayout({ children }: PatientLayoutProps) {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top bar */}
-        <PatientTopBar user={user} clinicName={clinicName} logoutAction={logoutAction} />
+        <PatientTopBar user={user} clinicName="AppointDent" logoutAction={logoutAction} />
 
         {/* Page content */}
         <main className="flex-1 p-6 max-w-5xl w-full mx-auto space-y-6 overflow-y-auto">

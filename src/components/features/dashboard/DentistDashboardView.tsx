@@ -17,24 +17,33 @@ import {
   ChevronUp,
   ShieldAlert
 } from 'lucide-react'
-import PatientRecordModal, { PatientRecord } from '../patients/PatientRecordModal'
+import PatientRecordModal from '../patients/PatientRecordModal'
+import DentistCompleteBillingModal from '../appointments/DentistCompleteBillingModal'
+import type { PatientRecord } from '../patients/types'
+import type { Service } from '../billing/types'
+import StatCard from './components/StatCard'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
-import { fetchPatientRecord } from '@/actions/patientActions'
+import { fetchPatientRecord } from '@/actions/patientMedicalActions'
 
 export interface Appointment {
   id: number
   scheduled_at: string
   status: string
+  payment_status: string
+  is_walk_in: boolean
+  downpayment: number
   patients: {
     id: number
     first_name: string
     last_name: string
-    phone: string
-    birthdate: string
-    gender: string
+    phone?: string
+    birthdate?: string
+    gender?: string
   } | null
   services: {
+    id: number
     name: string
+    price: number
   } | null
 }
 
@@ -52,40 +61,9 @@ interface DentistDashboardViewProps {
     pending: number
     patientsCount: number
   }
+  services: Service[]
 }
 
-const colorMap = {
-  blue: { card: 'bg-blue-50', icon: 'text-blue-600', text: 'text-blue-700' },
-  emerald: { card: 'bg-emerald-50', icon: 'text-emerald-600', text: 'text-emerald-700' },
-  amber: { card: 'bg-amber-50', icon: 'text-amber-550', text: 'text-amber-700' },
-  rose: { card: 'bg-rose-50', icon: 'text-rose-500', text: 'text-rose-700' },
-}
-
-function StatCard({
-  label, value, sub, icon: Icon, color, href,
-}: {
-  label: string
-  value: string | number
-  sub: string
-  icon: React.ElementType
-  color: keyof typeof colorMap
-  href: string
-}) {
-  const c = colorMap[color]
-  return (
-    <Link href={href} className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow group">
-      <div className="flex items-start justify-between">
-        <div className={`w-10 h-10 rounded-lg ${c.card} flex items-center justify-center flex-shrink-0`}>
-          <Icon className={`w-5 h-5 ${c.icon}`} />
-        </div>
-        <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition mt-1" />
-      </div>
-      <p className="mt-4 text-2xl font-bold text-slate-900 leading-none">{value}</p>
-      <p className="mt-1 text-xs font-medium text-gray-500">{label}</p>
-      <p className="mt-0.5 text-[11px] text-gray-400">{sub}</p>
-    </Link>
-  )
-}
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
@@ -96,10 +74,12 @@ function StatusBadge({ status }: { status: string }) {
     cancelled: 'bg-red-50 text-red-650 border border-red-200',
     no_show: 'bg-gray-100 text-gray-500 border border-gray-200',
     in_progress: 'bg-blue-50 text-blue-700 border border-blue-200 font-semibold',
+    follow_up: 'bg-teal-50 text-teal-700 border border-teal-200',
+    pending_patient_confirm: 'bg-purple-50 text-purple-700 border border-purple-200',
   }
   return (
     <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${styles[status] ?? 'bg-gray-100 text-gray-500 border border-gray-200'}`}>
-      {status === 'in_progress' ? 'In Progress' : status.replace('_', ' ')}
+      {status === 'in_progress' ? 'In Progress' : status.replace(/_/g, ' ')}
     </span>
   )
 }
@@ -112,7 +92,8 @@ export default function DentistDashboardView({
   clinicId,
   todayAppts,
   upcomingAppts,
-  stats
+  stats,
+  services
 }: DentistDashboardViewProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -120,6 +101,7 @@ export default function DentistDashboardView({
   const [isLoadingRecord, setIsLoadingRecord] = useState(false)
   const [updatingApptId, setUpdatingApptId] = useState<number | null>(null)
   const [expandedApptId, setExpandedApptId] = useState<number | null>(null)
+  const [completingAppt, setCompletingAppt] = useState<Appointment | null>(null)
   const [patientNotesMap, setPatientNotesMap] = useState<Record<number, { lastVisit: string; bloodPressure: string; medicalFlags: string }>>({})
 
   useEffect(() => {
@@ -174,7 +156,7 @@ export default function DentistDashboardView({
   const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 18 ? 'Good afternoon' : 'Good evening'
 
   // Status Action Handler
-  const handleStatusUpdate = async (apptId: number, status: 'completed' | 'no_show' | 'cancelled') => {
+  const handleStatusUpdate = async (apptId: number, status: 'confirmed' | 'completed' | 'no_show' | 'cancelled') => {
     setUpdatingApptId(apptId)
     const res = await updateAppointmentStatus(
       apptId,
@@ -374,21 +356,51 @@ export default function DentistDashboardView({
                         </div>
 
                         {/* Status updates action buttons inside expanded panel */}
-                        {(appt.status === 'pending' || appt.status === 'confirmed') && (
+                        {(appt.status === 'pending' || appt.status === 'confirmed' || appt.status === 'rescheduled') && (
                           <div className="flex justify-end gap-2.5 pt-3">
-                            <button
-                              onClick={() => handleStatusUpdate(appt.id, 'completed')}
-                              disabled={isBusy}
-                              className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-2xs transition disabled:opacity-50"
-                            >
-                              Complete Appointment
-                            </button>
+                            {(appt.status === 'pending' || appt.status === 'rescheduled') && (
+                              <button
+                                onClick={() => handleStatusUpdate(appt.id, 'confirmed')}
+                                disabled={isBusy}
+                                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-2xs transition disabled:opacity-50"
+                              >
+                                Approve
+                              </button>
+                            )}
+                            {appt.status === 'confirmed' ? (
+                              <button
+                                onClick={() => setCompletingAppt(appt)}
+                                disabled={isBusy}
+                                className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-2xs transition disabled:opacity-50"
+                              >
+                                Complete &amp; Send to Billing
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleStatusUpdate(appt.id, 'completed')}
+                                disabled={isBusy}
+                                className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-2xs transition disabled:opacity-50"
+                              >
+                                Complete Appointment
+                              </button>
+                            )}
                             <button
                               onClick={() => handleStatusUpdate(appt.id, 'no_show')}
                               disabled={isBusy}
-                              className="px-4 py-1.5 bg-red-100 hover:bg-red-200 text-red-750 rounded-lg text-xs font-bold transition disabled:opacity-50"
+                              className="px-4 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-bold transition disabled:opacity-50"
                             >
                               No Show
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (confirm('Are you sure you want to cancel this appointment?')) {
+                                  handleStatusUpdate(appt.id, 'cancelled')
+                                }
+                              }}
+                              disabled={isBusy}
+                              className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow-2xs transition disabled:opacity-50"
+                            >
+                              Cancel Appointment
                             </button>
                           </div>
                         )}
@@ -459,6 +471,20 @@ export default function DentistDashboardView({
           </div>
         </div>
       )}
+
+      {/* Complete & Send to Billing Modal */}
+      <DentistCompleteBillingModal
+        appointment={completingAppt}
+        onClose={() => setCompletingAppt(null)}
+        clinicId={clinicId}
+        dentistUserId={dentistUserId}
+        dentistId={dentistId}
+        services={services}
+        onSuccess={() => {
+          setCompletingAppt(null)
+          startTransition(() => router.refresh())
+        }}
+      />
 
       {/* Patient EHR Modal */}
       <PatientRecordModal

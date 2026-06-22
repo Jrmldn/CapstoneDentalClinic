@@ -2,19 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, X, ChevronDown, ChevronUp, Calendar, BookOpen, User } from 'lucide-react'
-import { addTreatmentRecord } from '@/actions/patientActions'
+import { addTreatmentRecord } from '@/actions/clinicalRecordActions'
 import { fetchServices } from '@/actions/serviceActions'
-
-export interface TreatmentHistory {
-  id: number
-  performed_at: string | null
-  treatment: string
-  notes: string | null
-  tooth_number: number | null
-  service_id: number | null
-  services: { id: number; name: string } | { id: number; name: string }[] | null
-  dentists: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null
-}
+import { toothInputToNumber, toothNumberToLabel } from '@/utils/teeth'
+import type { TreatmentHistory } from './types'
 
 interface TreatmentTabProps {
   patientId: number
@@ -88,7 +79,7 @@ export default function TreatmentTab({
       clinic_id: clinicId,
       dentist_id: dentistId || 0,
       service_id: selectedServiceId,
-      tooth_number: toothNumber ? parseInt(toothNumber) : null,
+      tooth_number: toothInputToNumber(toothNumber),
       treatment: treatmentName,
       notes: serializedNotes,
       performed_at: performedAt ? new Date(performedAt).toISOString() : undefined,
@@ -118,15 +109,6 @@ export default function TreatmentTab({
       }
     } catch (e) {}
     return { clinical_notes: notesStr || '—', prescription_notes: '—' }
-  }
-
-  // Alpha translation for child teeth representation
-  const getToothLabel = (num: number | null): string => {
-    if (!num) return '—'
-    if (num >= 101 && num <= 120) {
-      return String.fromCharCode(num - 36) // 101 -> A
-    }
-    return num.toString()
   }
 
   return (
@@ -255,7 +237,7 @@ export default function TreatmentTab({
             const isExpanded = expandedCardId === treat.id
             const parsedNotes = parseNotesObj(treat.notes)
             const dentistObj = Array.isArray(treat.dentists) ? treat.dentists[0] : treat.dentists
-            const toothLabel = getToothLabel(treat.tooth_number)
+            const toothLabel = toothNumberToLabel(treat.tooth_number)
 
             // TR code (mock code, e.g. TR-001, TR-002, etc.)
             const trCode = `TR-${(treatments.length - idx).toString().padStart(3, '0')}`
@@ -320,10 +302,21 @@ export default function TreatmentTab({
                       </div>
                     )}
 
-                    <div className="flex justify-between items-center pt-2.5 border-t border-gray-100 text-[11px] text-slate-500 font-semibold">
-                      <div className="flex items-center gap-1">
-                        <User className="w-3.5 h-3.5 text-slate-400" />
-                        <span>Attending: Dr. {dentistObj ? `${dentistObj.first_name} ${dentistObj.last_name}` : 'Cruz'}</span>
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-center pt-2.5 border-t border-gray-100 text-[11px] text-slate-500 font-semibold gap-2">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center gap-1">
+                          <User className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Attending: Dr. {dentistObj ? `${dentistObj.first_name} ${dentistObj.last_name}` : 'Cruz'}</span>
+                        </div>
+                        {(() => {
+                          const clinicObj = Array.isArray(treat.clinics) ? treat.clinics[0] : treat.clinics
+                          if (!clinicObj) return null
+                          return (
+                            <span className="text-slate-400 font-medium">
+                              · Recorded at {clinicObj.name} on {treat.performed_at ? new Date(treat.performed_at).toLocaleString() : '—'}
+                            </span>
+                          )
+                        })()}
                       </div>
                       <span className="font-mono text-gray-400 text-xs">{trCode}</span>
                     </div>

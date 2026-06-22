@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/serverSSR'
+import { supabaseAdmin } from '@/lib/supabase/server'
 import { enforceRole } from '@/lib/auth/protection'
 import { getStaffClinicId } from '@/lib/auth/getClinicId'
 import { fetchClinicTransactions } from '@/actions/billingActions'
@@ -8,9 +8,7 @@ export const metadata = { title: 'Billing & Invoices — AppoinDent' }
 
 export default async function BillingPage() {
   const authUser = await enforceRole('staff')
-  const supabase = await createClient()
 
-  // Resolve clinicId
   const clinicId = await getStaffClinicId(authUser.id)
   if (!clinicId) {
     return (
@@ -20,55 +18,50 @@ export default async function BillingPage() {
     )
   }
 
-  // Fetch initial clinic transactions, appointments, services, products, and patients for billing creation in parallel (Class A Optimization)
-  const [txRes, appointmentsRes, servicesRes, productsRes, patientsRes] = await Promise.all([
-    fetchClinicTransactions(clinicId),
-    supabase
-      .from('appointments')
-      .select(`
-        id,
-        scheduled_at,
-        status,
-        payment_status,
-        patients ( id, first_name, last_name ),
-        services ( id, name, price )
-      `)
-      .eq('clinic_id', clinicId)
-      .not('status', 'in', '(cancelled,no_show)')
-      .order('scheduled_at', { ascending: false }),
-    supabase
-      .from('services')
-      .select('id, name, price')
-      .eq('clinic_id', clinicId)
-      .eq('is_active', true),
-    supabase
-      .from('products')
-      .select('id, name, price')
-      .eq('clinic_id', clinicId)
-      .eq('is_active', true),
-    supabase
-      .from('clinic_patients')
-      .select(`
-        is_active,
-        patients!inner (
-          id,
-          first_name,
-          last_name
-        )
-      `)
-      .eq('clinic_id', clinicId)
-      .eq('is_active', true)
-  ])
+  const [txRes, appointmentsRes, servicesRes, productsRes, patientsRes, installmentPlansRes] =
+    await Promise.all([
+      fetchClinicTransactions(clinicId),
+      supabaseAdmin
+        .from('appointments')
+        .select(`
+          id, scheduled_at, status, payment_status, downpayment,
+          patients ( id, first_name, last_name ),
+          services ( id, name, price )
+        `)
+        .eq('clinic_id', clinicId)
+        .not('status', 'in', '(cancelled,no_show)')
+        .order('scheduled_at', { ascending: false }),
+      supabaseAdmin
+        .from('services')
+        .select('id, name, price, price_min, price_max')
+        .eq('clinic_id', clinicId)
+        .eq('is_active', true),
+      supabaseAdmin
+        .from('products')
+        .select('id, name, price, price_min, price_max')
+        .eq('clinic_id', clinicId)
+        .eq('is_active', true),
+      supabaseAdmin
+        .from('patients')
+        .select('id, first_name, last_name')
+        .eq('is_guest', false),
+      supabaseAdmin
+        .from('installment_plans')
+        .select(`
+          id, transaction_id, clinic_id, patient_id, total_amount, num_installments,
+          notes, status, created_at,
+          patients ( id, first_name, last_name ),
+          installment_payments (
+            id, plan_id, installment_number, due_date, amount, status, paid_at, created_at
+          )
+        `)
+        .eq('clinic_id', clinicId)
+        .order('created_at', { ascending: false }),
+    ])
 
   const initialTransactions = txRes.transactions || []
 
-  // Map and flatten active patients
-  const activePatients = (patientsRes.data || [])
-    .map((item: any) => item.patients)
-    .filter((p): p is any => p !== null)
-
-  // Sort by last name and then first name
-  activePatients.sort((a: any, b: any) => {
+  const activePatients = (patientsRes.data || []).sort((a: { first_name: string; last_name: string }, b: { first_name: string; last_name: string }) => {
     const lastA = (a.last_name || '').toLowerCase()
     const lastB = (b.last_name || '').toLowerCase()
     if (lastA !== lastB) return lastA.localeCompare(lastB)
@@ -78,15 +71,16 @@ export default async function BillingPage() {
   return (
     <div className="p-6 md:p-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Billing &amp; Transactions</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Billing</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Record payments, issue invoices, apply discounts (senior/PWD/HMO), and track invoice histories.
+          Record payments, issue invoices, apply discounts, and manage installment plans.
         </p>
       </div>
 
       <BillingClient
         clinicId={clinicId}
         initialTransactions={initialTransactions}
+        initialInstallmentPlans={installmentPlansRes.data ?? []}
         appointments={appointmentsRes.data ?? []}
         services={servicesRes.data ?? []}
         products={productsRes.data ?? []}

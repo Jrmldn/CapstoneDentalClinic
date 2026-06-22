@@ -1,14 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X, RefreshCw } from 'lucide-react'
-import {
-  updateAppointmentStatus,
-  getAvailableSlots
-} from '@/actions/appointmentActions'
+import { updateAppointmentStatus } from '@/actions/appointmentActions'
+import { useAvailableSlots, MILLISECONDS_PER_MINUTE } from './hooks/useAvailableSlots'
 import type { Appointment } from './AppointmentTypes'
-
-const MILLISECONDS_PER_MINUTE = 60_000
 
 interface RescheduleModalProps {
   appointment: Appointment | null
@@ -26,17 +23,9 @@ export default function RescheduleModal({
   onSuccess
 }: RescheduleModalProps) {
   const [rescheduleDate, setRescheduleDate] = useState('')
-  const [rescheduleSlots, setRescheduleSlots] = useState<{ start: string; end: string; available: boolean }[]>([])
+  const { slots: rescheduleSlots, fetchSlots } = useAvailableSlots(clinicId)
   const [selectedRescheduleSlot, setSelectedRescheduleSlot] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const handleFetchSlots = async (dentistId: number, serviceId: number, date: string) => {
-    if (!dentistId || !serviceId || !date) return
-    const slotsResult = await getAvailableSlots(clinicId, dentistId, serviceId, date)
-    if (slotsResult.success && slotsResult.slots) {
-      setRescheduleSlots(slotsResult.slots)
-    }
-  }
 
   const handleRescheduleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -53,10 +42,10 @@ export default function RescheduleModal({
 
     const rescheduleResult = await updateAppointmentStatus(
       appointment.id,
-      'rescheduled',
+      'pending_patient_confirm',
       userId,
       'staff',
-      'Rescheduled by staff',
+      'Rescheduled by staff — awaiting patient confirmation',
       startDateObj.toISOString(),
       endIso
     )
@@ -69,9 +58,12 @@ export default function RescheduleModal({
     }
   }
 
-  if (!appointment) return null
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
 
-  return (
+  if (!mounted || !appointment) return null
+
+  return createPortal(
     <div className="fixed inset-0 bg-black/55 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md animate-in zoom-in-95 duration-150">
         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
@@ -100,7 +92,7 @@ export default function RescheduleModal({
                 setRescheduleDate(e.target.value)
                 setSelectedRescheduleSlot('')
                 if (appointment.dentists?.id && appointment.services?.id) {
-                  handleFetchSlots(appointment.dentists.id, appointment.services.id, e.target.value)
+                  fetchSlots(appointment.dentists.id, appointment.services.id, e.target.value)
                 }
               }}
             />
@@ -159,6 +151,7 @@ export default function RescheduleModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

@@ -53,6 +53,7 @@ export default async function ServicesPage() {
         clinicId={clinicId}
         initialServices={services}
         initialProducts={products}
+        viewerRole="staff"
       />
     </div>
   )

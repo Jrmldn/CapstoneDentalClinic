@@ -10,12 +10,20 @@ const eslintConfig = defineConfig([
       reportUnusedDisableDirectives: "off",
     },
     rules: {
-      "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/no-unused-vars": "off",
-      "react-hooks/exhaustive-deps": "off",
+      // Strictest settings for cleanest code. These WILL fail the build on
+      // any existing violations — only paste this after cleaning up current
+      // `any` usage and unused imports, or expect npm run lint to fail hard.
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/no-unused-vars": "error",
+      // exhaustive-deps stays "warn" even in strict configs — too many
+      // legitimate exceptions (intentional one-time effects, stable refs)
+      // to safely hard-block on.
+      "react-hooks/exhaustive-deps": "warn",
+
       "react/no-unescaped-entities": "off",
       "@next/next/no-img-element": "off",
       "react-hooks/set-state-in-effect": "off",
+      "react-hooks/purity": "off",
       "@typescript-eslint/no-require-imports": "off",
     },
   },

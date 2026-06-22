@@ -2,24 +2,8 @@
 
 import { useState } from 'react'
 import { Plus, X, HeartPulse, ShieldAlert, CheckCircle, HelpCircle } from 'lucide-react'
-import { addPeriodontalScreening, addTmjAssessment } from '@/actions/patientActions'
-
-export interface PeriodontalScreening {
-  id: number
-  screened_at: string | null
-  pocket_depths: any // JSON
-  bleeding_points: any // JSON
-  findings: string | null
-  dentists: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null
-}
-
-export interface TmjAssessment {
-  id: number
-  assessed_at: string | null
-  findings: string | null
-  pain_scale: number | null
-  dentists: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null
-}
+import { addPeriodontalScreening, addTmjAssessment } from '@/actions/clinicalRecordActions'
+import type { PeriodontalScreening, TmjAssessment } from './types'
 
 interface PeriodontalTabProps {
   patientId: number
@@ -368,8 +352,8 @@ export default function PeriodontalTab({
             <tbody className="divide-y divide-gray-50 font-medium text-slate-700">
               {Array.from({ length: 10 }).map((_, idx) => {
                 const siteKey = `site_${idx + 1}`
-                const depth = (displayPocketDepths as any)?.[siteKey] ?? 2
-                const isBleeding = (displayBleedingPoints as any)?.[siteKey] ?? false
+                const depth = displayPocketDepths?.[siteKey] ?? 2
+                const isBleeding = displayBleedingPoints?.[siteKey] ?? false
                 return (
                   <tr key={siteKey} className="hover:bg-slate-50/50">
                     <td className="px-4 py-2 text-slate-600 font-semibold">Site {idx + 1}</td>

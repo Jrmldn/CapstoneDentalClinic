@@ -2,13 +2,15 @@
 
 import { Calendar, Clock, Check, X, DollarSign } from 'lucide-react'
 import type { Appointment } from './AppointmentTypes'
+import { formatPhone } from '@/utils/phone-helpers'
 
 interface AppointmentTableProps {
   filteredAppointments: Appointment[]
   onConfirm: (id: number) => void
   onReschedule: (appt: Appointment) => void
   onOpenBilling: (appt: Appointment) => void
-  onCancel: (appt: Appointment) => void
+  onNoShow: (id: number) => void
+  onCancel: (id: number) => void
 }
 
 function getStatusBadgeClass(status: string): string {
@@ -18,6 +20,9 @@ function getStatusBadgeClass(status: string): string {
     case 'completed': return 'bg-slate-50 text-slate-600 border border-slate-200'
     case 'cancelled': return 'bg-red-50 text-red-700 border border-red-200'
     case 'rescheduled': return 'bg-purple-50 text-purple-700 border border-purple-200'
+    case 'no_show': return 'bg-orange-50 text-orange-700 border border-orange-200'
+    case 'follow_up': return 'bg-teal-50 text-teal-700 border border-teal-200'
+    case 'pending_patient_confirm': return 'bg-purple-50 text-purple-700 border border-purple-200'
     default: return 'bg-gray-50 text-gray-700 border border-gray-200'
   }
 }
@@ -27,7 +32,8 @@ export default function AppointmentTable({
   onConfirm,
   onReschedule,
   onOpenBilling,
-  onCancel
+  onNoShow,
+  onCancel,
 }: AppointmentTableProps) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
@@ -39,6 +45,7 @@ export default function AppointmentTable({
               <th className="px-6 py-4">Dentist</th>
               <th className="px-6 py-4">Service</th>
               <th className="px-6 py-4">Scheduled Date &amp; Time</th>
+              <th className="px-6 py-4">Type</th>
               <th className="px-6 py-4">Status</th>
               <th className="px-6 py-4">Payment</th>
               <th className="px-6 py-4 text-right">Actions</th>
@@ -65,7 +72,7 @@ export default function AppointmentTable({
                       <p className="font-semibold text-slate-900">
                         {appt.patients ? `${appt.patients.first_name} ${appt.patients.last_name}` : 'Unknown'}
                       </p>
-                      <p className="text-xs text-gray-500">{appt.patients?.phone || 'No phone'}</p>
+                      <p className="text-xs text-gray-500">{formatPhone(appt.patients?.phone)}</p>
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -94,8 +101,17 @@ export default function AppointmentTable({
                     </div>
                   </td>
                   <td className="px-6 py-4">
+                    <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                      appt.is_walk_in 
+                        ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' 
+                        : 'bg-blue-50 text-blue-700 border border-blue-200'
+                    }`}>
+                      {appt.is_walk_in ? 'Walk-In' : 'Online'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
                     <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full capitalize ${getStatusBadgeClass(appt.status)}`}>
-                      {appt.status.replace('_', ' ')}
+                      {appt.status.replace(/_/g, ' ')}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -109,7 +125,7 @@ export default function AppointmentTable({
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      {appt.status === 'pending' && (
+                      {(appt.status === 'pending' || appt.status === 'rescheduled') && (
                         <button
                           onClick={() => onConfirm(appt.id)}
                           className="p-1 text-blue-600 hover:bg-blue-50 rounded"
@@ -118,7 +134,7 @@ export default function AppointmentTable({
                           <Check className="w-4 h-4" />
                         </button>
                       )}
-                      {(appt.status === 'pending' || appt.status === 'confirmed' || appt.status === 'rescheduled') && (
+                      {(appt.status === 'pending' || appt.status === 'confirmed' || appt.status === 'rescheduled' || appt.status === 'pending_patient_confirm') && (
                         <>
                           <button
                             onClick={() => onReschedule(appt)}
@@ -134,12 +150,26 @@ export default function AppointmentTable({
                             Complete &amp; Bill
                           </button>
                           <button
-                            onClick={() => onCancel(appt)}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded"
-                            title="Cancel Appointment"
+                            onClick={() => onCancel(appt.id)}
+                            className="px-2 py-1 text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100 text-xs font-semibold"
                           >
-                            <X className="w-4 h-4" />
+                            Cancel
                           </button>
+                          {/* No-show: only show when appointment scheduled time has passed */}
+                          {(() => {
+                            const apptTime = new Date(appt.scheduled_at)
+                            const now = new Date()
+                            const hasPassed = apptTime < now
+                            return hasPassed ? (
+                              <button
+                                onClick={() => onNoShow(appt.id)}
+                                className="px-2 py-1 text-orange-700 bg-orange-50 border border-orange-200 rounded hover:bg-orange-100 text-xs font-semibold"
+                                title="Mark as No-Show"
+                              >
+                                No Show
+                              </button>
+                            ) : null
+                          })()}
                         </>
                       )}
                     </div>
@@ -150,7 +180,7 @@ export default function AppointmentTable({
 
             {filteredAppointments.length === 0 && (
               <tr>
-                <td colSpan={7} className="text-center py-20 text-gray-400">
+                <td colSpan={8} className="text-center py-20 text-gray-400">
                   <Calendar className="w-12 h-12 text-gray-200 mx-auto mb-4" />
                   <p className="font-medium text-slate-500">No appointments found</p>
                   <p className="text-xs text-gray-400 mt-1">Try resetting your search filters.</p>

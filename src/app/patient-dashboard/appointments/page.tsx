@@ -1,16 +1,12 @@
 import React from 'react'
 import { enforceRole } from '@/lib/auth/protection'
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { fetchPatientRecord } from '@/actions/patientActions'
+import { fetchPatientRecord } from '@/actions/patientMedicalActions'
 import { createClient } from '@/lib/supabase/serverSSR'
 import { AppointmentsTab } from '../_components/AppointmentsTab'
 
 export default async function AppointmentsPage() {
   const authUser = await enforceRole('patient')
-  const cookieStore = await cookies()
-  const clinicId = cookieStore.get('clinic_id')?.value
-  if (!clinicId) redirect('/')
 
   const supabase = await createClient()
 
@@ -25,8 +21,7 @@ export default async function AppointmentsPage() {
     redirect('/')
   }
 
-  const clinicIdNum = parseInt(clinicId, 10)
-  const patientDetails = await fetchPatientRecord(patientRecord.id, clinicIdNum, {
+  const patientDetails = await fetchPatientRecord(patientRecord.id, undefined, {
     includeAppointments: true
   })
   if (!patientDetails.success || !patientDetails.record) {

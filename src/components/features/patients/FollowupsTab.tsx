@@ -2,17 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { Calendar, Plus, X, Clock, HelpCircle } from 'lucide-react'
-import { createAppointment, getAvailableSlots } from '@/actions/appointmentActions'
+import { createAppointment } from '@/actions/appointmentActions'
+import { getAvailableSlots } from '@/actions/slotAvailabilityActions'
 import { fetchServices } from '@/actions/serviceActions'
-
-export interface AppointmentRecord {
-  id: number
-  scheduled_at: string
-  status: string
-  notes: string | null
-  services: { name: string } | { name: string }[] | null
-  dentists: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null
-}
+import type { AppointmentRecord } from './types'
 
 interface FollowupsTabProps {
   patientId: number
@@ -39,7 +32,7 @@ export default function FollowupsTab({
   const [services, setServices] = useState<Service[]>([])
   const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null)
   const [date, setDate] = useState('')
-  const [slots, setSlots] = useState<any[]>([])
+  const [slots, setSlots] = useState<{ start: string; end: string; available: boolean }[]>([])
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null)
   const [notes, setNotes] = useState('')
   const [isLoadingSlots, setIsLoadingSlots] = useState(false)
@@ -293,6 +286,15 @@ export default function FollowupsTab({
                         Attending: Dr. {dentistObj.first_name} {dentistObj.last_name}
                       </p>
                     )}
+                    {(() => {
+                      const clinicObj = Array.isArray(appt.clinics) ? appt.clinics[0] : appt.clinics
+                      if (!clinicObj) return null
+                      return (
+                        <p className="text-[9px] text-slate-400 font-semibold mt-0.5">
+                          Scheduled at {clinicObj.name} {appt.booked_at ? `on ${new Date(appt.booked_at).toLocaleDateString()}` : ''}
+                        </p>
+                      )
+                    })()}
                   </div>
                 </div>
 

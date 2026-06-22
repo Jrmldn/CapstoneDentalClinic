@@ -1,27 +1,20 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Clinic } from './types'
-import { DEFAULT_SPECIALTY, DEFAULT_HMO } from './constants'
+import { DEFAULT_SPECIALTY } from './constants'
 import { getEffectiveClinicStatus } from '@/lib/clinicStatus'
 
 interface UseClinicFiltersProps {
   clinics: Clinic[]
   availableSpecialties?: string[]
-  availableHMOs?: string[]
 }
 
-/**
- * Custom Hook: useClinicFilters
- * Manages all filtering logic, state, and side-effects for the Clinic Map and sidebar.
- */
 export const useClinicFilters = ({
   clinics,
   availableSpecialties,
-  availableHMOs,
 }: UseClinicFiltersProps) => {
   const router = useRouter()
   const [selectedSpecialty, setSelectedSpecialty] = useState(DEFAULT_SPECIALTY)
-  const [selectedHMO, setSelectedHMO] = useState(DEFAULT_HMO)
   const [showOpenOnly, setShowOpenOnly] = useState(false)
   const [minRating, setMinRating] = useState(0)
   const [activeClinicId, setActiveClinicId] = useState<string | null>(null)
@@ -38,15 +31,6 @@ export const useClinicFilters = ({
     )
     return Array.from(specs).sort()
   }, [clinics, availableSpecialties])
-
-  const hmoOptions = useMemo(() => {
-    if (availableHMOs && availableHMOs.length > 0) {
-      return [DEFAULT_HMO, ...availableHMOs]
-    }
-    const hmos = new Set<string>([DEFAULT_HMO])
-    clinics.forEach((c) => c.clinic_hmo?.forEach((h) => hmos.add(h.hmo_name)))
-    return Array.from(hmos).sort()
-  }, [clinics, availableHMOs])
 
   // Memoized Filtered List
   const filteredClinics = useMemo(() => {
@@ -69,16 +53,12 @@ export const useClinicFilters = ({
           (s) => s.specialty_name === selectedSpecialty
         )
 
-      const matchHMO =
-        selectedHMO === DEFAULT_HMO ||
-        clinic.clinic_hmo?.some((h) => h.hmo_name === selectedHMO)
-
       const matchOpen = !showOpenOnly || isOpen
       const matchRating = rating >= minRating
 
-      return matchSpecialty && matchHMO && matchOpen && matchRating
+      return matchSpecialty && matchOpen && matchRating
     })
-  }, [clinics, selectedSpecialty, selectedHMO, showOpenOnly, minRating])
+  }, [clinics, selectedSpecialty, showOpenOnly, minRating])
 
   // Handle BFCACHE and global popup clicks
   useEffect(() => {
@@ -103,8 +83,6 @@ export const useClinicFilters = ({
   return {
     selectedSpecialty,
     setSelectedSpecialty,
-    selectedHMO,
-    setSelectedHMO,
     showOpenOnly,
     setShowOpenOnly,
     minRating,
@@ -113,7 +91,6 @@ export const useClinicFilters = ({
     setActiveClinicId,
     isMapReady,
     specialtyOptions,
-    hmoOptions,
     filteredClinics,
     handleMapReady,
   }

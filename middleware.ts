@@ -1,6 +1,20 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+function addSecurityHeaders(response: NextResponse): NextResponse {
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('X-Frame-Options', 'DENY')
+  response.headers.set('X-XSS-Protection', '1; mode=block')
+  response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload')
+  response.headers.set(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co"
+  )
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  response.headers.set('Permissions-Policy', 'geolocation=()')
+  return response
+}
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
@@ -26,10 +40,10 @@ export async function middleware(request: NextRequest) {
   // 1. PROTECTION: If not logged in
   if (!user) {
     if (pathname.startsWith('/patient-dashboard') || pathname.startsWith('/staff-dashboard') || pathname.startsWith('/dentist-dashboard')) {
-      return NextResponse.redirect(new URL('/login', request.url))
+      return addSecurityHeaders(NextResponse.redirect(new URL('/login', request.url)))
     }
     if (pathname.startsWith('/superadmin-dashboard')) {
-      return NextResponse.redirect(new URL('/superadmin-login', request.url))
+      return addSecurityHeaders(NextResponse.redirect(new URL('/superadmin-login', request.url)))
     }
   }
 
@@ -37,7 +51,7 @@ export async function middleware(request: NextRequest) {
   if (user) {
     // A. Stop non-superadmins from entering superadmin-dashboard
     if (pathname.startsWith('/superadmin-dashboard') && userRole !== 'superadmin') {
-      return NextResponse.redirect(new URL('/login', request.url))
+      return addSecurityHeaders(NextResponse.redirect(new URL('/login', request.url)))
     }
     
     // B. Allow Patients, Staff, and Dentists to access their dashboards.
@@ -45,7 +59,7 @@ export async function middleware(request: NextRequest) {
     const isStaffOrDentistOrPatient = ['patient', 'staff', 'dentist'].includes(userRole || '')
     
     if (pathname.startsWith('/patient-dashboard') && !isStaffOrDentistOrPatient) {
-       return NextResponse.redirect(new URL('/login', request.url))
+      return addSecurityHeaders(NextResponse.redirect(new URL('/login', request.url)))
     }
 
     // 3. REDIRECTS AWAY FROM AUTH PAGES
@@ -78,11 +92,11 @@ export async function middleware(request: NextRequest) {
         })
       }
 
-      return response
+      return addSecurityHeaders(response)
     }
   }
 
-  return supabaseResponse
+  return addSecurityHeaders(supabaseResponse)
 }
 
 export const config = {

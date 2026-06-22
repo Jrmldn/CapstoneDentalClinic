@@ -4,7 +4,7 @@ import {
   generateSalesReport,
   generateAppointmentSummary,
   generateServiceFrequency
-} from '@/actions/managementActions'
+} from '@/actions/reportActions'
 import ReportsClient from '@/components/features/reports/ReportsClient'
 import PrintButton from './PrintButton'
 

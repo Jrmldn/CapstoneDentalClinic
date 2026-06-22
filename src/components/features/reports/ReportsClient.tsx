@@ -4,26 +4,24 @@ import { useState } from 'react'
 import {
   Calendar,
   DollarSign,
-  TrendingUp,
   Award,
   Users,
   Briefcase,
-  AlertCircle,
   RefreshCw,
   FileText,
-  FileSpreadsheet
 } from 'lucide-react'
 import {
   generateSalesReport,
   generateAppointmentSummary,
   generateServiceFrequency
-} from '@/actions/managementActions'
+} from '@/actions/reportActions'
+import type { SalesReport, ApptReport, ServiceFrequencyReport } from './types'
 
 interface ReportsClientProps {
   clinicId: number
-  defaultSales: any
-  defaultAppts: any
-  defaultFreq: any
+  defaultSales: SalesReport | null
+  defaultAppts: ApptReport | null
+  defaultFreq: ServiceFrequencyReport | null
   startDate: string
   endDate: string
 }
@@ -38,9 +36,9 @@ export default function ReportsClient({
 }: ReportsClientProps) {
   const [from, setFrom] = useState(startDate)
   const [to, setTo] = useState(endDate)
-  const [salesReport, setSalesReport] = useState<any>(defaultSales)
-  const [apptReport, setApptReport] = useState<any>(defaultAppts)
-  const [freqReport, setFreqReport] = useState<any>(defaultFreq)
+  const [salesReport, setSalesReport] = useState<SalesReport | null>(defaultSales)
+  const [apptReport, setApptReport] = useState<ApptReport | null>(defaultAppts)
+  const [freqReport, setFreqReport] = useState<ServiceFrequencyReport | null>(defaultFreq)
   const [isLoading, setIsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<'financial' | 'appointments' | 'services'>('financial')
 
@@ -66,7 +64,6 @@ export default function ReportsClient({
     totalRevenue: 0,
     totalSubtotal: 0,
     totalDiscounts: 0,
-    totalHmo: 0,
     totalPhilHealth: 0
   }
 
@@ -130,7 +127,7 @@ export default function ReportsClient({
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as typeof activeTab)}
               className={`flex items-center gap-2 px-5 py-3.5 text-xs font-bold transition border-b-2 outline-none ${
                 activeTab === tab.id
                   ? 'border-blue-650 text-blue-600'
@@ -144,7 +141,6 @@ export default function ReportsClient({
         })}
       </div>
 
-      {/* Tab content */}
       {/* Tab content */}
       <div className="bg-white rounded-b-xl border-x border-b border-gray-100 p-6 shadow-sm min-h-[400px] print:border-none print:shadow-none print:p-0">
         {activeTab === 'financial' && (
@@ -163,9 +159,9 @@ export default function ReportsClient({
                 </span>
               </div>
               <div className="bg-slate-50 p-4 rounded-xl border border-gray-100">
-                <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">HMO/PhilHealth Cover</span>
+                <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">PhilHealth Cover</span>
                 <span className="text-xl font-black text-blue-600 block mt-1">
-                  ₱{Number(salesSummary.totalHmo + salesSummary.totalPhilHealth).toLocaleString([], { minimumFractionDigits: 2 })}
+                  ₱{Number(salesSummary.totalPhilHealth || 0).toLocaleString([], { minimumFractionDigits: 2 })}
                 </span>
               </div>
               <div className="bg-slate-50 p-4 rounded-xl border border-gray-100 bg-gradient-to-br from-emerald-50 to-teal-50/20 border-emerald-250">
@@ -195,7 +191,7 @@ export default function ReportsClient({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-slate-700">
-                    {salesReport?.transactions?.map((tx: any) => (
+                    {salesReport?.transactions?.map((tx) => (
                       <tr key={tx.id} className="hover:bg-gray-50/50">
                         <td className="px-4 py-2.5 font-mono">#TX-{tx.id}</td>
                         <td className="px-4 py-2.5 font-semibold text-slate-900">
@@ -296,7 +292,7 @@ export default function ReportsClient({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-slate-755">
-                  {freqList.map((svc: any, idx: number) => (
+                  {freqList.map((svc, idx) => (
                     <tr key={svc.id} className="hover:bg-gray-50/50">
                       <td className="px-6 py-3 font-semibold text-gray-500">#{idx + 1}</td>
                       <td className="px-6 py-3 font-bold text-slate-900">{svc.name}</td>

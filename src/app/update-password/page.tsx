@@ -36,7 +36,7 @@ function UpdatePasswordForm() {
 
       // Graceful delay allowing the user to view the confirmation state
       setTimeout(() => {
-        // 🎯 Path Realignment: Routes directly to our verified server actions path (/auth/callback)
+        //  Path Realignment: Routes directly to our verified server actions path (/auth/callback)
         const callbackPath = clinic ? `/auth/callback?clinic=${clinic}` : '/auth/callback'
         window.location.href = callbackPath
       }, 1500)

@@ -1,9 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase/server'
 import { cache } from 'react'
 
-/**
- * Fetches an inventory item by its ID.
- */
 export const getInventoryItemById = cache(async (itemId: number) => {
   return supabaseAdmin
     .from('inventory_items')
@@ -12,9 +9,6 @@ export const getInventoryItemById = cache(async (itemId: number) => {
     .single()
 })
 
-/**
- * Updates stock quantity and updated_at timestamp for a specific inventory item.
- */
 export async function updateInventoryItemStock(itemId: number, quantity: number, updatedAt: string) {
   return supabaseAdmin
     .from('inventory_items')
@@ -22,9 +16,6 @@ export async function updateInventoryItemStock(itemId: number, quantity: number,
     .eq('id', itemId)
 }
 
-/**
- * Inserts a log entry documenting stock changes.
- */
 export async function insertInventoryLog(logData: {
   item_id: number
   changed_by: string
@@ -36,26 +27,22 @@ export async function insertInventoryLog(logData: {
     .insert([logData])
 }
 
-/**
- * Fetches all inventory items for a specific clinic.
- */
 export const getInventoryItemsByClinic = cache(async (clinicId: number) => {
   return supabaseAdmin
     .from('inventory_items')
-    .select('*')
+    .select('*, inventory_categories ( id, name )')
     .eq('clinic_id', clinicId)
     .order('name', { ascending: true })
 })
 
-/**
- * Inserts a new inventory item.
- */
 export async function insertInventoryItem(insertData: {
   clinic_id: number
   name: string
   unit: string
   quantity: number
   alert_threshold: number
+  category_id?: number | null
+  expiry_date?: string | null
 }) {
   return supabaseAdmin
     .from('inventory_items')
@@ -64,9 +51,19 @@ export async function insertInventoryItem(insertData: {
     .single()
 }
 
-/**
- * Deletes an inventory item.
- */
+export async function updateInventoryItemMeta(itemId: number, data: {
+  name?: string
+  unit?: string
+  alert_threshold?: number
+  category_id?: number | null
+  expiry_date?: string | null
+}) {
+  return supabaseAdmin
+    .from('inventory_items')
+    .update(data)
+    .eq('id', itemId)
+}
+
 export async function deleteInventoryItemById(itemId: number) {
   return supabaseAdmin
     .from('inventory_items')
@@ -74,9 +71,6 @@ export async function deleteInventoryItemById(itemId: number) {
     .eq('id', itemId)
 }
 
-/**
- * Fetches change history for a single inventory item along with user profile information.
- */
 export const getInventoryLogsByItemId = cache(async (itemId: number) => {
   return supabaseAdmin
     .from('inventory_logs')
@@ -92,9 +86,6 @@ export const getInventoryLogsByItemId = cache(async (itemId: number) => {
     .order('created_at', { ascending: false })
 })
 
-/**
- * Fetches name info for clinic staff from a list of user IDs.
- */
 export async function getStaffByUserIds(userIds: string[]) {
   return supabaseAdmin
     .from('clinic_staff')
@@ -102,12 +93,39 @@ export async function getStaffByUserIds(userIds: string[]) {
     .in('user_id', userIds)
 }
 
-/**
- * Fetches name info for dentists from a list of user IDs.
- */
 export async function getDentistsByUserIds(userIds: string[]) {
   return supabaseAdmin
     .from('dentists')
     .select('user_id, first_name, last_name')
     .in('user_id', userIds)
+}
+
+export const getCategoriesByClinic = cache(async (clinicId: number) => {
+  return supabaseAdmin
+    .from('inventory_categories')
+    .select('id, name')
+    .eq('clinic_id', clinicId)
+    .order('name', { ascending: true })
+})
+
+export async function insertCategory(clinicId: number, name: string) {
+  return supabaseAdmin
+    .from('inventory_categories')
+    .insert([{ clinic_id: clinicId, name }])
+    .select()
+    .single()
+}
+
+export async function updateCategoryById(id: number, name: string) {
+  return supabaseAdmin
+    .from('inventory_categories')
+    .update({ name })
+    .eq('id', id)
+}
+
+export async function deleteCategoryById(id: number) {
+  return supabaseAdmin
+    .from('inventory_categories')
+    .delete()
+    .eq('id', id)
 }

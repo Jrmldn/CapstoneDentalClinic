@@ -2,19 +2,18 @@
 
 import React from 'react'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
-import { ServicesTableProps } from '@/components/features/clinic-services/types'
+import { ServicesTableProps, Service } from '@/components/features/clinic-services/types'
 import { useServices } from '@/components/features/clinic-services/useServices'
 import ServiceForm from '@/components/features/clinic-services/ServiceForm'
 
+function displayPrice(s: Service) {
+  if (s.price_min != null && s.price_max != null && s.price_min !== s.price_max) {
+    return `₱${Number(s.price_min).toLocaleString()} – ₱${Number(s.price_max).toLocaleString()}`
+  }
+  return `₱${Number(s.price).toLocaleString()}`
+}
 
-
-/**
- * ServicesTable Component
- * Refactored to act as a presentational UI shell.
- * Business logic and state management are delegated to the useServices hook.
- * The inline form is delegated to the ServiceForm component.
- */
-export default function ServicesTable({ clinicId, initialServices }: ServicesTableProps) {
+export default function ServicesTable({ clinicId, initialServices, viewerRole, allClinicIds }: ServicesTableProps) {
   const {
     services,
     showForm,
@@ -28,15 +27,13 @@ export default function ServicesTable({ clinicId, initialServices }: ServicesTab
     handleCancel,
     handleSubmit,
     handleDelete,
-  } = useServices({ clinicId, initialServices })
+  } = useServices({ clinicId, initialServices, allClinicIds })
 
   return (
     <div>
-      {/* Toolbar */}
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-gray-500">{services.length} active service{services.length !== 1 ? 's' : ''}</p>
         <button
-          id="add-service-btn"
           onClick={openAdd}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition"
         >
@@ -45,9 +42,9 @@ export default function ServicesTable({ clinicId, initialServices }: ServicesTab
         </button>
       </div>
 
-      {/* Inline form */}
       {showForm && (
         <ServiceForm
+          viewerRole={viewerRole}
           editingId={editingId}
           form={form}
           isPending={isPending}
@@ -55,10 +52,10 @@ export default function ServicesTable({ clinicId, initialServices }: ServicesTab
           handleChange={handleChange}
           handleSubmit={handleSubmit}
           handleCancel={handleCancel}
+          showAllBranchesOption={!!allClinicIds && allClinicIds.length > 1}
         />
       )}
 
-      {/* Global error outside form */}
       {msg && !showForm && (
         <div className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium ${
           msg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
@@ -67,7 +64,6 @@ export default function ServicesTable({ clinicId, initialServices }: ServicesTab
         </div>
       )}
 
-      {/* Table */}
       {services.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <p className="text-sm">No services yet. Click &quot;Add Service&quot; to get started.</p>
@@ -86,8 +82,15 @@ export default function ServicesTable({ clinicId, initialServices }: ServicesTab
             <tbody className="divide-y divide-gray-50 bg-white">
               {services.map(s => (
                 <tr key={s.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3.5 font-medium text-slate-700">{s.name}</td>
-                  <td className="px-5 py-3.5 text-gray-600">₱{Number(s.price).toLocaleString()}</td>
+                  <td className="px-5 py-3.5 font-medium text-slate-700">
+                    {s.name}
+                    {s.allows_installment && (
+                      <span className="ml-1.5 text-[9px] font-bold px-1.5 py-0.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded uppercase">
+                        Installments
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-5 py-3.5 text-gray-600">{displayPrice(s)}</td>
                   <td className="px-5 py-3.5 text-gray-500">{s.slot_duration_min} min</td>
                   <td className="px-5 py-3.5 text-right">
                     <div className="flex items-center justify-end gap-2">

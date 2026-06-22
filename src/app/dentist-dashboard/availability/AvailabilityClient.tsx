@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { Calendar, Clock, Lock, Trash2, CalendarDays, AlertCircle, Sparkles } from 'lucide-react'
-import { addBlockedSlot, deleteBlockedSlot } from '@/actions/appointmentActions'
+import { addBlockedSlot, deleteBlockedSlot } from '@/actions/dentistScheduleActions'
 
 export interface BlockedSlot {
   id: number

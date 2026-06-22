@@ -1,7 +1,10 @@
-'use server'
+﻿'use server'
+
+import { sanitizeServerError } from '@/lib/errors/sanitizeError'
 
 import { revalidatePath } from 'next/cache'
 import { StaffData, DentistData } from '@/types/clinic'
+import { ensureRole } from '@/lib/auth/ensureRole'
 
 import {
   getMatchingUserIds,
@@ -30,6 +33,9 @@ interface PersonnelUpdatePayload {
 }
 
 export async function addStaff(data: StaffData) {
+  const auth = await ensureRole('superadmin')
+  if (!auth.success) return { success: false, error: auth.error }
+
   try {
     const { data: authData, error: authError } = await createAuthUser({
       email: data.email,
@@ -59,11 +65,14 @@ export async function addStaff(data: StaffData) {
     return { success: true }
   } catch (error) {
     console.error('Error in addStaff:', error)
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to add staff' }
+    return { success: false, error: sanitizeServerError(error) }
   }
 }
 
 export async function addDentist(data: DentistData) {
+  const auth = await ensureRole('superadmin')
+  if (!auth.success) return { success: false, error: auth.error }
+
   try {
     const { data: authData, error: authError } = await createAuthUser({
       email: data.email,
@@ -94,11 +103,14 @@ export async function addDentist(data: DentistData) {
     return { success: true }
   } catch (error) {
     console.error('Error in addDentist:', error)
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to add dentist' }
+    return { success: false, error: sanitizeServerError(error) }
   }
 }
 
 export async function deletePersonnel(userId: string) {
+  const auth = await ensureRole('superadmin')
+  if (!auth.success) return { success: false, error: auth.error }
+
   try {
     const { error: dbError } = await deleteUserRecord(userId)
 
@@ -111,11 +123,14 @@ export async function deletePersonnel(userId: string) {
     return { success: true }
   } catch (error) {
     console.error('Error in deletePersonnel:', error)
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to delete user' }
+    return { success: false, error: sanitizeServerError(error) }
   }
 }
 
 export async function fetchPersonnel() {
+  const auth = await ensureRole('superadmin')
+  if (!auth.success) return { success: false, error: auth.error }
+
   try {
     const { data: rawStaff, error: staffError } = await getAllStaff()
 
@@ -145,6 +160,9 @@ export async function fetchStaff(
   page = 1,
   limit = 10
 ) {
+  const auth = await ensureRole('superadmin')
+  if (!auth.success) return { success: false, error: auth.error, staff: [], totalCount: 0 }
+
   try {
     const { from, to } = getPaginationRange(page, limit)
     const matchingUserIds = searchQuery ? await getMatchingUserIds(searchQuery) : []
@@ -175,7 +193,7 @@ export async function fetchStaff(
     console.error('Error in fetchStaff:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch staff',
+      error: sanitizeServerError(error),
       staff: [],
       totalCount: 0,
     }
@@ -188,6 +206,9 @@ export async function fetchDentists(
   page = 1,
   limit = 10
 ) {
+  const auth = await ensureRole('superadmin')
+  if (!auth.success) return { success: false, error: auth.error, dentists: [], totalCount: 0 }
+
   try {
     const { from, to } = getPaginationRange(page, limit)
     const matchingUserIds = searchQuery ? await getMatchingUserIds(searchQuery) : []
@@ -218,7 +239,7 @@ export async function fetchDentists(
     console.error('Error in fetchDentists:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch dentists',
+      error: sanitizeServerError(error),
       dentists: [],
       totalCount: 0,
     }
@@ -235,6 +256,9 @@ export async function updatePersonnel(
     specialty?: string
   }
 ) {
+  const auth = await ensureRole('superadmin')
+  if (!auth.success) return { success: false, error: auth.error }
+
   try {
     const table = type === 'staff' ? 'clinic_staff' : 'dentists'
 
@@ -258,7 +282,8 @@ export async function updatePersonnel(
     console.error('Error in updatePersonnel:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update personnel'
+      error: sanitizeServerError(error)
     }
   }
 }
+

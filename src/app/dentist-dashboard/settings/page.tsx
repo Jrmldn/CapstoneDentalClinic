@@ -1,6 +1,5 @@
 import { enforceRole } from '@/lib/auth/protection'
 import { getDentistRecordByUserId } from '@/services/dashboardService'
-import { fetchDentistWorkingHours } from '@/actions/appointmentActions'
 import { createClient } from '@/lib/supabase/serverSSR'
 import SettingsClient from './SettingsClient'
 
@@ -35,16 +34,12 @@ export default async function SettingsPage() {
     clinicName = clinicData.name
   }
 
-  // Fetch dentist's working hours
-  const workingHoursRes = await fetchDentistWorkingHours(dentistId)
-  const initialWorkingHours = workingHoursRes.workingHours || []
-
   return (
     <div className="p-6 md:p-8 space-y-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">My Profile</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Manage your profile details and working hours availability.
+          Manage your profile details.
         </p>
       </div>
 
@@ -55,7 +50,6 @@ export default async function SettingsPage() {
         initialFirstName={dentistRecord.first_name}
         initialLastName={dentistRecord.last_name}
         initialSpecialty={dentistRecord.specialty || 'General Dentistry'}
-        initialWorkingHours={initialWorkingHours}
         initialLicenseNo={dentistRecord.license_no || ''}
       />
     </div>

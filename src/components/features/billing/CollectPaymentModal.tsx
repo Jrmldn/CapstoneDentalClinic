@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { X, RefreshCw } from 'lucide-react'
 import { processPayment, PaymentMethod, PaymentStatus } from '@/actions/billingActions'
-import { Transaction } from './BillingClient'
+import type { Transaction } from './types'
 
 interface CollectPaymentModalProps {
   transaction: Transaction | null
@@ -65,7 +65,6 @@ export default function CollectPaymentModal({ transaction, onClose, onSuccess }:
                 <option value="gcash">GCash</option>
                 <option value="paymaya">PayMaya</option>
                 <option value="credit_card">Credit Card</option>
-                <option value="hmo">HMO</option>
               </select>
             </div>
 

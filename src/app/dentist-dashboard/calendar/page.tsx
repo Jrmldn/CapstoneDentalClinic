@@ -1,6 +1,6 @@
 import { enforceRole } from '@/lib/auth/protection'
 import { getDentistRecordByUserId } from '@/services/dashboardService'
-import { fetchCalendarData } from '@/actions/managementActions'
+import { fetchCalendarData } from '@/actions/calendarActions'
 import CalendarClient from '@/components/features/calendar/CalendarClient'
 
 export const metadata = { title: 'Calendar — Dentist Portal' }
@@ -47,6 +47,9 @@ export default async function CalendarPage() {
         currentYear={year}
         currentMonth={month}
         canManageHolidays={false}
+        userId={authUser.id}
+        role="dentist"
+        dentistId={dentistId}
       />
     </div>
   )

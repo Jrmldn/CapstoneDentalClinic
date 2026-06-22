@@ -2,23 +2,26 @@ import React from 'react'
 import { Loader2, Check, X } from 'lucide-react'
 
 interface ProductFormProps {
+  viewerRole: 'superadmin' | 'staff'
   editingId: number | null
   form: {
     name: string
     price: string
+    price_type: 'fixed' | 'range'
+    price_min: string
+    price_max: string
+    addToAllBranches: boolean
   }
   isPending: boolean
   msg: { type: 'success' | 'error'; text: string } | null
   handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void
   handleSubmit: (e: React.FormEvent) => void
   handleCancel: () => void
+  showAllBranchesOption?: boolean
 }
 
-/**
- * ProductForm Component
- * Renders the form for creating or editing products.
- */
 export default function ProductForm({
+  viewerRole,
   editingId,
   form,
   isPending,
@@ -26,7 +29,10 @@ export default function ProductForm({
   handleChange,
   handleSubmit,
   handleCancel,
+  showAllBranchesOption = false,
 }: ProductFormProps) {
+  const isRange = form.price_type === 'range'
+
   return (
     <form
       onSubmit={handleSubmit}
@@ -35,23 +41,104 @@ export default function ProductForm({
       <p className="text-sm font-semibold text-slate-700">
         {editingId ? 'Edit Product' : 'New Product'}
       </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Product Name</label>
-          <input
-            id="product-name-input"
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            required
-            placeholder="e.g. Dental Floss"
-            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+
+      {/* Product name */}
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Product Name</label>
+        <input
+          name="name"
+          value={form.name}
+          onChange={handleChange}
+          required
+          placeholder="e.g. Dental Floss"
+          className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      {/* Superadmin: price type toggle + inputs */}
+      {viewerRole === 'superadmin' && (
+        <div className="space-y-2">
+          <label className="block text-xs font-medium text-gray-600">Price Type</label>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
+              <input
+                type="radio"
+                name="price_type"
+                value="fixed"
+                checked={form.price_type === 'fixed'}
+                onChange={handleChange}
+                className="accent-blue-600"
+              />
+              Fixed price
+            </label>
+            <label className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
+              <input
+                type="radio"
+                name="price_type"
+                value="range"
+                checked={form.price_type === 'range'}
+                onChange={handleChange}
+                className="accent-blue-600"
+              />
+              Price range
+            </label>
+          </div>
+
+          {isRange ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Min Price (₱)</label>
+                <input
+                  name="price_min"
+                  type="number"
+                  min="0"
+                  step="10"
+                  value={form.price_min}
+                  onChange={handleChange}
+                  required
+                  placeholder="e.g. 100"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Max Price (₱)</label>
+                <input
+                  name="price_max"
+                  type="number"
+                  min="0"
+                  step="10"
+                  value={form.price_max}
+                  onChange={handleChange}
+                  required
+                  placeholder="e.g. 500"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Price (₱)</label>
+              <input
+                name="price"
+                type="number"
+                min="0"
+                step="10"
+                value={form.price}
+                onChange={handleChange}
+                required
+                placeholder="0"
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
         </div>
+      )}
+
+      {/* Staff: plain price input */}
+      {viewerRole === 'staff' && (
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Price (₱)</label>
           <input
-            id="product-price-input"
             name="price"
             type="number"
             min="0"
@@ -63,7 +150,21 @@ export default function ProductForm({
             className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-      </div>
+      )}
+
+      {/* Add to all branches (superadmin add only) */}
+      {viewerRole === 'superadmin' && !editingId && showAllBranchesOption && (
+        <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            name="addToAllBranches"
+            checked={form.addToAllBranches}
+            onChange={handleChange}
+            className="w-4 h-4 accent-blue-600"
+          />
+          Add to all branches
+        </label>
+      )}
 
       {msg && (
         <p className={`text-xs font-medium ${msg.type === 'error' ? 'text-red-600' : 'text-emerald-600'}`}>

@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { Plus, RefreshCw, Layers } from 'lucide-react'
-import { DentalChart, ToothCondition } from './PatientRecordModal'
-import { updateDentalChart, ToothConditionData } from '@/actions/patientActions'
+import type { DentalChart, ToothCondition } from './types'
+import { updateDentalChart, ToothConditionData } from '@/actions/dentalChartActions'
 
 interface DentalChartTabProps {
   patientId: number
@@ -439,7 +439,24 @@ export default function DentalChartTab({
 
       {/* Audit Log Table */}
       <div className="bg-white p-5 rounded-xl border border-gray-150 shadow-xs">
-        <h4 className="font-bold text-slate-800 text-sm border-b border-gray-100 pb-1.5 mb-4">Dental Chart History</h4>
+        <div className="flex flex-wrap justify-between items-center border-b border-gray-100 pb-1.5 mb-4 gap-2">
+          <h4 className="font-bold text-slate-800 text-sm">Dental Chart History</h4>
+          {(() => {
+            const latestChart = dentalCharts?.[0]
+            if (!latestChart) return null
+            const dentistObj = Array.isArray(latestChart.dentists) ? latestChart.dentists[0] : latestChart.dentists
+            const clinicObj = Array.isArray(latestChart.clinics) ? latestChart.clinics[0] : latestChart.clinics
+            if (!dentistObj && !clinicObj) return null
+            const dentistName = dentistObj ? `Dr. ${dentistObj.first_name} ${dentistObj.last_name}` : 'Attending Dentist'
+            const branchName = clinicObj?.name || 'Clinic'
+            const updateDate = latestChart.updated_at || latestChart.created_at
+            return (
+              <span className="text-[10px] text-slate-400 font-semibold">
+                Last updated by {dentistName} ({branchName}) at {updateDate ? new Date(updateDate).toLocaleString() : '—'}
+              </span>
+            )
+          })()}
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>

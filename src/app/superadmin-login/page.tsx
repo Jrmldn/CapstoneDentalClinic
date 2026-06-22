@@ -2,7 +2,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react' // Added Lucide icons
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
+import { logLogin } from '@/actions/logLogin'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -54,6 +55,7 @@ export default function AdminLoginPage() {
         return
       }
 
+      await logLogin(data.user.id, data.user.email ?? '', 'superadmin')
       router.push('/superadmin-dashboard')
     } catch (err) {
       setError('An unexpected error occurred')

@@ -12,10 +12,6 @@ interface UseEditPersonnelProps {
   type: 'staff' | 'dentists'
 }
 
-/**
- * Custom Hook: useEditPersonnel
- * Manages states, inputs, dropdown options, and async submit actions for editing personnel.
- */
 export const useEditPersonnel = ({
   isOpen,
   onClose,

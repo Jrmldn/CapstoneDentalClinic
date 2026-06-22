@@ -14,6 +14,8 @@ export default function MobileTabs() {
     { label: 'Appointments', href: '/patient-dashboard/appointments' },
     { label: 'Calendar', href: '/patient-dashboard/calendar' },
     { label: 'Medical', href: '/patient-dashboard/clinicrecord' },
+    { label: 'Payments', href: '/patient-dashboard/payments' },
+    { label: 'Transactions', href: '/patient-dashboard/transactions' },
     { label: 'Profile', href: '/patient-dashboard/profile' },
   ]
 

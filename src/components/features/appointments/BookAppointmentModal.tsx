@@ -1,16 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X, AlertCircle, RefreshCw } from 'lucide-react'
-import {
-  createAppointment,
-  getAvailableSlots,
-  PaymentMethod
-} from '@/actions/appointmentActions'
-import { registerPatient } from '@/actions/patientActions'
+import { createAppointment, PaymentMethod } from '@/actions/appointmentActions'
+import { useAvailableSlots, MILLISECONDS_PER_MINUTE } from './hooks/useAvailableSlots'
+import { registerPatient } from '@/actions/patientCoreActions'
 import type { Patient, Service, Dentist } from './AppointmentTypes'
-
-const MILLISECONDS_PER_MINUTE = 60_000
+import { formatPhone } from '@/utils/phone-helpers'
 
 interface BookAppointmentModalProps {
   isOpen: boolean
@@ -44,7 +41,7 @@ export default function BookAppointmentModal({
   const [selectedServiceId, setSelectedServiceId] = useState<string>('')
   const [selectedDentistId, setSelectedDentistId] = useState<string>('')
   const [bookingDate, setBookingDate] = useState('')
-  const [availableSlots, setAvailableSlots] = useState<{ start: string; end: string; available: boolean }[]>([])
+  const { slots: availableSlots, fetchSlots, clearSlots } = useAvailableSlots(clinicId)
   const [selectedSlot, setSelectedSlot] = useState<string>('')
   const [notes, setNotes] = useState('')
   const [downpayment, setDownpayment] = useState('0')
@@ -52,14 +49,6 @@ export default function BookAppointmentModal({
   const [isWalkIn, setIsWalkIn] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
-
-  const handleFetchSlots = async (dentistId: number, serviceId: number, date: string) => {
-    if (!dentistId || !serviceId || !date) return
-    const slotsResult = await getAvailableSlots(clinicId, dentistId, serviceId, date)
-    if (slotsResult.success && slotsResult.slots) {
-      setAvailableSlots(slotsResult.slots)
-    }
-  }
 
   const resetForm = () => {
     setSelectedPatientId('')
@@ -71,7 +60,7 @@ export default function BookAppointmentModal({
     setDownpayment('0')
     setIsNewPatient(false)
     setNewPatientData({ firstName: '', lastName: '', phone: '', birthdate: '', gender: 'male', address: '' })
-    setAvailableSlots([])
+    clearSlots()
     setFormError('')
   }
 
@@ -162,9 +151,12 @@ export default function BookAppointmentModal({
     }
   }
 
-  if (!isOpen) return null
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
 
-  return (
+  if (!mounted || !isOpen) return null
+
+  return createPortal(
     <div className="fixed inset-0 bg-black/55 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-150">
         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
@@ -203,7 +195,7 @@ export default function BookAppointmentModal({
                 <option value="">-- Select Patient --</option>
                 {patients.map(p => (
                   <option key={p.id} value={p.id}>
-                    {p.last_name}, {p.first_name} ({p.phone})
+                    {p.last_name}, {p.first_name} ({formatPhone(p.phone)})
                   </option>
                 ))}
               </select>
@@ -287,7 +279,7 @@ export default function BookAppointmentModal({
                   setSelectedServiceId(e.target.value)
                   setSelectedSlot('')
                   if (selectedDentistId && bookingDate) {
-                    handleFetchSlots(parseInt(selectedDentistId), parseInt(e.target.value), bookingDate)
+                    fetchSlots(parseInt(selectedDentistId), parseInt(e.target.value), bookingDate)
                   }
                 }}
               >
@@ -310,7 +302,7 @@ export default function BookAppointmentModal({
                   setSelectedDentistId(e.target.value)
                   setSelectedSlot('')
                   if (selectedServiceId && bookingDate) {
-                    handleFetchSlots(parseInt(e.target.value), parseInt(selectedServiceId), bookingDate)
+                    fetchSlots(parseInt(e.target.value), parseInt(selectedServiceId), bookingDate)
                   }
                 }}
               >
@@ -338,7 +330,7 @@ export default function BookAppointmentModal({
                   setBookingDate(e.target.value)
                   setSelectedSlot('')
                   if (selectedDentistId && selectedServiceId) {
-                    handleFetchSlots(parseInt(selectedDentistId), parseInt(selectedServiceId), e.target.value)
+                    fetchSlots(parseInt(selectedDentistId), parseInt(selectedServiceId), e.target.value)
                   }
                 }}
               />
@@ -450,6 +442,7 @@ export default function BookAppointmentModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

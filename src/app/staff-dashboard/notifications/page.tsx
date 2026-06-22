@@ -1,6 +1,6 @@
 import { enforceRole } from '@/lib/auth/protection'
 import { getStaffClinicId } from '@/lib/auth/getClinicId'
-import { fetchNotifications } from '@/actions/managementActions'
+import { fetchNotifications } from '@/actions/notificationActions'
 import NotificationsClient from '@/components/features/notifications/NotificationsClient'
 
 export const metadata = { title: 'Notifications — AppoinDent' }

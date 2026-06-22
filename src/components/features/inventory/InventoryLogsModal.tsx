@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { X, Calendar, User, Info, TrendingUp, TrendingDown } from 'lucide-react'
-import { fetchInventoryLogs } from '@/actions/managementActions'
-import type { InventoryItem } from '@/components/features/inventory/InventoryClient'
+import { fetchInventoryLogs } from '@/actions/inventoryActions'
+import type { InventoryItem } from './types'
 
 
 interface InventoryLogsModalProps {

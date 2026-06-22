@@ -1,17 +1,13 @@
-import React from 'react'
+import React, { Suspense } from 'react'
 import { enforceRole } from '@/lib/auth/protection'
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { fetchPatientRecord } from '@/actions/patientActions'
+import { fetchPatientRecord } from '@/actions/patientMedicalActions'
 import { createClient } from '@/lib/supabase/serverSSR'
 import { ProfileTab } from '../_components/ProfileTab'
 import { PatientRecord } from '../_components/types'
 
 export default async function ProfilePage() {
   const authUser = await enforceRole('patient')
-  const cookieStore = await cookies()
-  const clinicId = cookieStore.get('clinic_id')?.value
-  if (!clinicId) redirect('/')
 
   const supabase = await createClient()
 
@@ -26,8 +22,7 @@ export default async function ProfilePage() {
     redirect('/')
   }
 
-  const clinicIdNum = parseInt(clinicId, 10)
-  const patientDetails = await fetchPatientRecord(patientRecord.id, clinicIdNum, {
+  const patientDetails = await fetchPatientRecord(patientRecord.id, undefined, {
     includeMedicalHistory: true
   })
   if (!patientDetails.success || !patientDetails.record) {
@@ -44,6 +39,10 @@ export default async function ProfilePage() {
   }
 
   return (
-    <ProfileTab record={patientDetails.record as unknown as PatientRecord} />
+    <Suspense fallback={<div className="p-8 text-center text-slate-400 text-sm">Loading profile...</div>}>
+      <ProfileTab 
+        record={patientDetails.record as unknown as PatientRecord} 
+      />
+    </Suspense>
   )
 }

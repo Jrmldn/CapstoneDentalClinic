@@ -1,17 +1,13 @@
 import React from 'react'
 import { enforceRole } from '@/lib/auth/protection'
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { fetchPatientRecord } from '@/actions/patientActions'
+import { fetchPatientRecord } from '@/actions/patientMedicalActions'
 import { createClient } from '@/lib/supabase/serverSSR'
 import { supabaseAdmin } from '@/lib/supabase/server'
 import { BookingTab } from '../_components/BookingTab'
 
 export default async function BookPage() {
   const authUser = await enforceRole('patient')
-  const cookieStore = await cookies()
-  const clinicId = cookieStore.get('clinic_id')?.value
-  if (!clinicId) redirect('/')
 
   const supabase = await createClient()
 
@@ -26,42 +22,29 @@ export default async function BookPage() {
     redirect('/')
   }
 
-  const clinicIdNum = parseInt(clinicId, 10)
-
-  // Fetch patient details, dentists, services, and clinic settings in parallel (Class A Optimization)
-  const [patientDetails, dentistsRes, servicesRes, clinicRes] = await Promise.all([
-    fetchPatientRecord(patientRecord.id, clinicIdNum, {}),
-    supabaseAdmin
-      .from('dentists')
-      .select('id, first_name, last_name, specialty')
-      .eq('clinic_id', clinicIdNum),
-    supabaseAdmin
-      .from('services')
-      .select('id, name, price, slot_duration_min')
-      .eq('clinic_id', clinicIdNum)
-      .eq('is_active', true),
+  // Fetch patient record and all active branches in parallel.
+  // Branch selection now happens inside the booking flow — the patient
+  // picks a branch, then dentists/services are loaded client-side.
+  const [patientDetails, branchesRes] = await Promise.all([
+    fetchPatientRecord(patientRecord.id, undefined, { includeAppointments: true }),
     supabaseAdmin
       .from('clinics')
-      .select('default_downpayment_amount')
-      .eq('id', clinicIdNum)
-      .single()
+      .select('id, name, address')
+      .eq('is_active', true)
+      .order('name', { ascending: true }),
   ])
 
   if (!patientDetails.success || !patientDetails.record) {
     redirect('/')
   }
 
-  const dentists = dentistsRes.data
-  const services = servicesRes.data
-  const defaultDownpaymentAmount = clinicRes.data?.default_downpayment_amount ?? 0
+  const branches = branchesRes.data ?? []
 
   return (
     <BookingTab
-      clinicId={clinicIdNum}
+      branches={branches}
       record={patientDetails.record as any}
-      dentists={(dentists || []) as any}
-      services={(services || []) as any}
-      defaultDownpaymentAmount={defaultDownpaymentAmount}
+      authUserId={authUser.id}
     />
   )
 }

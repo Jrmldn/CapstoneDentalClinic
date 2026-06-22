@@ -1,6 +1,6 @@
 import { enforceRole } from '@/lib/auth/protection'
 import { getStaffClinicId } from '@/lib/auth/getClinicId'
-import { fetchCalendarData } from '@/actions/managementActions'
+import { fetchCalendarData } from '@/actions/calendarActions'
 import CalendarClient from '@/components/features/calendar/CalendarClient'
 
 export const metadata = { title: 'Calendar — AppoinDent' }
@@ -32,7 +32,7 @@ export default async function CalendarPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">Clinic Calendar</h1>
         <p className="text-sm text-gray-500 mt-1">
-          View all scheduled appointments at a glance and manage clinic holidays and closures.
+          View all scheduled appointments at a glance.
         </p>
       </div>
 
@@ -42,6 +42,9 @@ export default async function CalendarPage() {
         initialAppointments={initialAppointments}
         currentYear={year}
         currentMonth={month}
+        userId={authUser.id}
+        role="staff"
+        canManageHolidays={false}
       />
     </div>
   )
