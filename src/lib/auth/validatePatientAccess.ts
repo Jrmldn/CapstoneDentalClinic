@@ -8,23 +8,18 @@ export type PatientAccessResult =
   | { allowed: true;  callerId: string; role: AppRole; callerClinicId?: number }
   | { allowed: false; reason: string }
 
-async function getCallerClinicId(userId: string, role: 'staff' | 'dentist'): Promise<number | null> {
-  const table = role === 'staff' ? 'clinic_staff' : 'dentists'
-  const { data } = await supabaseAdmin
-    .from(table)
-    .select('clinic_id')
-    .eq('user_id', userId)
-    .maybeSingle()
-  return data?.clinic_id ?? null
-}
-
 /**
  * Validates that the currently authenticated caller is allowed to access
  * a specific patient's records.
  *
+ * Access is role-based (practice-wide), not clinic-scoped — branches share one
+ * patient base, so any staff/dentist/superadmin may access any patient.
+ *
  * - patient    → must own the record (patients.user_id = caller)
- * - staff/dentist → caller's clinic must have an appointment with this patient
- * - superadmin → always allowed
+ * - staff/dentist/superadmin → always allowed
+ *
+ * The clinic_patients junction is metadata only (origin branch / enrollment
+ * history) and is intentionally NOT consulted here for access control.
  *
  * Cached per-request via React cache() to avoid N+1 DB calls.
  */
@@ -33,10 +28,6 @@ export const validatePatientAccess = cache(async (
 ): Promise<PatientAccessResult> => {
   const auth = await ensureRole('patient', 'staff', 'dentist', 'superadmin')
   if (!auth.success) return { allowed: false, reason: auth.error }
-
-  if (auth.role === 'superadmin') {
-    return { allowed: true, callerId: auth.userId, role: auth.role }
-  }
 
   if (auth.role === 'patient') {
     const { data } = await supabaseAdmin
@@ -49,19 +40,6 @@ export const validatePatientAccess = cache(async (
     return { allowed: true, callerId: auth.userId, role: auth.role }
   }
 
-  // staff or dentist: derive clinic from caller identity, don't trust client input
-  const callerClinicId = await getCallerClinicId(auth.userId, auth.role)
-  if (!callerClinicId) return { allowed: false, reason: 'Caller clinic not found' }
-
-  const { data: appt } = await supabaseAdmin
-    .from('appointments')
-    .select('id')
-    .eq('patient_id', patientId)
-    .eq('clinic_id', callerClinicId)
-    .limit(1)
-    .maybeSingle()
-
-  if (!appt) return { allowed: false, reason: 'Patient not associated with your clinic' }
-
-  return { allowed: true, callerId: auth.userId, role: auth.role, callerClinicId }
+  // staff, dentist, superadmin: practice-wide access by role
+  return { allowed: true, callerId: auth.userId, role: auth.role }
 })

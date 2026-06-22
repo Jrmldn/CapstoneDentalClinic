@@ -49,10 +49,10 @@ export default async function BillingPage() {
         .from('installment_plans')
         .select(`
           id, transaction_id, clinic_id, patient_id, total_amount, num_installments,
-          penalty_type, penalty_value, notes, status, created_at,
+          notes, status, created_at,
           patients ( id, first_name, last_name ),
           installment_payments (
-            id, plan_id, installment_number, due_date, amount, penalty_amount, status, paid_at, created_at
+            id, plan_id, installment_number, due_date, amount, status, paid_at, created_at
           )
         `)
         .eq('clinic_id', clinicId)
@@ -71,7 +71,7 @@ export default async function BillingPage() {
   return (
     <div className="p-6 md:p-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Billing &amp; Transactions</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Billing</h1>
         <p className="text-sm text-gray-500 mt-1">
           Record payments, issue invoices, apply discounts, and manage installment plans.
         </p>

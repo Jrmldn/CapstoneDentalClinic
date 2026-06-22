@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Calendar, ChevronRight, CalendarClock, AlertCircle, Star, MessageSquare } from 'lucide-react'
+import { Calendar, ChevronLeft, ChevronRight, CalendarClock, AlertCircle, Star, MessageSquare } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
@@ -21,6 +21,8 @@ export function AppointmentsTab({
 }: AppointmentsTabProps) {
   const router = useRouter()
   const [loadingId, setLoadingId] = useState<number | null>(null)
+  const [upcomingPage, setUpcomingPage] = useState(1)
+  const [pastPage, setPastPage] = useState(1)
 
   // Feedback state
   const [feedbackApptId, setFeedbackApptId] = useState<number | null>(null)
@@ -41,6 +43,12 @@ export function AppointmentsTab({
       (!['pending', 'confirmed', 'rescheduled', 'follow_up', 'pending_patient_confirm'].includes(a.status) &&
         new Date(a.scheduled_at) <= new Date())
   )
+
+  const PAGE_SIZE = 10
+  const upcomingTotalPages = Math.max(1, Math.ceil(upcomingAppointments.length / PAGE_SIZE))
+  const paginatedUpcoming = upcomingAppointments.slice((upcomingPage - 1) * PAGE_SIZE, upcomingPage * PAGE_SIZE)
+  const pastTotalPages = Math.max(1, Math.ceil(pastAppointments.length / PAGE_SIZE))
+  const paginatedPast = pastAppointments.slice((pastPage - 1) * PAGE_SIZE, pastPage * PAGE_SIZE)
 
   const handleConfirmReschedule = async (apptId: number) => {
     setLoadingId(apptId)
@@ -110,7 +118,7 @@ export function AppointmentsTab({
         </CardHeader>
         <CardContent className="space-y-3">
           {upcomingAppointments.length > 0 ? (
-            upcomingAppointments.map((appt) => (
+            paginatedUpcoming.map((appt) => (
               <div key={appt.id} className="flex flex-col gap-3 p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
                 {/* Staff reschedule confirmation banner */}
                 {appt.status === 'pending_patient_confirm' && (
@@ -185,6 +193,27 @@ export function AppointmentsTab({
           ) : (
             <p className="text-sm text-slate-400 text-center py-4">No upcoming appointments</p>
           )}
+          {upcomingTotalPages > 1 && (
+            <div className="flex items-center justify-between pt-2">
+              <p className="text-xs text-slate-400">Page {upcomingPage} of {upcomingTotalPages}</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setUpcomingPage(p => Math.max(1, p - 1))}
+                  disabled={upcomingPage === 1}
+                  className="p-1.5 rounded-lg border border-gray-200 text-slate-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setUpcomingPage(p => Math.min(upcomingTotalPages, p + 1))}
+                  disabled={upcomingPage === upcomingTotalPages}
+                  className="p-1.5 rounded-lg border border-gray-200 text-slate-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -195,7 +224,7 @@ export function AppointmentsTab({
         </CardHeader>
         <CardContent className="space-y-3">
           {pastAppointments.length > 0 ? (
-            pastAppointments.map((appt) => {
+            paginatedPast.map((appt) => {
               const alreadyRated = submittedFeedbackIds.has(appt.id)
               const isFeedbackOpen = feedbackApptId === appt.id
               return (
@@ -280,6 +309,27 @@ export function AppointmentsTab({
             })
           ) : (
             <p className="text-sm text-slate-400 text-center py-4">No past appointments found</p>
+          )}
+          {pastTotalPages > 1 && (
+            <div className="flex items-center justify-between pt-2">
+              <p className="text-xs text-slate-400">Page {pastPage} of {pastTotalPages}</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPastPage(p => Math.max(1, p - 1))}
+                  disabled={pastPage === 1}
+                  className="p-1.5 rounded-lg border border-gray-200 text-slate-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setPastPage(p => Math.min(pastTotalPages, p + 1))}
+                  disabled={pastPage === pastTotalPages}
+                  className="p-1.5 rounded-lg border border-gray-200 text-slate-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

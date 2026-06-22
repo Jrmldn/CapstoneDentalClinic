@@ -741,11 +741,42 @@ export type Database = {
           },
         ]
       }
+      inventory_categories: {
+        Row: {
+          clinic_id: number
+          created_at: string | null
+          id: number
+          name: string
+        }
+        Insert: {
+          clinic_id: number
+          created_at?: string | null
+          id?: number
+          name: string
+        }
+        Update: {
+          clinic_id?: number
+          created_at?: string | null
+          id?: number
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_categories_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_items: {
         Row: {
           alert_threshold: number
+          category_id: number | null
           clinic_id: number
           created_at: string | null
+          expiry_date: string | null
           id: number
           name: string
           quantity: number
@@ -754,8 +785,10 @@ export type Database = {
         }
         Insert: {
           alert_threshold?: number
+          category_id?: number | null
           clinic_id: number
           created_at?: string | null
+          expiry_date?: string | null
           id?: number
           name: string
           quantity?: number
@@ -764,8 +797,10 @@ export type Database = {
         }
         Update: {
           alert_threshold?: number
+          category_id?: number | null
           clinic_id?: number
           created_at?: string | null
+          expiry_date?: string | null
           id?: number
           name?: string
           quantity?: number
@@ -773,6 +808,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "inventory_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "inventory_items_clinic_id_fkey"
             columns: ["clinic_id"]

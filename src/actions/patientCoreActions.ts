@@ -176,7 +176,21 @@ export async function registerPatient(data: RegisterPatientData) {
       if (medError) throw new Error(medError.message)
     }
 
-    // Uses onConflict to safely handle re-registration of an existing patient
+    if (data.clinic_id) {
+      const { error: junctionError } = await supabaseAdmin
+        .from('clinic_patients')
+        .upsert(
+          [{
+            clinic_id: data.clinic_id,
+            patient_id: patient.id,
+            enrolled_by: data.enrolled_by ?? auth.userId,
+            is_active: true,
+          }],
+          { onConflict: 'clinic_id,patient_id' }
+        )
+      if (junctionError) throw new Error(junctionError.message)
+    }
+
     revalidatePath('/staff-dashboard/patients')
     revalidatePath('/staff-dashboard/appointments')
     return { success: true, patient }

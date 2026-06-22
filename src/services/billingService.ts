@@ -81,7 +81,7 @@ export const getTransactionsByPatient = cache(async (patientId: number, clinicId
       *,
       transaction_items (
         id, description, quantity, unit_price, total_price,
-        services ( id, name ),
+        services ( id, name, allows_installment, downpayment_amount, num_installments ),
         products ( id, name )
       ),
       appointments (
@@ -153,7 +153,7 @@ export const getTransactionsByClinic = cache(async (
       *,
       transaction_items (
         id, description, quantity, unit_price, total_price,
-        services ( id, name ),
+        services ( id, name, allows_installment, downpayment_amount, num_installments ),
         products ( id, name )
       ),
       patients ( id, first_name, last_name ),

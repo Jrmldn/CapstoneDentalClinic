@@ -24,7 +24,7 @@ export async function manageClinicHolidays(
   holidayId?: number
 ) {
   try {
-    const auth = await ensureRole('staff')
+    const auth = await ensureRole('superadmin')
     if (!auth.success) return { success: false, error: auth.error }
 
     if (action === 'remove' && holidayId) {
@@ -72,7 +72,7 @@ export async function manageClinicHolidays(
       }
     }
 
-    revalidatePath('/staff-dashboard/calendar')
+    revalidatePath(`/superadmin-dashboard/clinic/${clinicId}/profile`)
     return { success: true }
   } catch (error) {
     console.error('Error in manageClinicHolidays:', error)

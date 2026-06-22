@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { X, RefreshCw, CheckCircle } from 'lucide-react'
 import { finalizeDraftInvoice } from '@/actions/billingActions'
 import { normalizeRelation } from '@/lib/utils'
+import { getEligibleInstallmentService } from '@/utils/installment-helpers'
 import type { Transaction } from './types'
 
 function getDentistName(transaction: Transaction): string | null {
@@ -32,6 +33,8 @@ export default function FinalizeDraftModal({ transaction, onClose, onSuccess, on
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   useEffect(() => { setMounted(true) }, [])
+
+  const installmentEligible = transaction != null && getEligibleInstallmentService(transaction) != null
 
   useEffect(() => {
     if (transaction) {
@@ -143,17 +146,19 @@ export default function FinalizeDraftModal({ transaction, onClose, onSuccess, on
                 />
                 Collect Payment now
               </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="radio"
-                  name="resolutionMode"
-                  value="installment"
-                  checked={resolutionMode === 'installment'}
-                  onChange={() => setResolutionMode('installment')}
-                  className="accent-indigo-600"
-                />
-                Set up Installment
-              </label>
+              {installmentEligible && (
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="resolutionMode"
+                    value="installment"
+                    checked={resolutionMode === 'installment'}
+                    onChange={() => setResolutionMode('installment')}
+                    className="accent-indigo-600"
+                  />
+                  Set up Installment
+                </label>
+              )}
             </div>
           </div>
 

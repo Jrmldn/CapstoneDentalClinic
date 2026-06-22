@@ -6,9 +6,7 @@ import {
   LayoutGrid,
   CalendarDays,
   Users,
-  User,
   Image as ImageIcon,
-  Clock,
   Settings,
   ClipboardList,
 } from 'lucide-react'
@@ -26,7 +24,6 @@ const menuGroups = [
     items: [
       { label: 'Appointments',  href: '/dentist-dashboard/appointments',   icon: ClipboardList, key: 'appointments' },
       { label: 'Patients',      href: '/dentist-dashboard/patients',       icon: Users,         key: 'patients' },
-      { label: 'Availability',  href: '/dentist-dashboard/availability',   icon: Clock,         key: 'availability' },
     ],
   },
   {

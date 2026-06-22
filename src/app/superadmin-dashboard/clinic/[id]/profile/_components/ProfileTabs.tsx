@@ -1,17 +1,41 @@
 'use client'
 
 import { useState } from 'react'
-import { Building2, Clock, Shield, ImageIcon } from 'lucide-react'
+import { Building2, Clock, Shield, ImageIcon, CalendarX, Users } from 'lucide-react'
 import GeneralInfoForm from './GeneralInfoForm'
 import OperatingHoursForm from './OperatingHoursForm'
 import HMOsSpecialtiesForm from './HMOsSpecialtiesForm'
 import GalleryForm from './GalleryForm'
+import HolidaysForm from './HolidaysForm'
+import DentistScheduleTab from './DentistScheduleTab'
+import type { BlockedSlot } from '@/app/dentist-dashboard/availability/AvailabilityClient'
+
+interface WorkingHour {
+  day_of_week: number
+  start_time: string
+  end_time: string
+}
+
+interface ClinicHoliday {
+  id: number
+  date: string
+  description: string
+  is_special_day: boolean
+}
+
+interface Dentist {
+  id: number
+  first_name: string
+  last_name: string
+}
 
 const TABS = [
-  { key: 'general', label: 'General Info', icon: Building2 },
-  { key: 'hours', label: 'Operating Hours', icon: Clock },
-  { key: 'specialties', label: 'Specialties', icon: Shield },
-  { key: 'gallery', label: 'Gallery', icon: ImageIcon },
+  { key: 'general',           label: 'General Info',       icon: Building2  },
+  { key: 'hours',             label: 'Operating Hours',    icon: Clock      },
+  { key: 'specialties',       label: 'Specialties',        icon: Shield     },
+  { key: 'gallery',           label: 'Gallery',            icon: ImageIcon  },
+  { key: 'holidays',          label: 'Holidays',           icon: CalendarX  },
+  { key: 'dentist-schedules', label: 'Dentist Schedules',  icon: Users      },
 ]
 
 interface Props {
@@ -20,10 +44,15 @@ interface Props {
   operatingHours: Record<string, unknown>[]
   specialties: Record<string, unknown>[]
   gallery: Record<string, unknown>[]
+  holidays: ClinicHoliday[]
+  dentists: Dentist[]
+  blockedSlotsMap: Record<number, BlockedSlot[]>
+  workingHoursMap: Record<number, WorkingHour[]>
 }
 
 export default function ProfileTabs({
-  clinicId, clinic, operatingHours, specialties, gallery
+  clinicId, clinic, operatingHours, specialties, gallery,
+  holidays, dentists, blockedSlotsMap, workingHoursMap,
 }: Props) {
   const [active, setActive] = useState('general')
 
@@ -53,10 +82,18 @@ export default function ProfileTabs({
 
       {/* Tab content */}
       <div className="p-6">
-        {active === 'general' && <GeneralInfoForm clinicId={clinicId} clinic={clinic} />}
-        {active === 'hours' && <OperatingHoursForm clinicId={clinicId} operatingHours={operatingHours} />}
-        {active === 'specialties' && <HMOsSpecialtiesForm clinicId={clinicId} specialties={specialties} />}
-        {active === 'gallery' && <GalleryForm clinicId={clinicId} gallery={gallery} />}
+        {active === 'general'           && <GeneralInfoForm clinicId={clinicId} clinic={clinic} />}
+        {active === 'hours'             && <OperatingHoursForm clinicId={clinicId} operatingHours={operatingHours} />}
+        {active === 'specialties'       && <HMOsSpecialtiesForm clinicId={clinicId} specialties={specialties} />}
+        {active === 'gallery'           && <GalleryForm clinicId={clinicId} gallery={gallery} />}
+        {active === 'holidays'          && <HolidaysForm clinicId={clinicId} initialHolidays={holidays} />}
+        {active === 'dentist-schedules' && (
+          <DentistScheduleTab
+            dentists={dentists}
+            initialBlockedSlotsMap={blockedSlotsMap}
+            initialWorkingHoursMap={workingHoursMap}
+          />
+        )}
       </div>
     </div>
   )

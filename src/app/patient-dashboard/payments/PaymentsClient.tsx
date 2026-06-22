@@ -22,7 +22,6 @@ type InstallmentPaymentRow = {
   installment_number: number
   due_date: string
   amount: number
-  penalty_amount: number
   status: string
   paid_at: string | null
 }
@@ -32,8 +31,6 @@ type InstallmentPlanRow = {
   transaction_id: number | null
   total_amount: number
   num_installments: number
-  penalty_type: string
-  penalty_value: number
   notes: string | null
   status: string
   created_at: string
@@ -95,7 +92,7 @@ export default function PaymentsClient({ plans, patientId }: PaymentsClientProps
               {overdue.length} installment{overdue.length > 1 ? 's are' : ' is'} overdue.
             </p>
             <p className="text-red-700 text-xs mt-0.5">
-              Please settle your overdue payment{overdue.length > 1 ? 's' : ''} to avoid additional penalties.
+              Please settle your overdue payment{overdue.length > 1 ? 's' : ''} as soon as possible.
             </p>
           </div>
         </div>
@@ -142,7 +139,7 @@ export default function PaymentsClient({ plans, patientId }: PaymentsClientProps
                 setPaymentTarget({
                   installmentPaymentId: payment.id,
                   planId: plan.id,
-                  amount: payment.amount + (payment.penalty_amount ?? 0),
+                  amount: payment.amount,
                   description: `${txLabel} — Installment ${payment.installment_number}`,
                 })
               }}
@@ -200,10 +197,7 @@ function PlanCard({ plan, paidIds, onPay }: PlanCardProps) {
           <p className="text-sm font-bold text-slate-800">{txLabel}</p>
           <p className="text-xs text-slate-500 mt-0.5">
             Total: ₱{Number(plan.total_amount).toLocaleString()} ·{' '}
-            {plan.num_installments} installments ·{' '}
-            Penalty: {plan.penalty_type === 'flat'
-              ? `₱${Number(plan.penalty_value).toLocaleString()} flat`
-              : `${plan.penalty_value}% interest`}
+            {plan.num_installments} installments
           </p>
         </div>
         <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase ${
@@ -252,11 +246,6 @@ function PlanCard({ plan, paidIds, onPay }: PlanCardProps) {
                   <p className="text-sm font-bold text-slate-900">
                     ₱{Number(payment.amount).toLocaleString()}
                   </p>
-                  {payment.penalty_amount > 0 && (
-                    <p className="text-xs text-red-600 font-medium">
-                      +₱{Number(payment.penalty_amount).toLocaleString()} penalty
-                    </p>
-                  )}
                 </div>
                 {!effectivePaid && onPay ? (
                   <button

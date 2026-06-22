@@ -169,7 +169,10 @@ export default function DentistCompleteBillingModal({
           </p>
 
           <div className="space-y-3">
-            {lines.map((line, index) => (
+            {lines.map((line, index) => {
+              const selectedService = line.service_id !== '' ? services.find(s => s.id === line.service_id) : undefined
+              const hasRange = selectedService?.allows_installment && selectedService.price_min != null && selectedService.price_max != null
+              return (
               <div key={index} className="bg-slate-50 p-4 rounded-xl border border-gray-150 space-y-3">
                 <div className="flex items-start gap-3">
                   <div className="flex-1 space-y-1">
@@ -199,11 +202,17 @@ export default function DentistCompleteBillingModal({
                     <label className="text-[10px] font-bold text-slate-500 uppercase">Fee (₱)</label>
                     <input
                       type="number"
-                      min="0"
+                      min={hasRange ? selectedService!.price_min! : 0}
+                      max={hasRange ? selectedService!.price_max! : undefined}
                       className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-white outline-none text-right font-semibold focus:ring-1 focus:ring-blue-500"
                       value={line.unit_price}
                       onChange={(e) => updateLine(index, { unit_price: parseFloat(e.target.value) || 0 })}
                     />
+                    {hasRange && (
+                      <p className="text-[10px] text-slate-400 text-right">
+                        ₱{selectedService!.price_min!.toLocaleString()}–₱{selectedService!.price_max!.toLocaleString()}
+                      </p>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -226,7 +235,8 @@ export default function DentistCompleteBillingModal({
                   />
                 </div>
               </div>
-            ))}
+              )
+            })}
           </div>
 
           <button

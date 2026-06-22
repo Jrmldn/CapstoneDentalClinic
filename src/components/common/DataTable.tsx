@@ -28,6 +28,7 @@ interface DataTableProps<T> {
   getRowKey: (item: T) => string | number
   onEdit?: (item: T) => void
   onDelete?: (item: T) => void | Promise<void> | unknown
+  rowActions?: RowAction<T>[]
   currentPage: number
   totalCount: number
   itemsPerPage: number
@@ -44,6 +45,7 @@ export default function DataTable<T extends object>({
   getRowKey,
   onEdit,
   onDelete,
+  rowActions,
   currentPage,
   totalCount,
   itemsPerPage,
@@ -125,7 +127,7 @@ export default function DataTable<T extends object>({
                   {col.label}
                 </th>
               ))}
-              {(onEdit || onDelete) && (
+              {(onEdit || onDelete || rowActions?.length) && (
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   ACTIONS
                 </th>
@@ -166,9 +168,23 @@ export default function DataTable<T extends object>({
                       </td>
                     )
                   })}
-                  {(onEdit || onDelete) && (
+                  {(onEdit || onDelete || rowActions?.length) && (
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex items-center gap-2">
+                        {rowActions?.map((action, i) => (
+                          <button
+                            key={i}
+                            onClick={() => action.onClick(item)}
+                            disabled={action.disabled || action.isLoading?.(item)}
+                            className={action.className ?? 'p-1.5 text-gray-600 hover:bg-gray-50 rounded transition disabled:opacity-50'}
+                            title={action.title}
+                          >
+                            {action.isLoading?.(item)
+                              ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                              : action.icon
+                            }
+                          </button>
+                        ))}
                         {onEdit && (
                           <button
                             onClick={() => onEdit(item)}

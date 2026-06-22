@@ -5,32 +5,37 @@ import { sanitizeServerError } from '@/lib/errors/sanitizeError'
 import { ensureRole } from '@/lib/auth/ensureRole'
 import { validatePatientAccess } from '@/lib/auth/validatePatientAccess'
 import { supabaseAdmin } from '@/lib/supabase/server'
-import { normalizeRelation } from '@/lib/utils'
+import { deriveInstallmentSchedule, getEligibleInstallmentService } from '@/utils/installment-helpers'
 import {
   insertInstallmentPlan,
   insertInstallmentPayments,
   getInstallmentsByPatient,
   getInstallmentsByClinic,
+  getInstallmentsAllClinics,
   updateInstallmentPaymentStatus,
   updateInstallmentPlanStatus,
 } from '@/services/installmentService'
 
-export type PenaltyType = 'flat' | 'percentage'
-
-export interface InstallmentDue {
-  due_date: string
-  amount: number
+export interface CreateInstallmentPlanData {
+  transaction_id: number
+  first_due_date: string
+  notes?: string
 }
 
-export interface CreateInstallmentPlanData {
-  transaction_id?: number | null
+interface EligibleServiceRow {
+  id: number
+  name: string
+  allows_installment: boolean
+  downpayment_amount: number | null
+  num_installments: number | null
+}
+
+interface TransactionTermsRow {
+  id: number
   clinic_id: number
   patient_id: number
   total_amount: number
-  installments: InstallmentDue[]
-  penalty_type: PenaltyType
-  penalty_value: number
-  notes?: string
+  transaction_items: { services: EligibleServiceRow | EligibleServiceRow[] | null }[]
 }
 
 export async function createInstallmentPlan(data: CreateInstallmentPlanData) {
@@ -38,22 +43,46 @@ export async function createInstallmentPlan(data: CreateInstallmentPlanData) {
   if (!auth.success) return { success: false, error: auth.error }
 
   try {
+    // Source of truth comes from the DB, never from the client: load the transaction,
+    // confirm an installment-eligible service, and recompute the schedule from its terms.
+    const { data: txRow, error: txError } = await supabaseAdmin
+      .from('transactions')
+      .select(`
+        id, clinic_id, patient_id, total_amount,
+        transaction_items ( services ( id, name, allows_installment, downpayment_amount, num_installments ) )
+      `)
+      .eq('id', data.transaction_id)
+      .single()
+
+    if (txError || !txRow) throw new Error('Transaction not found')
+
+    const tx = txRow as unknown as TransactionTermsRow
+    const service = getEligibleInstallmentService(tx)
+    if (!service || service.downpayment_amount == null || service.num_installments == null) {
+      return { success: false, error: 'This transaction has no installment-eligible service.' }
+    }
+
+    const schedule = deriveInstallmentSchedule(
+      tx.total_amount,
+      service.downpayment_amount,
+      service.num_installments,
+      data.first_due_date
+    )
+
     const { data: plan, error: planError } = await insertInstallmentPlan({
-      transaction_id: data.transaction_id ?? null,
-      clinic_id: data.clinic_id,
-      patient_id: data.patient_id,
-      total_amount: data.total_amount,
-      num_installments: data.installments.length,
-      penalty_type: data.penalty_type,
-      penalty_value: data.penalty_value,
+      transaction_id: tx.id,
+      clinic_id: tx.clinic_id,
+      patient_id: tx.patient_id,
+      total_amount: tx.total_amount,
+      num_installments: schedule.length,
       notes: data.notes ?? null,
     })
 
     if (planError) throw new Error(planError.message)
 
-    const payments = data.installments.map((inst, i) => ({
+    const payments = schedule.map(inst => ({
       plan_id: plan.id,
-      installment_number: i + 1,
+      installment_number: inst.installment_number,
       due_date: inst.due_date,
       amount: inst.amount,
     }))
@@ -120,44 +149,6 @@ export async function markInstallmentPaid(installmentPaymentId: number, planId: 
   }
 }
 
-export async function applyInstallmentPenalty(installmentPaymentId: number) {
-  const auth = await ensureRole('staff')
-  if (!auth.success) return { success: false, error: auth.error }
-
-  try {
-    const { data: payment, error: fetchError } = await supabaseAdmin
-      .from('installment_payments')
-      .select(`
-        id, amount,
-        installment_plans ( id, penalty_type, penalty_value )
-      `)
-      .eq('id', installmentPaymentId)
-      .single()
-
-    if (fetchError || !payment) throw new Error('Installment payment not found')
-
-    const planData = normalizeRelation(
-      payment.installment_plans as { id: number; penalty_type: string; penalty_value: number } | { id: number; penalty_type: string; penalty_value: number }[] | null
-    )
-    if (!planData) throw new Error('Installment plan not found')
-
-    const penaltyAmount =
-      planData.penalty_type === 'flat'
-        ? planData.penalty_value
-        : parseFloat(((payment.amount * planData.penalty_value) / 100).toFixed(2))
-
-    const { error } = await updateInstallmentPaymentStatus(installmentPaymentId, 'overdue', penaltyAmount)
-    if (error) throw new Error(error.message)
-
-    revalidatePath('/staff-dashboard/billing')
-    revalidatePath('/patient-dashboard/payments')
-    return { success: true, penaltyAmount }
-  } catch (error) {
-    console.error('Error in applyInstallmentPenalty:', error)
-    return { success: false, error: sanitizeServerError(error) }
-  }
-}
-
 export async function fetchPatientInstallments(patientId: number) {
   const access = await validatePatientAccess(patientId)
   if (!access.allowed) return { success: false, error: access.reason, plans: [] }
@@ -182,6 +173,20 @@ export async function fetchClinicInstallments(clinicId: number) {
     return { success: true, plans: data ?? [] }
   } catch (error) {
     console.error('Error in fetchClinicInstallments:', error)
+    return { success: false, error: sanitizeServerError(error), plans: [] }
+  }
+}
+
+export async function fetchAllInstallments() {
+  const auth = await ensureRole('superadmin')
+  if (!auth.success) return { success: false, error: auth.error, plans: [] }
+
+  try {
+    const { data, error } = await getInstallmentsAllClinics()
+    if (error) throw new Error(error.message)
+    return { success: true, plans: data ?? [] }
+  } catch (error) {
+    console.error('Error in fetchAllInstallments:', error)
     return { success: false, error: sanitizeServerError(error), plans: [] }
   }
 }

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { X, CheckCircle2, AlertTriangle, Clock, RefreshCw, CalendarDays } from 'lucide-react'
-import { markInstallmentPaid, applyInstallmentPenalty } from '@/actions/installmentActions'
+import { markInstallmentPaid } from '@/actions/installmentActions'
 import type { InstallmentPlan, InstallmentPayment } from './types'
 
 interface InstallmentDetailModalProps {
@@ -11,6 +11,7 @@ interface InstallmentDetailModalProps {
   onClose: () => void
   plan: InstallmentPlan
   onSuccess: () => void
+  readOnly?: boolean
 }
 
 const TODAY = new Date().toISOString().split('T')[0]
@@ -28,6 +29,7 @@ export default function InstallmentDetailModal({
   onClose,
   plan,
   onSuccess,
+  readOnly = false,
 }: InstallmentDetailModalProps) {
   const [loadingId, setLoadingId] = useState<number | null>(null)
   const [error, setError] = useState('')
@@ -50,15 +52,6 @@ export default function InstallmentDetailModal({
     setLoadingId(null)
     if (res.success) onSuccess()
     else setError(res.error || 'Failed to mark as paid.')
-  }
-
-  const handleApplyPenalty = async (payment: InstallmentPayment) => {
-    setError('')
-    setLoadingId(payment.id)
-    const res = await applyInstallmentPenalty(payment.id)
-    setLoadingId(null)
-    if (res.success) onSuccess()
-    else setError(res.error || 'Failed to apply penalty.')
   }
 
   return createPortal(
@@ -89,14 +82,6 @@ export default function InstallmentDetailModal({
           {/* Plan summary */}
           <div className="bg-slate-50 rounded-xl p-3 text-xs text-slate-600 space-y-1.5">
             <div className="flex justify-between">
-              <span className="font-semibold text-slate-500">Penalty</span>
-              <span className="font-medium">
-                {plan.penalty_type === 'flat'
-                  ? `₱${Number(plan.penalty_value).toLocaleString()} flat per overdue`
-                  : `${plan.penalty_value}% interest rate`}
-              </span>
-            </div>
-            <div className="flex justify-between">
               <span className="font-semibold text-slate-500">Plan Status</span>
               <span className={`font-bold capitalize ${
                 plan.status === 'completed' ? 'text-emerald-600' :
@@ -119,10 +104,6 @@ export default function InstallmentDetailModal({
               const isEffectivelyOverdue = payment.status !== 'paid' && payment.due_date < TODAY
               const { label, color } = getPaymentStatus(payment)
               const isLoading = loadingId === payment.id
-              const canApplyPenalty =
-                (isEffectivelyOverdue || payment.status === 'overdue') &&
-                payment.penalty_amount === 0 &&
-                plan.penalty_value > 0
 
               return (
                 <div key={payment.id} className="border border-gray-100 rounded-xl p-3.5 space-y-2.5">
@@ -156,11 +137,6 @@ export default function InstallmentDetailModal({
                     <div>
                       <span className="text-slate-400">Amount: </span>
                       <span className="font-semibold">₱{Number(payment.amount).toLocaleString()}</span>
-                      {payment.penalty_amount > 0 && (
-                        <span className="text-red-600 ml-1">
-                          +₱{Number(payment.penalty_amount).toLocaleString()} penalty
-                        </span>
-                      )}
                     </div>
                   </div>
 
@@ -172,7 +148,7 @@ export default function InstallmentDetailModal({
                     </p>
                   )}
 
-                  {payment.status !== 'paid' && (
+                  {payment.status !== 'paid' && !readOnly && (
                     <div className="flex gap-2 pt-0.5">
                       <button
                         onClick={() => handleMarkPaid(payment)}
@@ -181,15 +157,6 @@ export default function InstallmentDetailModal({
                       >
                         {isLoading ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'Mark as Paid'}
                       </button>
-                      {canApplyPenalty && (
-                        <button
-                          onClick={() => handleApplyPenalty(payment)}
-                          disabled={isLoading}
-                          className="flex-1 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg text-xs font-bold hover:bg-red-100 transition disabled:opacity-50 flex items-center justify-center gap-1"
-                        >
-                          {isLoading ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'Apply Penalty'}
-                        </button>
-                      )}
                     </div>
                   )}
                 </div>

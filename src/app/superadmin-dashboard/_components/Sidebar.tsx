@@ -9,6 +9,7 @@ import {
   BarChart3,
   Settings,
   Image as ImageIcon,
+  CalendarDays,
 } from 'lucide-react'
 
 const menuGroups = [
@@ -24,6 +25,7 @@ const menuGroups = [
       { label: 'Clinics & Branches', href: '/superadmin-dashboard/clinic',    icon: Home,          key: 'clinic' },
       { label: 'Personnel Directory',href: '/superadmin-dashboard/personnel', icon: Users,         key: 'personnel' },
       { label: 'Services & Products',href: '/superadmin-dashboard/services',  icon: Settings,      key: 'services' },
+      { label: 'Installment Plans', href: '/superadmin-dashboard/installments', icon: CalendarDays, key: 'installments' },
     ],
   },
   {

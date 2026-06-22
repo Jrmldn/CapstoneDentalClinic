@@ -1,9 +1,10 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { X, AlertCircle, RefreshCw, CalendarDays, Plus, Minus } from 'lucide-react'
+import { X, AlertCircle, RefreshCw, CalendarDays } from 'lucide-react'
 import { createInstallmentPlan } from '@/actions/installmentActions'
+import { deriveInstallmentSchedule, getEligibleInstallmentService } from '@/utils/installment-helpers'
 import type { Transaction } from './types'
 
 interface InstallmentSetupModalProps {
@@ -14,72 +15,51 @@ interface InstallmentSetupModalProps {
   onSuccess: () => void
 }
 
-function splitEvenly(total: number, n: number) {
-  const base = Math.floor((total / n) * 100) / 100
-  const remainder = parseFloat((total - base * n).toFixed(2))
-  return Array.from({ length: n }, (_, i) => ({
-    due_date: '',
-    amount: i === n - 1 ? (base + remainder).toFixed(2) : base.toFixed(2),
-  }))
-}
+const TODAY = new Date().toISOString().split('T')[0]
 
 export default function InstallmentSetupModal({
   isOpen,
   onClose,
   transaction,
-  clinicId,
   onSuccess,
 }: InstallmentSetupModalProps) {
-  const [numInstallments, setNumInstallments] = useState(2)
-  const [penaltyType, setPenaltyType] = useState<'flat' | 'percentage'>('flat')
-  const [penaltyValue, setPenaltyValue] = useState('0')
+  const [firstDueDate, setFirstDueDate] = useState(TODAY)
   const [notes, setNotes] = useState('')
-  const [installments, setInstallments] = useState<{ due_date: string; amount: string }[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => { setMounted(true) }, [])
 
-  const resetSplit = useCallback(() => {
-    setInstallments(splitEvenly(transaction.total_amount, numInstallments))
-  }, [transaction.total_amount, numInstallments])
+  const service = useMemo(() => getEligibleInstallmentService(transaction), [transaction])
 
-  useEffect(() => { resetSplit() }, [resetSplit])
+  const schedule = useMemo(() => {
+    if (!service || service.downpayment_amount == null || service.num_installments == null) return []
+    return deriveInstallmentSchedule(
+      transaction.total_amount,
+      service.downpayment_amount,
+      service.num_installments,
+      firstDueDate
+    )
+  }, [service, transaction.total_amount, firstDueDate])
 
-  const totalInstallmentAmount = installments.reduce(
-    (sum, inst) => sum + (parseFloat(inst.amount) || 0),
-    0
-  )
+  const handleClose = () => {
+    setFormError('')
+    setNotes('')
+    setFirstDueDate(TODAY)
+    onClose()
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormError('')
-
-    for (const inst of installments) {
-      if (!inst.due_date) { setFormError('All installments must have a due date.'); return }
-      if (!inst.amount || parseFloat(inst.amount) <= 0) { setFormError('All installments must have a valid amount.'); return }
-    }
-
-    if (Math.abs(totalInstallmentAmount - transaction.total_amount) > 0.05) {
-      setFormError(
-        `Installment total ₱${totalInstallmentAmount.toLocaleString()} doesn't match transaction total ₱${Number(transaction.total_amount).toLocaleString()}.`
-      )
-      return
-    }
+    if (!service || service.num_installments == null) { setFormError('This transaction has no installment-eligible service.'); return }
+    if (!firstDueDate) { setFormError('Select a first due date.'); return }
 
     setIsSubmitting(true)
     const result = await createInstallmentPlan({
       transaction_id: transaction.id,
-      clinic_id: clinicId,
-      patient_id: transaction.patient_id,
-      total_amount: transaction.total_amount,
-      installments: installments.map(inst => ({
-        due_date: inst.due_date,
-        amount: parseFloat(inst.amount),
-      })),
-      penalty_type: penaltyType,
-      penalty_value: parseFloat(penaltyValue) || 0,
+      first_due_date: firstDueDate,
       notes: notes || undefined,
     })
 
@@ -90,15 +70,6 @@ export default function InstallmentSetupModal({
     } else {
       setFormError(result.error || 'Failed to create installment plan.')
     }
-  }
-
-  const handleClose = () => {
-    setFormError('')
-    setNotes('')
-    setPenaltyType('flat')
-    setPenaltyValue('0')
-    setNumInstallments(2)
-    onClose()
   }
 
   if (!mounted || !isOpen) return null
@@ -133,136 +104,86 @@ export default function InstallmentSetupModal({
             </div>
           )}
 
-          {/* Number of installments */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-slate-700">Number of Installments</label>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setNumInstallments(n => Math.max(2, n - 1))}
-                disabled={numInstallments <= 2}
-                className="p-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition"
-              >
-                <Minus className="w-4 h-4" />
-              </button>
-              <span className="text-lg font-bold text-slate-900 w-6 text-center">{numInstallments}</span>
-              <button
-                type="button"
-                onClick={() => setNumInstallments(n => Math.min(5, n + 1))}
-                disabled={numInstallments >= 5}
-                className="p-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-              <span className="text-xs text-slate-400">installments (2–5)</span>
+          {!service ? (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-lg text-sm">
+              This transaction has no installment-eligible service.
             </div>
-          </div>
-
-          {/* Schedule table */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-semibold text-slate-700">Payment Schedule</label>
-              <button
-                type="button"
-                onClick={resetSplit}
-                className="text-xs text-indigo-600 hover:underline font-medium"
-              >
-                Reset equal split
-              </button>
-            </div>
-            <div className="space-y-2">
-              {installments.map((inst, i) => (
-                <div key={i} className="grid grid-cols-[28px_1fr_1fr] gap-2 items-center">
-                  <span className="text-xs text-slate-400 font-semibold text-right">{i + 1}.</span>
-                  <input
-                    type="date"
-                    required
-                    value={inst.due_date}
-                    onChange={(e) =>
-                      setInstallments(prev =>
-                        prev.map((p, idx) => idx === i ? { ...p, due_date: e.target.value } : p)
-                      )
-                    }
-                    className="px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50"
-                  />
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-medium">₱</span>
-                    <input
-                      type="number"
-                      required
-                      min="0.01"
-                      step="0.01"
-                      value={inst.amount}
-                      onChange={(e) =>
-                        setInstallments(prev =>
-                          prev.map((p, idx) => idx === i ? { ...p, amount: e.target.value } : p)
-                        )
-                      }
-                      className="w-full pl-7 pr-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50"
-                    />
-                  </div>
+          ) : (
+            <>
+              {/* Plan terms (read-only, set by superadmin per service) */}
+              <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 space-y-1.5">
+                <div className="flex justify-between">
+                  <span className="font-semibold text-slate-500">Service</span>
+                  <span className="font-medium text-slate-800">{service.name}</span>
                 </div>
-              ))}
-            </div>
-            <div className="flex justify-between text-xs font-semibold text-slate-500 pt-1 border-t border-gray-100">
-              <span>Total:</span>
-              <span className={
-                Math.abs(totalInstallmentAmount - transaction.total_amount) > 0.05
-                  ? 'text-red-600'
-                  : 'text-emerald-600'
-              }>
-                ₱{totalInstallmentAmount.toLocaleString()} / ₱{Number(transaction.total_amount).toLocaleString()}
-              </span>
-            </div>
-          </div>
-
-          {/* Penalty settings */}
-          <div className="border-t border-gray-100 pt-4 space-y-3">
-            <label className="text-sm font-semibold text-slate-700 block">Late Payment Penalty</label>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-slate-500 mb-1 block">Penalty Type</label>
-                <select
-                  value={penaltyType}
-                  onChange={(e) => setPenaltyType(e.target.value as 'flat' | 'percentage')}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50"
-                >
-                  <option value="flat">Flat Amount (₱)</option>
-                  <option value="percentage">Interest Rate (%)</option>
-                </select>
+                <div className="flex justify-between">
+                  <span className="font-semibold text-slate-500">Downpayment</span>
+                  <span className="font-medium">₱{Number(service.downpayment_amount).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-semibold text-slate-500">Installments</span>
+                  <span className="font-medium">{service.num_installments} payment{service.num_installments === 1 ? '' : 's'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-semibold text-slate-500">Monthly amount</span>
+                  <span className="font-medium">
+                    {service.num_installments && service.num_installments > 0
+                      ? `₱${((transaction.total_amount - Number(service.downpayment_amount)) / service.num_installments).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                      : '—'}
+                  </span>
+                </div>
               </div>
-              <div>
-                <label className="text-xs text-slate-500 mb-1 block">
-                  {penaltyType === 'flat' ? 'Amount (₱)' : 'Rate (%)'}
-                </label>
+
+              {/* First due date */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-slate-700">First Due Date (downpayment)</label>
                 <input
-                  type="number"
-                  min="0"
-                  step={penaltyType === 'percentage' ? '0.1' : '1'}
-                  value={penaltyValue}
-                  onChange={(e) => setPenaltyValue(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50"
+                  type="date"
+                  required
+                  value={firstDueDate}
+                  onChange={(e) => setFirstDueDate(e.target.value)}
+                  className="px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50"
                 />
               </div>
-            </div>
-            <p className="text-xs text-slate-400">
-              {penaltyType === 'flat'
-                ? `₱${parseFloat(penaltyValue) || 0} added per overdue installment.`
-                : `${parseFloat(penaltyValue) || 0}% of installment amount added when overdue.`}
-            </p>
-          </div>
 
-          {/* Notes */}
-          <div>
-            <label className="text-xs font-semibold text-slate-600 block mb-1">Notes (Optional)</label>
-            <textarea
-              rows={2}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g., Patient agreed to monthly installments starting July..."
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 resize-none"
-            />
-          </div>
+              {/* Derived schedule (read-only) */}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Payment Schedule</label>
+                <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                  {schedule.map((inst) => (
+                    <div key={inst.installment_number} className="grid grid-cols-[28px_1fr_auto] gap-2 items-center text-sm">
+                      <span className="text-xs text-slate-400 font-semibold text-right">{inst.installment_number}.</span>
+                      <span className="text-slate-600">
+                        {new Date(inst.due_date + 'T00:00:00').toLocaleDateString('en-US', {
+                          month: 'short', day: 'numeric', year: 'numeric'
+                        })}
+                        {inst.installment_number === 1 && (
+                          <span className="ml-1.5 text-[10px] font-bold text-indigo-600">DOWNPAYMENT</span>
+                        )}
+                      </span>
+                      <span className="font-semibold text-slate-800 text-right">₱{Number(inst.amount).toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-between text-xs font-semibold text-slate-500 pt-1 border-t border-gray-100">
+                  <span>Total:</span>
+                  <span className="text-emerald-600">₱{Number(transaction.total_amount).toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Notes (Optional)</label>
+                <textarea
+                  rows={2}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="e.g., Patient agreed to monthly installments starting July..."
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 resize-none"
+                />
+              </div>
+            </>
+          )}
 
           <div className="border-t border-gray-100 pt-4 flex justify-end gap-3">
             <button
@@ -274,7 +195,7 @@ export default function InstallmentSetupModal({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !service}
               className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-semibold text-sm disabled:opacity-50 flex items-center gap-2"
             >
               {isSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Create Plan'}

@@ -7,8 +7,6 @@ export interface InstallmentPlanInsertData {
   patient_id: number
   total_amount: number
   num_installments: number
-  penalty_type: 'flat' | 'percentage'
-  penalty_value: number
   notes?: string | null
 }
 
@@ -39,10 +37,10 @@ export const getInstallmentsByPatient = cache(async (patientId: number) => {
     .from('installment_plans')
     .select(`
       id, transaction_id, clinic_id, patient_id, total_amount, num_installments,
-      penalty_type, penalty_value, notes, status, created_at,
+      notes, status, created_at,
       transactions ( id, created_at, transaction_items ( description ) ),
       installment_payments (
-        id, plan_id, installment_number, due_date, amount, penalty_amount, status, paid_at, created_at
+        id, plan_id, installment_number, due_date, amount, status, paid_at, created_at
       )
     `)
     .eq('patient_id', patientId)
@@ -54,24 +52,37 @@ export const getInstallmentsByClinic = cache(async (clinicId: number) => {
     .from('installment_plans')
     .select(`
       id, transaction_id, clinic_id, patient_id, total_amount, num_installments,
-      penalty_type, penalty_value, notes, status, created_at,
+      notes, status, created_at,
       patients ( id, first_name, last_name ),
       installment_payments (
-        id, plan_id, installment_number, due_date, amount, penalty_amount, status, paid_at, created_at
+        id, plan_id, installment_number, due_date, amount, status, paid_at, created_at
       )
     `)
     .eq('clinic_id', clinicId)
     .order('created_at', { ascending: false })
 })
 
+export const getInstallmentsAllClinics = cache(async () => {
+  return supabaseAdmin
+    .from('installment_plans')
+    .select(`
+      id, transaction_id, clinic_id, patient_id, total_amount, num_installments,
+      notes, status, created_at,
+      patients ( id, first_name, last_name ),
+      clinics ( id, name ),
+      installment_payments (
+        id, plan_id, installment_number, due_date, amount, status, paid_at, created_at
+      )
+    `)
+    .order('created_at', { ascending: false })
+})
+
 export async function updateInstallmentPaymentStatus(
   paymentId: number,
-  status: 'paid' | 'overdue',
-  penaltyAmount?: number
+  status: 'paid' | 'overdue'
 ) {
   const updateData: Record<string, unknown> = { status }
   if (status === 'paid') updateData.paid_at = new Date().toISOString()
-  if (penaltyAmount !== undefined) updateData.penalty_amount = penaltyAmount
   return supabaseAdmin
     .from('installment_payments')
     .update(updateData)

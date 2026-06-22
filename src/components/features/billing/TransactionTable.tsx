@@ -2,6 +2,7 @@
 
 import { DollarSign, Receipt, CalendarDays, CheckCircle, Eye } from 'lucide-react'
 import { normalizeRelation } from '@/lib/utils'
+import { getEligibleInstallmentService } from '@/utils/installment-helpers'
 import type { Transaction, InstallmentPlan } from './types'
 
 function getDentistName(tx: Transaction): string | null {
@@ -63,6 +64,7 @@ export default function TransactionTable({
             {filteredTransactions.map((tx) => {
               const existingPlan = installmentPlanByTxId[tx.id]
               const isDraft = tx.billing_status === 'draft'
+              const installmentEligible = getEligibleInstallmentService(tx) != null
 
               return (
                 <tr key={tx.id} className="hover:bg-gray-50/50 transition">
@@ -161,7 +163,7 @@ export default function TransactionTable({
                             </button>
                           )
                         ) : (
-                          onSetInstallment && (
+                          installmentEligible && onSetInstallment && (
                             <button
                               onClick={() => onSetInstallment(tx)}
                               className="px-3 py-1 bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 rounded text-xs font-bold transition flex items-center gap-1"

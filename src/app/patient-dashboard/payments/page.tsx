@@ -12,7 +12,6 @@ type InstallmentPaymentRow = {
   installment_number: number
   due_date: string
   amount: number
-  penalty_amount: number
   status: string
   paid_at: string | null
 }
@@ -22,8 +21,6 @@ type InstallmentPlanRow = {
   transaction_id: number | null
   total_amount: number
   num_installments: number
-  penalty_type: string
-  penalty_value: number
   notes: string | null
   status: string
   created_at: string
@@ -51,10 +48,10 @@ export default async function PatientPaymentsPage() {
     .from('installment_plans')
     .select(`
       id, transaction_id, total_amount, num_installments,
-      penalty_type, penalty_value, notes, status, created_at,
+      notes, status, created_at,
       transactions ( id, created_at, transaction_items ( description ) ),
       installment_payments (
-        id, plan_id, installment_number, due_date, amount, penalty_amount, status, paid_at
+        id, plan_id, installment_number, due_date, amount, status, paid_at
       )
     `)
     .eq('patient_id', patient.id)

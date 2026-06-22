@@ -145,6 +145,29 @@ export async function createDraftInvoice(data: CreateDraftInvoiceData) {
   if (!auth.success) return { success: false, error: auth.error }
 
   try {
+    // Validate price range for installment-eligible services
+    const serviceIds = data.items.map(i => i.service_id).filter((id): id is number => id != null)
+    if (serviceIds.length > 0) {
+      type SvcRow = { id: number; name: string; allows_installment: boolean | null; price_min: number | null; price_max: number | null }
+      const { data: svcs } = await supabaseAdmin
+        .from('services')
+        .select('id, name, allows_installment, price_min, price_max')
+        .in('id', serviceIds)
+      for (const item of data.items) {
+        if (!item.service_id) continue
+        const svc = (svcs as SvcRow[] ?? []).find(s => s.id === item.service_id)
+        if (!svc?.allows_installment) continue
+        const min = Number(svc.price_min ?? 0)
+        const max = Number(svc.price_max ?? Infinity)
+        if (item.unit_price < min || item.unit_price > max) {
+          return {
+            success: false,
+            error: `Price for "${svc.name}" must be between ₱${min.toLocaleString()} and ₱${max.toLocaleString()}.`,
+          }
+        }
+      }
+    }
+
     let downpayment = 0
     const { data: appt } = await supabaseAdmin
       .from('appointments')

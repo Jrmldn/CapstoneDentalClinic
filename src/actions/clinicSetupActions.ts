@@ -4,6 +4,7 @@ import { sanitizeServerError } from '@/lib/errors/sanitizeError'
 
 import { supabaseAdmin } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { ensureRole } from '@/lib/auth/ensureRole'
 
 // Define types locally if they are not in @/types yet
 interface OperatingHourData {
@@ -46,6 +47,9 @@ export async function updateClinicProfile(
 }
 
 export async function updateOperatingHours(clinicId: number, hours: OperatingHourData[]) {
+  const auth = await ensureRole('superadmin')
+  if (!auth.success) return { success: false, error: auth.error }
+
   try {
     // Delete existing hours for the clinic to replace them
     await supabaseAdmin

@@ -23,18 +23,8 @@ export async function addBlockedSlot(
   endTime: string | null,
   reason: string | null
 ) {
-  const auth = await ensureRole('dentist')
+  const auth = await ensureRole('superadmin')
   if (!auth.success) return { success: false, error: auth.error }
-
-  const { data: dentistRecord } = await supabaseAdmin
-    .from('dentists')
-    .select('id')
-    .eq('user_id', auth.userId)
-    .maybeSingle()
-
-  if (!dentistRecord || dentistRecord.id !== dentistId) {
-    return { success: false, error: 'Insufficient permissions' }
-  }
 
   try {
     const { data, error } = await supabaseAdmin
@@ -51,7 +41,6 @@ export async function addBlockedSlot(
 
     if (error) throw new Error(error.message)
 
-    revalidatePath('/dentist-dashboard/availability')
     return { success: true, blockedSlot: data }
   } catch (error) {
     console.error('Error in addBlockedSlot:', error)
@@ -63,27 +52,8 @@ export async function addBlockedSlot(
 }
 
 export async function deleteBlockedSlot(blockedSlotId: number) {
-  const auth = await ensureRole('dentist')
+  const auth = await ensureRole('superadmin')
   if (!auth.success) return { success: false, error: auth.error }
-
-  const { data: dentistRecord } = await supabaseAdmin
-    .from('dentists')
-    .select('id')
-    .eq('user_id', auth.userId)
-    .maybeSingle()
-
-  if (!dentistRecord) return { success: false, error: 'Insufficient permissions' }
-
-  // Verify the slot belongs to this dentist
-  const { data: slot } = await supabaseAdmin
-    .from('dentist_blocked_slots')
-    .select('dentist_id')
-    .eq('id', blockedSlotId)
-    .maybeSingle()
-
-  if (!slot || slot.dentist_id !== dentistRecord.id) {
-    return { success: false, error: 'Insufficient permissions' }
-  }
 
   try {
     const { error } = await supabaseAdmin
@@ -93,7 +63,6 @@ export async function deleteBlockedSlot(blockedSlotId: number) {
 
     if (error) throw new Error(error.message)
 
-    revalidatePath('/dentist-dashboard/availability')
     return { success: true }
   } catch (error) {
     console.error('Error in deleteBlockedSlot:', error)
@@ -105,18 +74,8 @@ export async function deleteBlockedSlot(blockedSlotId: number) {
 }
 
 export async function fetchBlockedSlots(dentistId: number) {
-  const auth = await ensureRole('dentist')
+  const auth = await ensureRole('superadmin')
   if (!auth.success) return { success: false, error: auth.error, blockedSlots: [] }
-
-  const { data: dentistRecord } = await supabaseAdmin
-    .from('dentists')
-    .select('id')
-    .eq('user_id', auth.userId)
-    .maybeSingle()
-
-  if (!dentistRecord || dentistRecord.id !== dentistId) {
-    return { success: false, error: 'Insufficient permissions', blockedSlots: [] }
-  }
 
   try {
     const { data, error } = await supabaseAdmin
@@ -143,18 +102,8 @@ export async function updateDentistWorkingHours(
   dentistId: number,
   availabilities: DentistAvailabilityInput[]
 ) {
-  const auth = await ensureRole('dentist')
+  const auth = await ensureRole('superadmin')
   if (!auth.success) return { success: false, error: auth.error }
-
-  const { data: dentistRecord } = await supabaseAdmin
-    .from('dentists')
-    .select('id')
-    .eq('user_id', auth.userId)
-    .maybeSingle()
-
-  if (!dentistRecord || dentistRecord.id !== dentistId) {
-    return { success: false, error: 'Insufficient permissions' }
-  }
 
   try {
     // Delete existing availability for dentist
@@ -181,7 +130,6 @@ export async function updateDentistWorkingHours(
       if (insertErr) throw new Error(insertErr.message)
     }
 
-    revalidatePath('/dentist-dashboard/settings')
     return { success: true }
   } catch (error) {
     console.error('Error in updateDentistWorkingHours:', error)

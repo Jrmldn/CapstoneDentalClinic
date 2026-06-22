@@ -40,6 +40,9 @@ export const useServices = ({ clinicId, initialServices, allClinicIds = [] }: Us
       price_type: isRange ? 'range' : 'fixed',
       price_min: s.price_min != null ? String(s.price_min) : String(s.price),
       price_max: s.price_max != null ? String(s.price_max) : String(s.price),
+      allows_installment: !!s.allows_installment,
+      downpayment_amount: s.downpayment_amount != null ? String(s.downpayment_amount) : '',
+      num_installments: s.num_installments != null ? String(s.num_installments) : '',
       addToAllBranches: false,
     })
     setShowForm(true)
@@ -58,6 +61,8 @@ export const useServices = ({ clinicId, initialServices, allClinicIds = [] }: Us
     startTransition(async () => {
       const isRange = form.price_type === 'range'
       const price = isRange ? Number(form.price_min) : Number(form.price)
+      // Installment requires a price range so the dentist has a min/max to choose within.
+      const allowsInstallment = isRange && form.allows_installment
       const payload = {
         clinic_id: clinicId,
         name: form.name.trim(),
@@ -65,14 +70,20 @@ export const useServices = ({ clinicId, initialServices, allClinicIds = [] }: Us
         price_min: isRange ? Number(form.price_min) : null,
         price_max: isRange ? Number(form.price_max) : null,
         slot_duration_min: Number(form.slot_duration_min),
+        allows_installment: allowsInstallment,
+        downpayment_amount: allowsInstallment ? Number(form.downpayment_amount) : null,
+        num_installments: allowsInstallment ? Number(form.num_installments) : null,
       }
 
       let result
       if (editingId) {
         result = await updateService(editingId, payload)
       } else if (form.addToAllBranches && allClinicIds.length > 0) {
-        const { name, price, price_min, price_max, slot_duration_min } = payload
-        result = await addServiceToAllBranches({ name, price, price_min, price_max, slot_duration_min }, allClinicIds)
+        const { name, price, price_min, price_max, slot_duration_min, allows_installment, downpayment_amount, num_installments } = payload
+        result = await addServiceToAllBranches(
+          { name, price, price_min, price_max, slot_duration_min, allows_installment, downpayment_amount, num_installments },
+          allClinicIds
+        )
       } else {
         result = await addService(payload)
       }

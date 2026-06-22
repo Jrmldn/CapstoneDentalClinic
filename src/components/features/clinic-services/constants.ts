@@ -5,6 +5,9 @@ export const EMPTY_FORM = {
   price_type: 'fixed' as 'fixed' | 'range',
   price_min: '',
   price_max: '',
+  allows_installment: false,
+  downpayment_amount: '',
+  num_installments: '',
   addToAllBranches: false,
 }
 

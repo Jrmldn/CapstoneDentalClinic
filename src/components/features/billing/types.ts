@@ -18,6 +18,7 @@ export interface Service {
   price: number
   price_min?: number | null
   price_max?: number | null
+  allows_installment?: boolean | null
 }
 
 export interface Product {
@@ -34,7 +35,6 @@ export interface InstallmentPayment {
   installment_number: number
   due_date: string
   amount: number
-  penalty_amount: number
   status: 'pending' | 'paid' | 'overdue'
   paid_at: string | null
   created_at: string
@@ -47,12 +47,11 @@ export interface InstallmentPlan {
   patient_id: number
   total_amount: number
   num_installments: number
-  penalty_type: 'flat' | 'percentage'
-  penalty_value: number
   notes: string | null
   status: 'active' | 'completed' | 'cancelled'
   created_at: string
   patients?: { id: number; first_name: string; last_name: string } | null
+  clinics?: { id: number; name: string } | null
   transactions?: { id: number; created_at: string } | null
   installment_payments?: InstallmentPayment[]
 }
@@ -79,6 +78,19 @@ export interface Transaction {
     quantity: number
     unit_price: number
     total_price: number
+    services?: {
+      id: number
+      name: string
+      allows_installment: boolean
+      downpayment_amount: number | null
+      num_installments: number | null
+    } | {
+      id: number
+      name: string
+      allows_installment: boolean
+      downpayment_amount: number | null
+      num_installments: number | null
+    }[] | null
   }[]
   appointments?: {
     scheduled_at: string

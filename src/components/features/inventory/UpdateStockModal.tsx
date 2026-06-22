@@ -101,8 +101,8 @@ export default function UpdateStockModal({ item, isOpen, onClose, onSuccess, use
               <input
                 required
                 type="number"
-                step="0.01"
-                placeholder="0.00"
+                step="5"
+                placeholder="0"
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-lg font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 value={delta}
                 onChange={e => setDelta(e.target.value)}

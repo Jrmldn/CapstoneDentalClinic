@@ -143,7 +143,8 @@ CREATE POLICY "dentists_delete" ON public.dentists
 
 -- ─────────────────────────────────────────────────────────────────
 -- 5. patients
---    Central directory (no clinic_patients junction — dropped).
+--    Central directory. Access is role-based (practice-wide), not clinic-scoped.
+--    clinic_patients is kept as metadata (origin branch / enrollment), not used for access control.
 --    Patients own their record; staff/dentist/superadmin read all.
 -- ─────────────────────────────────────────────────────────────────
 ALTER TABLE public.patients ENABLE ROW LEVEL SECURITY;
@@ -868,6 +869,40 @@ CREATE POLICY "inventory_items_update" ON public.inventory_items
 CREATE POLICY "inventory_items_delete" ON public.inventory_items
   FOR DELETE TO authenticated
   USING ((SELECT role FROM public.users WHERE id = auth.uid()) = 'superadmin');
+
+
+-- ─────────────────────────────────────────────────────────────────
+-- 24b. inventory_categories   (branch-specific)
+-- ─────────────────────────────────────────────────────────────────
+ALTER TABLE public.inventory_categories ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "inventory_categories_select" ON public.inventory_categories;
+DROP POLICY IF EXISTS "inventory_categories_insert" ON public.inventory_categories;
+DROP POLICY IF EXISTS "inventory_categories_update" ON public.inventory_categories;
+DROP POLICY IF EXISTS "inventory_categories_delete" ON public.inventory_categories;
+
+CREATE POLICY "inventory_categories_select" ON public.inventory_categories
+  FOR SELECT TO authenticated USING (
+    (SELECT role FROM public.users WHERE id = auth.uid()) IN ('staff', 'dentist', 'superadmin')
+  );
+
+CREATE POLICY "inventory_categories_insert" ON public.inventory_categories
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    (SELECT role FROM public.users WHERE id = auth.uid()) IN ('staff', 'superadmin')
+  );
+
+CREATE POLICY "inventory_categories_update" ON public.inventory_categories
+  FOR UPDATE TO authenticated
+  USING (
+    (SELECT role FROM public.users WHERE id = auth.uid()) IN ('staff', 'superadmin')
+  );
+
+CREATE POLICY "inventory_categories_delete" ON public.inventory_categories
+  FOR DELETE TO authenticated
+  USING (
+    (SELECT role FROM public.users WHERE id = auth.uid()) IN ('staff', 'superadmin')
+  );
 
 
 -- ─────────────────────────────────────────────────────────────────

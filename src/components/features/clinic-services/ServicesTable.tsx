@@ -82,7 +82,14 @@ export default function ServicesTable({ clinicId, initialServices, viewerRole, a
             <tbody className="divide-y divide-gray-50 bg-white">
               {services.map(s => (
                 <tr key={s.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3.5 font-medium text-slate-700">{s.name}</td>
+                  <td className="px-5 py-3.5 font-medium text-slate-700">
+                    {s.name}
+                    {s.allows_installment && (
+                      <span className="ml-1.5 text-[9px] font-bold px-1.5 py-0.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded uppercase">
+                        Installments
+                      </span>
+                    )}
+                  </td>
                   <td className="px-5 py-3.5 text-gray-600">{displayPrice(s)}</td>
                   <td className="px-5 py-3.5 text-gray-500">{s.slot_duration_min} min</td>
                   <td className="px-5 py-3.5 text-right">
