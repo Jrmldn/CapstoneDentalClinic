@@ -5,6 +5,7 @@ import { Camera, Upload, Trash, Eye, FileImage, Loader2, AlertCircle, CheckCircl
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase/client'
+import { formatDateTime } from '@/lib/date'
 import imageCompression from 'browser-image-compression'
 
 interface PhotosTabProps {
@@ -270,17 +271,6 @@ export default function PhotosTab({ patientId, viewerRole }: PhotosTabProps) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
-  // Format date helper
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    })
-  }
 
   // Restrict access if role is not dentist or superadmin
   const canUpload = viewerRole === 'dentist' || viewerRole === 'superadmin'
@@ -391,7 +381,7 @@ export default function PhotosTab({ patientId, viewerRole }: PhotosTabProps) {
                       {photo.displayName}
                     </p>
                     <p className="text-[9px] text-slate-400 font-medium mt-0.5">
-                      {formatDate(photo.createdAt)} · {formatBytes(photo.size)}
+                      {formatDateTime(photo.createdAt)} · {formatBytes(photo.size)}
                     </p>
                     <div className="mt-1.5 pt-1.5 border-t border-slate-100 text-[8px] text-slate-500 font-medium space-y-0.5">
                       <p><span className="font-semibold text-slate-600">Uploaded by:</span> {photo.uploadedBy}</p>
@@ -431,7 +421,7 @@ export default function PhotosTab({ patientId, viewerRole }: PhotosTabProps) {
             <div className="text-center mt-3 text-white">
               <p className="text-xs font-bold">{previewPhoto.displayName}</p>
               <p className="text-[10px] text-slate-300 mt-0.5">
-                {formatDate(previewPhoto.createdAt)} · Uploaded by: {previewPhoto.uploadedBy} ({previewPhoto.branchName})
+                {formatDateTime(previewPhoto.createdAt)} · Uploaded by: {previewPhoto.uploadedBy} ({previewPhoto.branchName})
               </p>
             </div>
           </div>

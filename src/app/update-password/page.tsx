@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 
@@ -13,6 +13,19 @@ function UpdatePasswordForm() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+
+  // This page is only reachable with the session the /auth/callback established
+  // from a valid reset/invite link. Guard against direct navigation (no session)
+  // so the user gets a clear message instead of a cryptic updateUser error.
+  const [checking, setChecking] = useState(true)
+  const [authorized, setAuthorized] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setAuthorized(!!data.session)
+      setChecking(false)
+    })
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -47,6 +60,36 @@ function UpdatePasswordForm() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (checking) {
+    return (
+      <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-2xl p-8 text-center">
+        <p className="text-gray-500 text-sm">Verifying your reset link...</p>
+      </div>
+    )
+  }
+
+  if (!authorized) {
+    return (
+      <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-2xl p-8 text-center">
+        <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-4">
+          <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Link expired or invalid</h2>
+        <p className="text-gray-500 text-sm mb-6">
+          This password reset link has expired or was already used. Please request a new one.
+        </p>
+        <a
+          href="/login"
+          className="inline-block py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors text-sm"
+        >
+          Back to login
+        </a>
+      </div>
+    )
   }
 
   return (
@@ -128,14 +171,7 @@ function UpdatePasswordForm() {
 export default function UpdatePasswordPage() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      {/* Required for Next.js build-time compliance when using query string hooks */}
-      <Suspense fallback={
-        <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-2xl p-8 text-center text-gray-500 text-sm">
-          Loading verification context...
-        </div>
-      }>
-        <UpdatePasswordForm />
-      </Suspense>
+      <UpdatePasswordForm />
     </div>
   )
 }

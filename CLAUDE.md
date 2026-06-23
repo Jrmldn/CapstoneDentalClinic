@@ -9,6 +9,7 @@
 - Remove only imports/vars your own change orphaned. Mention, don't delete, pre-existing dead code.
 - For multi-step work, state a brief plan with verification steps per step.
 - `npm run lint` must pass clean before any PR.
+- Flatten nested conditionals into early-return guard clauses (`if (!x) return`), not 3-level nesting. Applies everywhere — server actions, services, query builders, components — not just client components.
 
 ## Stack
 Next.js 16 (App Router), React 19, TypeScript, Supabase, Tailwind v4, Framer Motion.
@@ -56,7 +57,6 @@ Roles: `patient`, `dentist`, `staff`, `superadmin`.
 - No native dialogs (`alert()`, `confirm()`, `window.location.reload()`). [TODO: toast vs. `<ConfirmDialog>` — pending]
 - ClassName ternary with >2 branches → extract to a named function (e.g. `getDayCellStyles(...)`). Never inline in JSX.
 - Shared interfaces used in 2+ files → shared types file, not redefined per-file.
-- Flatten nested conditionals into early-return guard clauses (`if (!x) return`), not 3-level nesting.
 - Remove decorative-only UI (e.g. non-functional dividers) during refactors.
 
 ## Dates
@@ -64,6 +64,7 @@ Roles: `patient`, `dentist`, `staff`, `superadmin`.
 
 ## Verification
 - `npm run lint` clean.
+- Run the relevant tests after a successful implementation of a feature or function.
 - Walk the exact role/dashboard changed.
 - State success as a concrete click-path.
 - Confirm `revalidatePath` covers every dashboard rendering the mutated data.

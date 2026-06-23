@@ -7,6 +7,7 @@ import {
 } from '@/actions/reportActions'
 import ReportsClient from '@/components/features/reports/ReportsClient'
 import PrintButton from './PrintButton'
+import { toDateKey, formatDate } from '@/lib/date'
 
 export const metadata = { title: 'Reports & Analytics — AppoinDent' }
 
@@ -24,12 +25,11 @@ export default async function ReportsPage() {
   }
 
   // Load last 30 days reports by default
-  const todayObj = new Date()
-  const today = todayObj.toISOString().slice(0, 10)
-  
+  const today = toDateKey()
+
   const thirtyDaysAgoObj = new Date()
   thirtyDaysAgoObj.setDate(thirtyDaysAgoObj.getDate() - 30)
-  const thirtyDaysAgo = thirtyDaysAgoObj.toISOString().slice(0, 10)
+  const thirtyDaysAgo = toDateKey(thirtyDaysAgoObj)
 
   const [salesRes, apptRes, freqRes] = await Promise.all([
     generateSalesReport(clinicId, thirtyDaysAgo, today),
@@ -53,7 +53,7 @@ export default async function ReportsPage() {
       <div className="hidden print:block text-center border-b-2 border-slate-900 pb-4 mb-8">
         <h1 className="text-3xl font-black text-slate-900 uppercase tracking-wider">Clinic Performance Report</h1>
         <p className="text-sm text-slate-600 mt-1.5 font-semibold">
-          Generated: {new Date().toLocaleDateString()} &bull; Period: {thirtyDaysAgo} to {today}
+          Generated: {formatDate(new Date())} &bull; Period: {thirtyDaysAgo} to {today}
         </p>
       </div>
 

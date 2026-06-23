@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { retriggerNotification, fetchNotifications } from '@/actions/notificationActions'
 import { formatPhone } from '@/utils/phone-helpers'
+import { formatDateTime } from '@/lib/date'
 import type { Notification, NotificationsClientProps } from './types'
 
 export default function NotificationsClient({
@@ -128,14 +129,7 @@ export default function NotificationsClient({
                     </span>
                   </td>
                   <td className="px-6 py-4 text-gray-500 text-xs">
-                    {new Date(notif.created_at).toLocaleString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                      hour: 'numeric',
-                      minute: '2-digit',
-                      hour12: true
-                    })}
+                    {formatDateTime(notif.created_at)}
                   </td>
                   <td className="px-6 py-4 max-w-xs md:max-w-md">
                     <p className="text-slate-800 text-xs truncate" title={notif.message_body}>

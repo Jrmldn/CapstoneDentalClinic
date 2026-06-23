@@ -9,7 +9,7 @@ import {
   ClipboardList,
   Receipt,
   Package,
-  Settings,
+  ShoppingBag,
   Bell,
   Image as ImageIcon,
   History,
@@ -47,7 +47,7 @@ const menuGroups = [
   {
     label: 'Settings',
     items: [
-      { label: 'Services',       href: '/staff-dashboard/services',      icon: Settings,      key: 'services' },
+      { label: 'Products',       href: '/staff-dashboard/services',      icon: ShoppingBag,   key: 'services' },
     ],
   },
 ]

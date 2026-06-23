@@ -5,6 +5,7 @@ import { Building2, Users, Stethoscope, UserCircle, ArrowRight, Loader2 } from '
 import { getSuperadminStats } from '@/actions/dashboardActions'
 import Link from 'next/link'
 import { SuperadminStats } from '@/types/dashboard'
+import { formatDate, formatDateLong } from '@/lib/date'
 
 const colorMap = {
   blue: { card: 'bg-blue-50', icon: 'text-blue-600', text: 'text-blue-700' },
@@ -80,7 +81,7 @@ export default function SuperadminDashboardView() {
 
   const now = new Date()
   const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 18 ? 'Good afternoon' : 'Good evening'
-  const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+  const dateStr = formatDateLong(now)
 
   return (
     <div className="p-6 md:p-8 space-y-8">
@@ -154,11 +155,7 @@ export default function SuperadminDashboardView() {
                   <tr key={clinic.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-3.5 font-semibold text-slate-800">{clinic.name}</td>
                     <td className="px-6 py-3.5 text-xs">
-                      {clinic.created_at ? new Date(clinic.created_at).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                      }) : 'N/A'}
+                      {clinic.created_at ? formatDate(clinic.created_at) : 'N/A'}
                     </td>
                     <td className="px-6 py-3.5">
                       <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${

@@ -23,6 +23,7 @@ import type { PatientRecord } from '../patients/types'
 import type { Service } from '../billing/types'
 import StatCard from './components/StatCard'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
+import { formatDate, formatTime, formatDateLong } from '@/lib/date'
 import { fetchPatientRecord } from '@/actions/patientMedicalActions'
 
 export interface Appointment {
@@ -124,8 +125,8 @@ export default function DentistDashboardView({
               .filter(a => a.status === 'completed')
               .map(a => new Date(a.scheduled_at))
               .sort((a, b) => b.getTime() - a.getTime())
-            const lastVisitDateStr = completedAppts.length > 0 
-              ? completedAppts[0].toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+            const lastVisitDateStr = completedAppts.length > 0
+              ? formatDate(completedAppts[0])
               : 'No past visits'
 
             const bp = medHistory?.blood_pressure || '120/80 mmHg'
@@ -194,7 +195,7 @@ export default function DentistDashboardView({
           {greeting}, Dr. {dentistName} !
         </h1>
         <p className="text-sm text-gray-500 mt-1">
-          Specialty: {specialty || 'General Dentist'} · {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          Specialty: {specialty || 'General Dentist'} · {formatDateLong(new Date())}
         </p>
       </div>
 
@@ -257,11 +258,7 @@ export default function DentistDashboardView({
                 const isExpanded = expandedApptId === appt.id
                 const isBusy = updatingApptId === appt.id || isPending
 
-                const apptTime = new Date(appt.scheduled_at).toLocaleTimeString('en-US', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: false,
-                })
+                const apptTime = formatTime(appt.scheduled_at)
 
                 // Mock duration based on service or typical appointment (e.g. 45 min, 90 min)
                 let durationStr = '45 min'
@@ -435,9 +432,8 @@ export default function DentistDashboardView({
               upcomingAppts.map((appt) => {
                 const patient = appt.patients
                 const service = appt.services
-                const dt = new Date(appt.scheduled_at)
-                const dateStr = dt.toLocaleDateString([], { month: 'short', day: 'numeric' })
-                const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+                const dateStr = formatDate(appt.scheduled_at)
+                const timeStr = formatTime(appt.scheduled_at)
 
                 return (
                   <div key={appt.id} className="px-6 py-3.5 flex items-center justify-between hover:bg-gray-50 transition">

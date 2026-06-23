@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Trash2, Plus, RefreshCw, CalendarX, Sparkles } from 'lucide-react'
 import { manageClinicHolidays } from '@/actions/calendarActions'
+import { formatDate } from '@/lib/date'
 
 interface ClinicHoliday {
   id: number
@@ -140,9 +141,7 @@ export default function HolidaysForm({ clinicId, initialHolidays }: HolidaysForm
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-slate-800 truncate">{holiday.description}</p>
                   <p className="text-xs text-slate-400">
-                    {new Date(holiday.date + 'T00:00:00').toLocaleDateString('en-US', {
-                      weekday: 'short', month: 'long', day: 'numeric', year: 'numeric'
-                    })}
+                    {formatDate(holiday.date)}
                   </p>
                 </div>
               </div>

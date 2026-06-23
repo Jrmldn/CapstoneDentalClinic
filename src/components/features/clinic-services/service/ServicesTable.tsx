@@ -2,9 +2,9 @@
 
 import React from 'react'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
-import { ServicesTableProps, Service } from '@/components/features/clinic-services/types'
-import { useServices } from '@/components/features/clinic-services/useServices'
-import ServiceForm from '@/components/features/clinic-services/ServiceForm'
+import { ServicesTableProps, Service } from './types'
+import { useServices } from './useServices'
+import ServiceForm from './ServiceForm'
 
 function displayPrice(s: Service) {
   if (s.price_min != null && s.price_max != null && s.price_min !== s.price_max) {

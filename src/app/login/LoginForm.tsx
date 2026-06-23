@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase/client'
 import { useEffect, useState } from 'react'
 import { AUTH_ERRORS, AuthErrorCode } from '@/lib/errorMessages'
 import SignUpForm from './SignUpForm'
+import ForgotPasswordForm from './ForgotPasswordForm'
 
 type View = 'sign_in' | 'sign_up' | 'forgotten_password'
 
@@ -23,10 +24,6 @@ export function LoginForm() {
   const redirectTo = clinicId
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback?clinic=${clinicId}`
     : `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`
-
-  const recoveryRedirectTo = clinicId
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback?clinic=${clinicId}&next=/update-password`
-    : `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback?next=/update-password`
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
@@ -61,12 +58,29 @@ export function LoginForm() {
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">{errorData.title}</h3>
               <p className="text-gray-600 text-sm">{errorData.message}</p>
-              <button
-                onClick={() => setIsErrorModalOpen(false)}
-                className="mt-6 w-full py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
-              >
-                Understood
-              </button>
+              {errorCode === 'LINK_EXPIRED' ? (
+                <div className="mt-6 space-y-2">
+                  <button
+                    onClick={() => { setIsErrorModalOpen(false); setView('forgotten_password') }}
+                    className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                  >
+                    Request a new link
+                  </button>
+                  <button
+                    onClick={() => setIsErrorModalOpen(false)}
+                    className="w-full py-2.5 px-4 text-gray-600 hover:text-gray-800 font-medium rounded-lg transition-colors"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setIsErrorModalOpen(false)}
+                  className="mt-6 w-full py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
+                >
+                  Understood
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -128,48 +142,7 @@ export function LoginForm() {
           </div>
         </div>
       ) : view === 'forgotten_password' ? (
-        <div>
-          <h1 className="text-3xl font-bold text-center text-gray-900 mb-2">
-            Reset Password
-          </h1>
-          <p className="text-center text-gray-600 mb-8">
-            Enter your email to receive a password reset link
-          </p>
-          <Auth
-            supabaseClient={supabase}
-            appearance={{
-              theme: ThemeSupa,
-              variables: {
-                default: {
-                  colors: {
-                    brand: '#2563EB',
-                    brandAccent: '#1D4ED8',
-                  },
-                },
-              },
-            }}
-            redirectTo={recoveryRedirectTo}
-            view="forgotten_password"
-            showLinks={false}
-            localization={{
-              variables: {
-                forgotten_password: {
-                  email_label: 'Email',
-                  email_input_placeholder: 'name@example.com',
-                  button_label: 'Send Reset Link',
-                },
-              },
-            }}
-          />
-          <p className="text-center text-sm text-gray-500 mt-6">
-            <button
-              onClick={() => setView('sign_in')}
-              className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
-            >
-              Back to Sign In
-            </button>
-          </p>
-        </div>
+        <ForgotPasswordForm onBackToSignIn={() => setView('sign_in')} />
       ) : (
         <SignUpForm
           redirectTo={redirectTo}

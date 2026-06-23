@@ -28,11 +28,19 @@ export async function createAuthUser(data: {
   return supabaseAdmin.auth.admin.createUser({
     email: data.email,
     password: data.password,
-    email_confirm: true,
+    email_confirm: false,
     user_metadata: {
       full_name: data.fullName,
       role: data.role,
     },
+  })
+}
+
+export async function generateRecoveryLink(email: string, redirectTo: string) {
+  return supabaseAdmin.auth.admin.generateLink({
+    type: 'recovery',
+    email,
+    options: { redirectTo },
   })
 }
 

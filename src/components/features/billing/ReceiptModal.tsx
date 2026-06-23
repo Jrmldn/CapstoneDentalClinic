@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Printer } from 'lucide-react'
+import { formatDate } from '@/lib/date'
 import type { Transaction, InstallmentPlan } from './types'
 
 interface ReceiptModalProps {
@@ -22,9 +23,7 @@ export default function ReceiptModal({ transaction, onClose, clinicName, install
     ? `${transaction.patients.first_name} ${transaction.patients.last_name}`
     : 'Unknown Patient'
 
-  const date = new Date(transaction.created_at).toLocaleDateString('en-US', {
-    month: 'long', day: 'numeric', year: 'numeric',
-  })
+  const date = formatDate(transaction.created_at)
 
   // When an installment plan is still being collected, the receipt must reflect
   // the amount actually paid so far, not the full invoice total.

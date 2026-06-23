@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { X, RefreshCw } from 'lucide-react'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
 import { useAvailableSlots, MILLISECONDS_PER_MINUTE } from './hooks/useAvailableSlots'
+import { toDateKey, formatDateTime } from '@/lib/date'
 import type { Appointment } from './AppointmentTypes'
 
 interface RescheduleModalProps {
@@ -77,7 +78,7 @@ export default function RescheduleModal({
             <p className="font-bold">Current Appointment Details:</p>
             <p>Patient: {appointment.patients ? `${appointment.patients.first_name} ${appointment.patients.last_name}` : 'Unknown'}</p>
             <p>Service: {appointment.services?.name}</p>
-            <p>Current Time: {new Date(appointment.scheduled_at).toLocaleString('en-US')}</p>
+            <p>Current Time: {formatDateTime(appointment.scheduled_at)}</p>
           </div>
 
           <div className="space-y-1">
@@ -85,7 +86,7 @@ export default function RescheduleModal({
             <input
               type="date"
               required
-              min={new Date().toISOString().slice(0, 10)}
+              min={toDateKey()}
               className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-gray-50 focus:ring-2 focus:ring-blue-550"
               value={rescheduleDate}
               onChange={(e) => {

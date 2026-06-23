@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase/client'
+import { signUpPatient } from '@/actions/authActions'
+import { toDateKey } from '@/lib/date'
 import TermsModal from './TermsModal'
 
 interface SignUpFormData {
@@ -11,7 +12,7 @@ interface SignUpFormData {
   phone: string
   first_name: string
   last_name: string
-  date_of_birth: string
+  birthdate: string
 }
 
 interface FormErrors {
@@ -21,7 +22,7 @@ interface FormErrors {
   phone?: string
   first_name?: string
   last_name?: string
-  date_of_birth?: string
+  birthdate?: string
   terms?: string
   general?: string
 }
@@ -39,7 +40,7 @@ export default function SignUpForm({ redirectTo, onSwitchToSignIn }: SignUpFormP
     phone: '',
     first_name: '',
     last_name: '',
-    date_of_birth: '',
+    birthdate: '',
   })
   const [errors, setErrors] = useState<FormErrors>({})
   const [isLoading, setIsLoading] = useState(false)
@@ -65,14 +66,14 @@ export default function SignUpForm({ redirectTo, onSwitchToSignIn }: SignUpFormP
       e.phone = 'Enter a valid phone number'
     }
 
-    if (!form.date_of_birth) {
-      e.date_of_birth = 'Date of birth is required'
+    if (!form.birthdate) {
+      e.birthdate = 'Date of birth is required'
     } else {
-      const dob = new Date(form.date_of_birth)
+      const dob = new Date(form.birthdate)
       const today = new Date()
       const age = today.getFullYear() - dob.getFullYear()
-      if (dob > today) e.date_of_birth = 'Date of birth cannot be in the future'
-      else if (age > 120) e.date_of_birth = 'Enter a valid date of birth'
+      if (dob > today) e.birthdate = 'Date of birth cannot be in the future'
+      else if (age > 120) e.birthdate = 'Enter a valid date of birth'
     }
 
     if (!form.password) {
@@ -107,23 +108,18 @@ export default function SignUpForm({ redirectTo, onSwitchToSignIn }: SignUpFormP
     setErrors({})
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const res = await signUpPatient({
         email: form.email.trim(),
         password: form.password,
-        options: {
-          emailRedirectTo: redirectTo,
-          data: {
-            first_name: form.first_name.trim(),
-            last_name: form.last_name.trim(),
-            phone: form.phone.trim(),
-            date_of_birth: form.date_of_birth,
-            role: 'patient',
-          },
-        },
+        first_name: form.first_name.trim(),
+        last_name: form.last_name.trim(),
+        phone: form.phone.trim(),
+        birthdate: form.birthdate,
+        redirectTo,
       })
 
-      if (error) {
-        setErrors({ general: error.message })
+      if (!res.success) {
+        setErrors({ general: res.error ?? 'Something went wrong. Please try again.' })
         return
       }
 
@@ -250,19 +246,19 @@ export default function SignUpForm({ redirectTo, onSwitchToSignIn }: SignUpFormP
         <div>
           <label className="block text-sm font-normal text-gray-600 mb-1">Date of Birth</label>
           <input
-            name="date_of_birth"
+            name="birthdate"
             type="date"
-            value={form.date_of_birth}
+            value={form.birthdate}
             onChange={handleChange}
-            max={new Date().toISOString().split('T')[0]}
+            max={toDateKey()}
             className={`w-full px-3 py-2 text-sm border rounded bg-transparent outline-none transition-colors
-              ${errors.date_of_birth
+              ${errors.birthdate
                 ? 'border-red-400 focus:border-red-500 bg-red-50'
                 : 'border-gray-300 focus:border-gray-400 focus:outline-none bg-white'
               }`}
           />
-          {errors.date_of_birth && (
-            <p className="mt-1 text-xs text-red-500">{errors.date_of_birth}</p>
+          {errors.birthdate && (
+            <p className="mt-1 text-xs text-red-500">{errors.birthdate}</p>
           )}
         </div>
 

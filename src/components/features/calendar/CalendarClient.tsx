@@ -15,6 +15,7 @@ import { updateAppointmentStatus } from '@/actions/appointmentActions'
 import type { Appointment as RescheduleAppt } from '../appointments/AppointmentTypes'
 import RescheduleModal from '../appointments/RescheduleModal'
 import AddHolidayModal from './components/AddHolidayModal'
+import { toDateKey, formatDate, formatTime } from '@/lib/date'
 
 interface Holiday {
   id: number
@@ -238,7 +239,7 @@ export default function CalendarClient({
               }
 
               const { appts, holiday } = getDayDetails(dateStr)
-              const isToday = new Date().toISOString().slice(0, 10) === dateStr
+              const isToday = toDateKey() === dateStr
               const isSelected = selectedDate === dateStr
 
               let cellBg = 'bg-white hover:border-blue-500'
@@ -299,11 +300,7 @@ export default function CalendarClient({
               </h3>
               {selectedDate && (
                 <span className="text-xs text-gray-500 font-semibold">
-                  {new Date(selectedDate).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
+                  {formatDate(selectedDate)}
                 </span>
               )}
             </div>
@@ -348,11 +345,7 @@ export default function CalendarClient({
                     </p>
                   ) : (
                     selectedDetails.appts.map((appt) => {
-                      const time = new Date(appt.scheduled_at).toLocaleTimeString('en-US', {
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true
-                      })
+                      const time = formatTime(appt.scheduled_at)
                       const patientObj = Array.isArray(appt.patients) ? appt.patients[0] : appt.patients
                       const serviceObj = Array.isArray(appt.services) ? appt.services[0] : appt.services
                       const dentistObj = Array.isArray(appt.dentists) ? appt.dentists[0] : appt.dentists

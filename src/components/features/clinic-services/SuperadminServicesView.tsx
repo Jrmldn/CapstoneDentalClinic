@@ -2,9 +2,11 @@
 
 import React, { useState } from 'react'
 import { Building2, Loader2, ArrowRight, Settings } from 'lucide-react'
-import ServicesTabs from './ServicesTabs'
+import ServicesTable from './service/ServicesTable'
+import ProductsTable from './product/ProductsTable'
 import { fetchServices, fetchProducts } from '@/actions/serviceActions'
-import type { Service, Product } from './types'
+import type { Service } from './service/types'
+import type { Product } from './product/types'
 
 interface ClinicOption {
   id: number
@@ -13,9 +15,21 @@ interface ClinicOption {
 
 interface SuperadminServicesViewProps {
   clinics: ClinicOption[]
+  mode: 'services' | 'products'
 }
 
-export default function SuperadminServicesView({ clinics }: SuperadminServicesViewProps) {
+const COPY = {
+  services: {
+    title: 'Services Management',
+    subtitle: 'Configure, add, or update dental services for each branch clinic.',
+  },
+  products: {
+    title: 'Products Management',
+    subtitle: 'Configure, add, or update retail products for each branch clinic.',
+  },
+}
+
+export default function SuperadminServicesView({ clinics, mode }: SuperadminServicesViewProps) {
   const allClinicIds = clinics.map(c => c.id)
   const [selectedClinicId, setSelectedClinicId] = useState<number | ''>('')
   const [services, setServices] = useState<Service[]>([])
@@ -36,13 +50,13 @@ export default function SuperadminServicesView({ clinics }: SuperadminServicesVi
     setIsLoading(true)
 
     try {
-      const [servicesRes, productsRes] = await Promise.all([
-        fetchServices(clinicId),
-        fetchProducts(clinicId)
-      ])
-
-      setServices(servicesRes.success ? servicesRes.services : [])
-      setProducts(productsRes.success ? productsRes.products : [])
+      if (mode === 'services') {
+        const res = await fetchServices(clinicId)
+        setServices(res.success ? res.services : [])
+      } else {
+        const res = await fetchProducts(clinicId)
+        setProducts(res.success ? res.products : [])
+      }
     } catch (err) {
       console.error('Failed to load items for clinic:', err)
     } finally {
@@ -55,9 +69,9 @@ export default function SuperadminServicesView({ clinics }: SuperadminServicesVi
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-5">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Services &amp; Products Management</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{COPY[mode].title}</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Configure, add, or update dental services and retail products for each branch clinic.
+            {COPY[mode].subtitle}
           </p>
         </div>
 
@@ -91,14 +105,23 @@ export default function SuperadminServicesView({ clinics }: SuperadminServicesVi
         </div>
       ) : selectedClinicId ? (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-xs p-6">
-          <ServicesTabs
-            key={selectedClinicId}
-            clinicId={selectedClinicId}
-            initialServices={services}
-            initialProducts={products}
-            viewerRole="superadmin"
-            allClinicIds={allClinicIds}
-          />
+          {mode === 'services' ? (
+            <ServicesTable
+              key={selectedClinicId}
+              clinicId={selectedClinicId}
+              initialServices={services}
+              viewerRole="superadmin"
+              allClinicIds={allClinicIds}
+            />
+          ) : (
+            <ProductsTable
+              key={selectedClinicId}
+              clinicId={selectedClinicId}
+              initialProducts={products}
+              viewerRole="superadmin"
+              allClinicIds={allClinicIds}
+            />
+          )}
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-20 bg-white border border-gray-100 rounded-2xl shadow-xs text-center px-4">
@@ -107,7 +130,7 @@ export default function SuperadminServicesView({ clinics }: SuperadminServicesVi
           </div>
           <h3 className="font-bold text-slate-900 text-sm">No Branch Selected</h3>
           <p className="text-xs text-slate-400 max-w-sm mt-1 mb-4">
-            Select one of your clinic branches in the header dropdown to manage its services, treatment prices, slot durations, and catalog items.
+            Select one of your clinic branches in the header dropdown to manage its {mode === 'services' ? 'dental services and treatment prices' : 'retail products and prices'}.
           </p>
           <div className="flex items-center gap-1 text-[11px] font-bold text-blue-600 animate-pulse">
             Select a branch above to start <ArrowRight className="w-3.5 h-3.5" />

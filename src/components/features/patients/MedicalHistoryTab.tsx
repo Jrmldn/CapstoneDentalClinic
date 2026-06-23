@@ -2,6 +2,7 @@
 
 import { RefreshCw } from 'lucide-react'
 import { formatPhone } from '@/utils/phone-helpers'
+import { formatDateTime } from '@/lib/date'
 import type { PatientRecord } from './types'
 import type { MedicalHistoryEditState } from './usePatientRecord'
 
@@ -33,14 +34,14 @@ export default function MedicalHistoryTab({ localRecord, viewerRole, lastVisitDa
           <h4 className="font-bold text-slate-900 text-sm">Personal Details</h4>
           {localRecord.medicalHistory?.detailed_info?.profile_updated_by ? (
             <span className="text-[10px] text-gray-400 font-medium">
-              Last updated: {localRecord.medicalHistory.detailed_info.profile_updated_at ? new Date(localRecord.medicalHistory.detailed_info.profile_updated_at).toLocaleString() : '—'}
+              Last updated: {formatDateTime(localRecord.medicalHistory.detailed_info.profile_updated_at)}
               {` by ${localRecord.medicalHistory.detailed_info.profile_updated_by}`}
               {localRecord.medicalHistory.detailed_info.profile_updated_by_branch && ` (${localRecord.medicalHistory.detailed_info.profile_updated_by_branch})`}
             </span>
           ) : (
             localRecord.patient.updated_at && (
               <span className="text-[10px] text-gray-400 font-medium">
-                Last updated: {new Date(localRecord.patient.updated_at).toLocaleString()}
+                Last updated: {formatDateTime(localRecord.patient.updated_at)}
               </span>
             )
           )}
@@ -109,7 +110,7 @@ export default function MedicalHistoryTab({ localRecord, viewerRole, lastVisitDa
           <h4 className="font-bold text-slate-900 text-sm">Medical History Summary</h4>
           {localRecord.medicalHistory && (
             <span className="text-[10px] text-gray-400 font-medium">
-              Last updated: {localRecord.medicalHistory.updated_at ? new Date(localRecord.medicalHistory.updated_at).toLocaleString() : '—'}
+              Last updated: {formatDateTime(localRecord.medicalHistory.updated_at)}
               {localRecord.medicalHistory.detailed_info?.updated_by && ` by ${localRecord.medicalHistory.detailed_info.updated_by}`}
               {localRecord.medicalHistory.detailed_info?.updated_by_branch && ` (${localRecord.medicalHistory.detailed_info.updated_by_branch})`}
             </span>

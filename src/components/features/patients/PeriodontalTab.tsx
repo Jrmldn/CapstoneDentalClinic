@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Plus, X, HeartPulse, ShieldAlert, CheckCircle, HelpCircle } from 'lucide-react'
 import { addPeriodontalScreening, addTmjAssessment } from '@/actions/clinicalRecordActions'
+import { formatDate } from '@/lib/date'
 import type { PeriodontalScreening, TmjAssessment } from './types'
 
 interface PeriodontalTabProps {
@@ -334,7 +335,7 @@ export default function PeriodontalTab({
           <h4 className="font-bold text-slate-800 text-sm">Periodontal Screening (PSR)</h4>
           <p className="text-[11px] text-gray-400 mt-0.5">
             {latestScreening?.screened_at 
-              ? `Last screening: ${new Date(latestScreening.screened_at).toLocaleDateString()}` 
+              ? `Last screening: ${formatDate(latestScreening.screened_at)}`
               : 'Default baseline representation'}
           </p>
         </div>
@@ -398,7 +399,7 @@ export default function PeriodontalTab({
             <h4 className="font-bold text-slate-800 text-sm">TMJ Assessment</h4>
             <p className="text-[11px] text-gray-400 mt-0.5">
               {latestTmj?.assessed_at
-                ? `Last assessed: ${new Date(latestTmj.assessed_at).toLocaleDateString()}`
+                ? `Last assessed: ${formatDate(latestTmj.assessed_at)}`
                 : 'Default baseline representation'}
             </p>
           </div>

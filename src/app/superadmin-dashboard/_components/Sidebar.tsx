@@ -7,7 +7,8 @@ import {
   Home,
   Users,
   BarChart3,
-  Settings,
+  Stethoscope,
+  ShoppingBag,
   Image as ImageIcon,
   CalendarDays,
 } from 'lucide-react'
@@ -24,7 +25,8 @@ const menuGroups = [
     items: [
       { label: 'Clinics & Branches', href: '/superadmin-dashboard/clinic',    icon: Home,          key: 'clinic' },
       { label: 'Personnel Directory',href: '/superadmin-dashboard/personnel', icon: Users,         key: 'personnel' },
-      { label: 'Services & Products',href: '/superadmin-dashboard/services',  icon: Settings,      key: 'services' },
+      { label: 'Services',          href: '/superadmin-dashboard/services',   icon: Stethoscope,   key: 'services' },
+      { label: 'Products',          href: '/superadmin-dashboard/products',   icon: ShoppingBag,   key: 'products' },
       { label: 'Installment Plans', href: '/superadmin-dashboard/installments', icon: CalendarDays, key: 'installments' },
     ],
   },

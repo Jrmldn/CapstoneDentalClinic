@@ -2,9 +2,9 @@
 
 import React from 'react'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
-import { ProductsTableProps, Product } from '@/components/features/clinic-services/types'
-import { useProducts } from '@/components/features/clinic-services/useProducts'
-import ProductForm from '@/components/features/clinic-services/ProductForm'
+import { ProductsTableProps, Product } from './types'
+import { useProducts } from './useProducts'
+import ProductForm from './ProductForm'
 
 function displayPrice(p: Product) {
   if (p.price_min != null && p.price_max != null && p.price_min !== p.price_max) {

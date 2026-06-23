@@ -5,6 +5,7 @@ import { Plus, X, ChevronDown, ChevronUp, Calendar, BookOpen, User } from 'lucid
 import { addTreatmentRecord } from '@/actions/clinicalRecordActions'
 import { fetchServices } from '@/actions/serviceActions'
 import { toothInputToNumber, toothNumberToLabel } from '@/utils/teeth'
+import { formatDate, formatDateTime } from '@/lib/date'
 import type { TreatmentHistory } from './types'
 
 interface TreatmentTabProps {
@@ -243,13 +244,7 @@ export default function TreatmentTab({
             const trCode = `TR-${(treatments.length - idx).toString().padStart(3, '0')}`
 
             // Date formatting
-            const dateStr = treat.performed_at
-              ? new Date(treat.performed_at).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })
-              : '—'
+            const dateStr = formatDate(treat.performed_at)
 
             return (
               <div
@@ -313,7 +308,7 @@ export default function TreatmentTab({
                           if (!clinicObj) return null
                           return (
                             <span className="text-slate-400 font-medium">
-                              · Recorded at {clinicObj.name} on {treat.performed_at ? new Date(treat.performed_at).toLocaleString() : '—'}
+                              · Recorded at {clinicObj.name} on {formatDateTime(treat.performed_at)}
                             </span>
                           )
                         })()}

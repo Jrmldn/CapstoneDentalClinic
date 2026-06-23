@@ -3,6 +3,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { Search, ChevronLeft, ChevronRight, Eye, CheckCircle2, Clock, XCircle, AlertTriangle } from 'lucide-react'
 import InstallmentDetailModal from './InstallmentDetailModal'
+import { toDateKey, formatDate } from '@/lib/date'
 import type { InstallmentPlan, InstallmentPayment } from './types'
 
 interface SuperadminInstallmentsClientProps {
@@ -10,7 +11,7 @@ interface SuperadminInstallmentsClientProps {
   clinicOptions: { id: number; name: string }[]
 }
 
-const TODAY = new Date().toISOString().split('T')[0]
+const TODAY = toDateKey()
 
 function getPlanProgress(plan: InstallmentPlan) {
   const payments = plan.installment_payments ?? []
@@ -206,9 +207,7 @@ export default function SuperadminInstallmentsClient({
                       </span>
                     </td>
                     <td className="px-4 py-3 text-slate-500 text-xs">
-                      {new Date(plan.created_at).toLocaleDateString('en-US', {
-                        month: 'short', day: 'numeric', year: 'numeric'
-                      })}
+                      {formatDate(plan.created_at)}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button

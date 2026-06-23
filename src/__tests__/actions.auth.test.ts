@@ -1,9 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+// addStaff/addDentist build recovery callback URLs from this base.
+process.env.NEXT_PUBLIC_SITE_URL = 'http://localhost:3000'
+
 // Module mocks (hoisted before imports)
 vi.mock('@/lib/auth/ensureRole')
 vi.mock('@/lib/auth/validatePatientAccess')
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
+
+vi.mock('@/lib/email/resend', () => ({
+  sendEmail: vi.fn().mockResolvedValue({ success: true }),
+}))
+vi.mock('@/lib/email/templates', () => ({
+  staffVerificationEmail: vi.fn(() => ({ subject: 's', html: 'h' })),
+  patientVerificationEmail: vi.fn(() => ({ subject: 's', html: 'h' })),
+  passwordResetEmail: vi.fn(() => ({ subject: 's', html: 'h' })),
+}))
 
 vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: { from: vi.fn() },
@@ -43,6 +55,7 @@ vi.mock('@/services/personnelService', () => ({
   getDentistsList: vi.fn(),
   updatePersonnelRecord: vi.fn(),
   getMatchingUserIds: vi.fn(),
+  generateRecoveryLink: vi.fn(),
 }))
 
 vi.mock('@/utils/personnel-helpers', () => ({
@@ -80,6 +93,7 @@ import {
   insertStaff,
   getAllStaff,
   getAllDentists,
+  generateRecoveryLink,
 } from '@/services/personnelService'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
 import {
@@ -198,6 +212,7 @@ describe('2.4 personnelActions — superadmin-only enforcement', () => {
       mockEnsureRole.mockResolvedValue({ success: true, userId: 'admin-uid', role: 'superadmin' })
       vi.mocked(createAuthUser).mockResolvedValue({ data: { user: { id: 'new-uid' } }, error: null } as never)
       vi.mocked(insertStaff).mockResolvedValue({ error: null } as never)
+      vi.mocked(generateRecoveryLink).mockResolvedValue({ data: { properties: { hashed_token: 'H' } }, error: null } as never)
 
       const result = await addStaff({ email: 'x@x.com', password: 'p', firstName: 'A', lastName: 'B', clinicId: 1 } as never)
       expect(result.success).toBe(true)

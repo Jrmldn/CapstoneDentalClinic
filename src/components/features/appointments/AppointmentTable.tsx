@@ -3,6 +3,7 @@
 import { Calendar, Clock, Check, X, DollarSign } from 'lucide-react'
 import type { Appointment } from './AppointmentTypes'
 import { formatPhone } from '@/utils/phone-helpers'
+import { formatDate, formatTime } from '@/lib/date'
 
 interface AppointmentTableProps {
   filteredAppointments: Appointment[]
@@ -53,17 +54,8 @@ export default function AppointmentTable({
           </thead>
           <tbody className="divide-y divide-gray-100 text-sm text-slate-700">
             {filteredAppointments.map((appt) => {
-              const dateObj = new Date(appt.scheduled_at)
-              const formattedDate = dateObj.toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric'
-              })
-              const formattedTime = dateObj.toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-              })
+              const formattedDate = formatDate(appt.scheduled_at)
+              const formattedTime = formatTime(appt.scheduled_at)
 
               return (
                 <tr key={appt.id} className="hover:bg-gray-50/50 transition">

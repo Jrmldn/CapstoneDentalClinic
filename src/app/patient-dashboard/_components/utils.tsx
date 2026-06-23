@@ -1,21 +1,10 @@
 import React from 'react'
 import { Badge } from '@/components/ui/badge'
+import { formatDateLong, formatTime as formatTimeManila } from '@/lib/date'
 
-export const formatDate = (dateStr: string) => {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
-}
+export const formatDate = (dateStr: string) => formatDateLong(dateStr)
 
-export const formatTime = (dateStr: string) => {
-  return new Date(dateStr).toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
+export const formatTime = (dateStr: string) => formatTimeManila(dateStr)
 
 export const getStatusBadge = (status: string) => {
   switch (status) {

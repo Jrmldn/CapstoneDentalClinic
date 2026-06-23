@@ -19,6 +19,7 @@ import {
   TransactionItem
 } from '@/actions/billingActions'
 import type { AppointmentOption, Service, Product, Patient } from './types'
+import { formatDate, formatTime } from '@/lib/date'
 
 const SENIOR_PWD_DISCOUNT_RATE = 0.2
 
@@ -350,9 +351,8 @@ export default function CreateInvoiceModal({
                   const patientObj = Array.isArray(a.patients) ? a.patients[0] : a.patients
                   const serviceObj = Array.isArray(a.services) ? a.services[0] : a.services
                   const patientName = patientObj ? `${patientObj.first_name} ${patientObj.last_name}` : 'Unknown'
-                  const dateObj = new Date(a.scheduled_at)
-                  const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                  const formattedTime = dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+                  const formattedDate = formatDate(a.scheduled_at)
+                  const formattedTime = formatTime(a.scheduled_at)
                   return (
                     <option key={a.id} value={a.id}>
                       {patientName} — {serviceObj?.name ?? 'No service'} — {formattedDate} at {formattedTime}

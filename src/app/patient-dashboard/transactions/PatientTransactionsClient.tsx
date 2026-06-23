@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Receipt, Eye } from 'lucide-react'
 import ReceiptModal from '@/components/features/billing/ReceiptModal'
+import { formatDate } from '@/lib/date'
 import type { Transaction, InstallmentPlan } from '@/components/features/billing/types'
 
 interface PatientTransactionsClientProps {
@@ -49,7 +50,7 @@ export default function PatientTransactionsClient({ transactions, installmentPla
               </span>
             </div>
             <p className="text-xs text-gray-400">
-              {new Date(tx.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              {formatDate(tx.created_at)}
             </p>
             {tx.transaction_items && tx.transaction_items.length > 0 && (
               <p className="text-sm text-slate-600 truncate">

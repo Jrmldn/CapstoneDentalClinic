@@ -7,6 +7,7 @@ import { calculateStaffDashboardStats } from '@/utils/dashboard-helpers'
 import StaffDashboardView, { Appointment } from '@/components/features/dashboard/StaffDashboardView'
 import { StaffRawAppointment } from '@/components/features/dashboard/types'
 import { normalizeRelation } from '@/lib/utils'
+import { toDateKey } from '@/lib/date'
 import { AlertCircle } from 'lucide-react'
 
 export default async function StaffDashboardPage() {
@@ -28,7 +29,7 @@ export default async function StaffDashboardPage() {
   }
 
   const clinicId = staffRecord.clinic_id
-  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
+  const today = toDateKey()
 
   // Fetch all dashboard data in parallel
   const [

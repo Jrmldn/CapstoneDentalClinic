@@ -10,6 +10,7 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { PatientRecord } from './types'
+import { toDateKey, formatDate, formatTime } from '@/lib/date'
 
 interface CalendarTabProps {
   record: PatientRecord
@@ -140,7 +141,7 @@ export function CalendarTab({
               }
 
               const dayAppts = getApptsByDate(dateStr)
-              const todayStr = new Date().toISOString().slice(0, 10)
+              const todayStr = toDateKey()
               const isToday = todayStr === dateStr
               const isSelected = selectedCalDate === dateStr
 
@@ -192,11 +193,7 @@ export function CalendarTab({
               </h3>
               {selectedCalDate && (
                 <span className="text-xs text-gray-500 font-semibold">
-                  {new Date(selectedCalDate + 'T00:00:00').toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
+                  {formatDate(selectedCalDate)}
                 </span>
               )}
             </div>
@@ -218,11 +215,7 @@ export function CalendarTab({
                     </p>
                   ) : (
                     selectedCalAppts.map((appt: any) => {
-                      const time = new Date(appt.scheduled_at).toLocaleTimeString('en-US', {
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true
-                      })
+                      const time = formatTime(appt.scheduled_at)
                       const colors = getStatusColor(appt.status)
                       return (
                         <div key={appt.id} className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-1.5">

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { fetchPatientRecord, updatePatientMedicalHistory } from '@/actions/patientMedicalActions'
 import { addClinicalAssessment } from '@/actions/clinicalRecordActions'
+import { formatDate } from '@/lib/date'
 import type { PatientRecord } from './types'
 
 export interface MedicalHistoryEditState {
@@ -152,11 +153,7 @@ export function usePatientRecord(
       .map(appt => new Date(appt.scheduled_at))
       .sort((a, b) => b.getTime() - a.getTime())
     if (completedAppts.length === 0) return 'No visits recorded'
-    return completedAppts[0].toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric'
-    })
+    return formatDate(completedAppts[0])
   })()
 
   return {
