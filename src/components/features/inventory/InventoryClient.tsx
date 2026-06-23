@@ -5,6 +5,7 @@ import { Plus, Tag, ArrowUpDown, PackageX, PackageCheck, Clock, ShieldAlert, Ale
 import type { RowAction } from '@/components/common/DataTable'
 import { fetchInventory, fetchCategories, deleteInventoryItem } from '@/actions/inventoryActions'
 import { getInventoryStatus, getInventoryStatuses, summarizeInventory, isExpired, isExpiringSoon, isStockLow } from '@/utils/inventory-helpers'
+import { formatDate } from '@/lib/date'
 import DataTable, { type ColumnDef } from '@/components/common/DataTable'
 import AddInventoryModal from '@/components/features/inventory/AddInventoryModal'
 import EditInventoryModal from '@/components/features/inventory/EditInventoryModal'
@@ -160,7 +161,7 @@ export default function InventoryClient({ clinicId, initialItems, initialCategor
         const soon = isExpiringSoon(dateStr)
         return (
           <span className={`text-sm font-medium ${expired ? 'text-red-600' : soon ? 'text-amber-600' : 'text-slate-600'}`}>
-            {new Date(dateStr).toLocaleDateString()}
+            {formatDate(dateStr)}
           </span>
         )
       },

@@ -12,6 +12,7 @@ import {
 import Link from 'next/link'
 import { StaffDashboardStats } from '@/utils/dashboard-helpers'
 import StatCard from './components/StatCard'
+import { formatTime, formatDateLong } from '@/lib/date'
 
 export interface Appointment {
   id: number
@@ -56,7 +57,7 @@ export default function StaffDashboardView({ staffName, todayAppts, stats }: Sta
           {greeting}, {staffName} !
         </h1>
         <p className="text-sm text-gray-500 mt-1">
-          {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          {formatDateLong(new Date())}
         </p>
       </div>
 
@@ -119,9 +120,7 @@ export default function StaffDashboardView({ staffName, todayAppts, stats }: Sta
               todayAppts.slice(0, 6).map((appt) => {
                 const patient = appt.patients
                 const service = appt.services
-                const time = new Date(appt.scheduled_at).toLocaleTimeString('en-US', {
-                  hour: 'numeric', minute: '2-digit', hour12: true
-                })
+                const time = formatTime(appt.scheduled_at)
                 return (
                   <div key={appt.id} className="px-6 py-3 flex items-center justify-between hover:bg-gray-50 transition">
                     <div className="flex items-center gap-3 min-w-0">

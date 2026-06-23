@@ -3,6 +3,7 @@
 import { DollarSign, Receipt, CalendarDays, CheckCircle, Eye } from 'lucide-react'
 import { normalizeRelation } from '@/lib/utils'
 import { getEligibleInstallmentService } from '@/utils/installment-helpers'
+import { formatDate } from '@/lib/date'
 import type { Transaction, InstallmentPlan } from './types'
 
 function getDentistName(tx: Transaction): string | null {
@@ -86,9 +87,7 @@ export default function TransactionTable({
                     )}
                   </td>
                   <td className="px-6 py-4 text-gray-500">
-                    {new Date(tx.created_at).toLocaleDateString('en-US', {
-                      month: 'short', day: 'numeric', year: 'numeric'
-                    })}
+                    {formatDate(tx.created_at)}
                   </td>
                   <td className="px-6 py-4 font-medium">₱{Number(tx.subtotal).toLocaleString()}</td>
                   <td className="px-6 py-4 text-xs text-indigo-600 font-medium">

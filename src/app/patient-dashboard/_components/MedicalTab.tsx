@@ -5,6 +5,7 @@ import { ClipboardList, FileText, HeartPulse, Edit2, Check, X, RefreshCw, AlertC
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { PatientRecord } from './types'
 import { formatDate } from './utils'
+import { formatDateTime } from '@/lib/date'
 import { updatePatientMedicalHistory } from '@/actions/patientMedicalActions'
 import { useRouter } from 'next/navigation'
 
@@ -189,7 +190,7 @@ export function MedicalTab({ record }: MedicalTabProps) {
 
               {record.medicalHistory && (
                 <div className="md:col-span-3 text-[10px] text-slate-400 font-medium pt-2 border-t border-slate-100">
-                  Last updated: {record.medicalHistory.updated_at ? new Date(record.medicalHistory.updated_at).toLocaleString() : '—'}
+                  Last updated: {formatDateTime(record.medicalHistory.updated_at)}
                   {record.medicalHistory.detailed_info?.updated_by && ` by ${record.medicalHistory.detailed_info.updated_by}`}
                   {record.medicalHistory.detailed_info?.updated_by_branch && ` (${record.medicalHistory.detailed_info.updated_by_branch})`}
                 </div>

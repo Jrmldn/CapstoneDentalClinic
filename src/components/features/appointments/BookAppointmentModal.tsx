@@ -8,6 +8,7 @@ import { useAvailableSlots, MILLISECONDS_PER_MINUTE } from './hooks/useAvailable
 import { registerPatient } from '@/actions/patientCoreActions'
 import type { Patient, Service, Dentist } from './AppointmentTypes'
 import { formatPhone } from '@/utils/phone-helpers'
+import { toDateKey } from '@/lib/date'
 
 interface BookAppointmentModalProps {
   isOpen: boolean
@@ -323,7 +324,7 @@ export default function BookAppointmentModal({
               <input
                 type="date"
                 required
-                min={new Date().toISOString().slice(0, 10)}
+                min={toDateKey()}
                 className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500"
                 value={bookingDate}
                 onChange={(e) => {

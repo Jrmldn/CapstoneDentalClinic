@@ -14,6 +14,7 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { toDateKey } from '@/lib/date'
 import { createAppointment, updateAppointmentStatus } from '@/actions/appointmentActions'
 import { getAvailableSlots, TimeSlot } from '@/actions/slotAvailabilityActions'
 import { getBranchData, BranchDentist, BranchService } from '@/actions/bookingActions'
@@ -120,7 +121,7 @@ export function BookingTab({
       setBookingDentist(dId)
       setBookingService(sId)
       if (existingAppt.scheduled_at) {
-        const datePart = new Date(existingAppt.scheduled_at).toISOString().slice(0, 10)
+        const datePart = toDateKey(existingAppt.scheduled_at)
         setBookingDate(datePart)
       }
     }
@@ -359,7 +360,7 @@ export function BookingTab({
                   <input
                     type="date"
                     value={bookingDate}
-                    min={new Date().toISOString().split('T')[0]}
+                    min={toDateKey()}
                     onChange={(e) => {
                       setBookingDate(e.target.value)
                       fetchSlots(e.target.value, bookingDentist, bookingService)

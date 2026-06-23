@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus, X, ClipboardCheck, Pill, Printer } from 'lucide-react'
 import { addPrescription } from '@/actions/clinicalRecordActions'
+import { formatDate } from '@/lib/date'
 import type { Prescription, PatientInfo } from './types'
 
 interface PrescriptionsTabProps {
@@ -67,7 +68,7 @@ export default function PrescriptionsTab({
     }
   }
 
-  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  const today = formatDate(new Date())
   const patientName = patient ? `${patient.first_name} ${patient.last_name}` : 'Patient'
 
   const printContent = (
@@ -118,9 +119,7 @@ export default function PrescriptionsTab({
       {/* Rx cards */}
       {prescriptions.map((pres, i) => {
         const dentist = Array.isArray(pres.dentists) ? pres.dentists[0] : pres.dentists
-        const date = pres.prescribed_at
-          ? new Date(pres.prescribed_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-          : '—'
+        const date = formatDate(pres.prescribed_at)
         return (
           <div key={pres.id} style={{ display: 'flex', gap: '14px', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px', marginBottom: '12px', pageBreakInside: 'avoid' }}>
             <div style={{ width: '26px', height: '26px', background: '#dbeafe', color: '#1d4ed8', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, flexShrink: 0, marginTop: '2px' }}>
@@ -290,13 +289,7 @@ export default function PrescriptionsTab({
         ) : (
           prescriptions.map((pres) => {
             const dentistObj = Array.isArray(pres.dentists) ? pres.dentists[0] : pres.dentists
-            const prescribedDate = pres.prescribed_at
-              ? new Date(pres.prescribed_at).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })
-              : '—'
+            const prescribedDate = formatDate(pres.prescribed_at)
 
             // Determine active/completed status (e.g. active if within 7 days, or by parsing duration)
             const isCompleted = pres.duration?.toLowerCase().includes('completed') ||

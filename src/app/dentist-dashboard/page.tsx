@@ -5,6 +5,7 @@ import DentistDashboardView, { Appointment } from '@/components/features/dashboa
 import { DentistRawAppointment } from '@/components/features/dashboard/types'
 import type { Service } from '@/components/features/billing/types'
 import { normalizeRelation } from '@/lib/utils'
+import { toDateKey } from '@/lib/date'
 import { AlertCircle } from 'lucide-react'
 
 export const metadata = { title: 'Dentist Portal — AppoinDent' }
@@ -31,7 +32,7 @@ export default async function DentistDashboardPage() {
 
   const dentistId = dentistRecord.id
   const clinicId = dentistRecord.clinic_id
-  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
+  const today = toDateKey()
 
   // Fetch dashboard data in parallel
   const [

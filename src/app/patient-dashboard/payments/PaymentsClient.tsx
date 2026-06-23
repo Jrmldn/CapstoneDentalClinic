@@ -3,14 +3,9 @@
 import React, { useState } from 'react'
 import { CheckCircle2, AlertTriangle, Clock, CalendarDays, Info } from 'lucide-react'
 import PaymentModal from '@/components/features/billing/PaymentModal'
+import { toDateKey, formatDate } from '@/lib/date'
 
-const TODAY = new Date().toISOString().split('T')[0]
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric',
-  })
-}
+const TODAY = toDateKey()
 
 function daysUntil(dateStr: string) {
   return Math.ceil((new Date(dateStr + 'T00:00:00').getTime() - Date.now()) / 86400000)

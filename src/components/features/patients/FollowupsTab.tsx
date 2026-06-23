@@ -5,6 +5,7 @@ import { Calendar, Plus, X, Clock, HelpCircle } from 'lucide-react'
 import { createAppointment } from '@/actions/appointmentActions'
 import { getAvailableSlots } from '@/actions/slotAvailabilityActions'
 import { fetchServices } from '@/actions/serviceActions'
+import { toDateKey, formatDate, formatTime } from '@/lib/date'
 import type { AppointmentRecord } from './types'
 
 interface FollowupsTabProps {
@@ -167,7 +168,7 @@ export default function FollowupsTab({
                 type="date"
                 className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs bg-gray-50 focus:bg-white focus:ring-1 focus:ring-blue-500"
                 value={date}
-                min={new Date().toLocaleDateString('en-CA')}
+                min={toDateKey()}
                 onChange={e => {
                   setDate(e.target.value)
                   setSelectedSlot(null)
@@ -250,17 +251,8 @@ export default function FollowupsTab({
           followups.map((appt) => {
             const dentistObj = Array.isArray(appt.dentists) ? appt.dentists[0] : appt.dentists
             const serviceObj = Array.isArray(appt.services) ? appt.services[0] : appt.services
-            const dt = new Date(appt.scheduled_at)
-            const dateStr = dt.toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })
-            const timeStr = dt.toLocaleTimeString('en-US', {
-              hour: 'numeric',
-              minute: '2-digit',
-              hour12: true,
-            })
+            const dateStr = formatDate(appt.scheduled_at)
+            const timeStr = formatTime(appt.scheduled_at)
 
             return (
               <div
@@ -291,7 +283,7 @@ export default function FollowupsTab({
                       if (!clinicObj) return null
                       return (
                         <p className="text-[9px] text-slate-400 font-semibold mt-0.5">
-                          Scheduled at {clinicObj.name} {appt.booked_at ? `on ${new Date(appt.booked_at).toLocaleDateString()}` : ''}
+                          Scheduled at {clinicObj.name} {appt.booked_at ? `on ${formatDate(appt.booked_at)}` : ''}
                         </p>
                       )
                     })()}

@@ -17,8 +17,11 @@ import {
   getAllDentists,
   getStaffList,
   getDentistsList,
-  updatePersonnelRecord
+  updatePersonnelRecord,
+  generateRecoveryLink,
 } from '@/services/personnelService'
+import { sendEmail } from '@/lib/email/resend'
+import { staffVerificationEmail } from '@/lib/email/templates'
 import {
   getPaginationRange,
   formatStaff,
@@ -61,6 +64,30 @@ export async function addStaff(data: StaffData) {
       throw new Error(`Database error: ${staffError.message}`)
     }
 
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? ''
+    const { data: linkData, error: linkError } = await generateRecoveryLink(data.email, `${siteUrl}/auth/callback`)
+
+    if (linkError || !linkData?.properties?.hashed_token) {
+      await deleteUserRecord(authData.user.id)
+      await deleteAuthUser(authData.user.id)
+      throw new Error('Failed to generate verification link.')
+    }
+
+    const callbackUrl = new URL(`${siteUrl}/auth/callback`)
+    callbackUrl.searchParams.set('token_hash', linkData.properties.hashed_token)
+    callbackUrl.searchParams.set('type', 'recovery')
+    callbackUrl.searchParams.set('clinic', String(data.clinicId))
+    callbackUrl.searchParams.set('next', '/update-password')
+
+    const template = staffVerificationEmail(callbackUrl.toString(), `${data.firstName} ${data.lastName}`)
+    const sent = await sendEmail({ to: data.email, ...template })
+
+    if (!sent.success) {
+      await deleteUserRecord(authData.user.id)
+      await deleteAuthUser(authData.user.id)
+      throw new Error('Failed to send staff invitation email.')
+    }
+
     revalidatePath('/superadmin-dashboard/personnel')
     return { success: true }
   } catch (error) {
@@ -97,6 +124,30 @@ export async function addDentist(data: DentistData) {
       await deleteUserRecord(authData.user.id)
       await deleteAuthUser(authData.user.id)
       throw new Error(`Database error: ${dentistError.message}`)
+    }
+
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? ''
+    const { data: linkData, error: linkError } = await generateRecoveryLink(data.email, `${siteUrl}/auth/callback`)
+
+    if (linkError || !linkData?.properties?.hashed_token) {
+      await deleteUserRecord(authData.user.id)
+      await deleteAuthUser(authData.user.id)
+      throw new Error('Failed to generate verification link.')
+    }
+
+    const callbackUrl = new URL(`${siteUrl}/auth/callback`)
+    callbackUrl.searchParams.set('token_hash', linkData.properties.hashed_token)
+    callbackUrl.searchParams.set('type', 'recovery')
+    callbackUrl.searchParams.set('clinic', String(data.clinicId))
+    callbackUrl.searchParams.set('next', '/update-password')
+
+    const template = staffVerificationEmail(callbackUrl.toString(), `${data.firstName} ${data.lastName}`)
+    const sent = await sendEmail({ to: data.email, ...template })
+
+    if (!sent.success) {
+      await deleteUserRecord(authData.user.id)
+      await deleteAuthUser(authData.user.id)
+      throw new Error('Failed to send dentist invitation email.')
     }
 
     revalidatePath('/superadmin-dashboard/personnel')

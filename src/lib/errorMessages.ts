@@ -3,6 +3,7 @@ export const ERROR_CODES = {
   PATIENT_ROUTING_FAILED: 'PATIENT_ROUTING_FAILED',
   NO_SESSION: 'NO_SESSION',
   INVALID_LINK: 'INVALID_LINK',
+  LINK_EXPIRED: 'LINK_EXPIRED',
 } as const;
 
 export const AUTH_ERRORS = {
@@ -21,6 +22,10 @@ export const AUTH_ERRORS = {
   [ERROR_CODES.INVALID_LINK]: {
     title: "Invalid Link",
     message: "This link has expired or is invalid. Please request a new one.",
+  },
+  [ERROR_CODES.LINK_EXPIRED]: {
+    title: "Link Expired",
+    message: "This link has expired or was already used. Request a new one below.",
   },
   DEFAULT: {
     title: "Authentication Error",

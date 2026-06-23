@@ -1,26 +1,27 @@
 import { createServerClient } from '@supabase/ssr'
+import type { EmailOtpType } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { logLogin } from '@/actions/logLogin'
 
 const callbackParamsSchema = z.object({
-  code:       z.string().optional(),
+  code: z.string().optional(),
   token_hash: z.string().optional(),
-  type:       z.enum(['recovery', 'email_change', 'email', 'signup', 'magiclink']).optional(),
-  next:       z.string().regex(/^\//).optional(),  // must be a relative path
-  clinic:     z.string().regex(/^\d+$/).optional(), // numeric string
+  type: z.enum(['recovery', 'email_change', 'email', 'signup', 'magiclink']).optional(),
+  next: z.string().regex(/^\//).optional(),  // must be a relative path
+  clinic: z.string().regex(/^\d+$/).optional(), // numeric string
 })
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
 
   const parsed = callbackParamsSchema.safeParse({
-    code:       searchParams.get('code')       ?? undefined,
+    code: searchParams.get('code') ?? undefined,
     token_hash: searchParams.get('token_hash') ?? undefined,
-    type:       searchParams.get('type')       ?? undefined,
-    next:       searchParams.get('next')       ?? undefined,
-    clinic:     searchParams.get('clinic')     ?? undefined,
+    type: searchParams.get('type') ?? undefined,
+    next: searchParams.get('next') ?? undefined,
+    clinic: searchParams.get('clinic') ?? undefined,
   })
 
   if (!parsed.success) {
@@ -73,17 +74,24 @@ export async function GET(request: NextRequest) {
       }
     }
   } else if (tokenHash && type) {
-    // 🏆 Fallback: Handle direct email link hash confirmations securely
     const { data, error } = await supabase.auth.verifyOtp({
       token_hash: tokenHash,
-      type: type as any,
+      type: type as EmailOtpType,
     })
 
     if (!error && data?.user) {
       sessionUser = data.user
-      if (type === 'recovery') {
-        isRecoveryFlow = true
+    } else {
+      // Token may already be consumed if Supabase's /verify endpoint processed it
+      // before redirecting here — fall back to the session it already established.
+      const { data: userData } = await supabase.auth.getUser()
+      if (userData?.user) {
+        sessionUser = userData.user
       }
+    }
+
+    if (sessionUser && type === 'recovery') {
+      isRecoveryFlow = true
     }
   } else {
     // Fallback context validation for active browser sessions
@@ -160,6 +168,11 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(new URL('/login?error=PATIENT_ROUTING_FAILED', request.url))
       }
     }
+  }
+  // A token or code was supplied but no session could be established — it was
+  // already used or has expired. Steer the user to request a fresh link.
+  if (code || tokenHash) {
+    return NextResponse.redirect(new URL('/login?error=LINK_EXPIRED', request.url))
   }
 
   // Fallback Catchall for Unauthenticated/Mismatched Actions

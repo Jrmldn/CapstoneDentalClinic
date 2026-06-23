@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { X, AlertCircle, RefreshCw, CalendarDays } from 'lucide-react'
 import { createInstallmentPlan } from '@/actions/installmentActions'
 import { deriveInstallmentSchedule, getEligibleInstallmentService } from '@/utils/installment-helpers'
+import { toDateKey, formatDate } from '@/lib/date'
 import type { Transaction } from './types'
 
 interface InstallmentSetupModalProps {
@@ -15,7 +16,7 @@ interface InstallmentSetupModalProps {
   onSuccess: () => void
 }
 
-const TODAY = new Date().toISOString().split('T')[0]
+const TODAY = toDateKey()
 
 export default function InstallmentSetupModal({
   isOpen,
@@ -154,9 +155,7 @@ export default function InstallmentSetupModal({
                     <div key={inst.installment_number} className="grid grid-cols-[28px_1fr_auto] gap-2 items-center text-sm">
                       <span className="text-xs text-slate-400 font-semibold text-right">{inst.installment_number}.</span>
                       <span className="text-slate-600">
-                        {new Date(inst.due_date + 'T00:00:00').toLocaleDateString('en-US', {
-                          month: 'short', day: 'numeric', year: 'numeric'
-                        })}
+                        {formatDate(inst.due_date)}
                         {inst.installment_number === 1 && (
                           <span className="ml-1.5 text-[10px] font-bold text-indigo-600">DOWNPAYMENT</span>
                         )}

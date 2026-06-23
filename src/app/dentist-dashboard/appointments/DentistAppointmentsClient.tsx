@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, Calendar, ClipboardList } from 'lucide-react'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
+import { formatDate, formatTime } from '@/lib/date'
 import DentistCompleteBillingModal from '@/components/features/appointments/DentistCompleteBillingModal'
 import type { Appointment } from '@/components/features/dashboard/DentistDashboardView'
 import type { Service } from '@/components/features/billing/types'
@@ -130,9 +131,8 @@ export default function DentistAppointmentsClient({ appointments, clinicId, dent
             <tbody className="divide-y divide-gray-100 text-sm text-slate-700">
               {filtered.map(appt => {
                 const isBusy = updatingId === appt.id
-                const dt = new Date(appt.scheduled_at)
-                const dateStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                const timeStr = dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+                const dateStr = formatDate(appt.scheduled_at)
+                const timeStr = formatTime(appt.scheduled_at)
 
                 return (
                   <tr key={appt.id} className="hover:bg-gray-50/50 transition">

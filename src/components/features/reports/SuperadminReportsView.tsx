@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { BarChart3, Building, Loader2, ArrowRight } from 'lucide-react'
 import ReportsClient from './ReportsClient'
+import { toDateKey } from '@/lib/date'
 import {
   generateSalesReport,
   generateAppointmentSummary,
@@ -26,12 +27,11 @@ export default function SuperadminReportsView({ clinics }: SuperadminReportsView
   const [isLoading, setIsLoading] = useState(false)
 
   // Default date ranges (last 30 days)
-  const todayObj = new Date()
-  const today = todayObj.toISOString().slice(0, 10)
-  
+  const today = toDateKey()
+
   const thirtyDaysAgoObj = new Date()
   thirtyDaysAgoObj.setDate(thirtyDaysAgoObj.getDate() - 30)
-  const thirtyDaysAgo = thirtyDaysAgoObj.toISOString().slice(0, 10)
+  const thirtyDaysAgo = toDateKey(thirtyDaysAgoObj)
 
   const handleClinicChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value

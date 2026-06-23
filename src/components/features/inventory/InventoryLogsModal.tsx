@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { X, Calendar, User, Info, TrendingUp, TrendingDown } from 'lucide-react'
 import { fetchInventoryLogs } from '@/actions/inventoryActions'
+import { formatDateTime } from '@/lib/date'
 import type { InventoryItem } from './types'
 
 
@@ -92,7 +93,7 @@ export default function InventoryLogsModal({ item, isOpen, onClose }: InventoryL
                         </div>
                         <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-medium">
                           <Calendar className="w-3 h-3" />
-                          {new Date(log.created_at).toLocaleDateString()} · {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {formatDateTime(log.created_at)}
                         </div>
                       </div>
                       <p className="text-sm text-slate-600 leading-relaxed italic">

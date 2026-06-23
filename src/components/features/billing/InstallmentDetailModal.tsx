@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { X, CheckCircle2, AlertTriangle, Clock, RefreshCw, CalendarDays } from 'lucide-react'
 import { markInstallmentPaid } from '@/actions/installmentActions'
+import { toDateKey, formatDate } from '@/lib/date'
 import type { InstallmentPlan, InstallmentPayment } from './types'
 
 interface InstallmentDetailModalProps {
@@ -14,7 +15,7 @@ interface InstallmentDetailModalProps {
   readOnly?: boolean
 }
 
-const TODAY = new Date().toISOString().split('T')[0]
+const TODAY = toDateKey()
 
 function getPaymentStatus(payment: InstallmentPayment) {
   if (payment.status === 'paid') return { label: 'Paid', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' }
@@ -129,9 +130,7 @@ export default function InstallmentDetailModal({
                     <div>
                       <span className="text-slate-400">Due date: </span>
                       <span className="font-semibold">
-                        {new Date(payment.due_date + 'T00:00:00').toLocaleDateString('en-US', {
-                          month: 'short', day: 'numeric', year: 'numeric'
-                        })}
+                        {formatDate(payment.due_date)}
                       </span>
                     </div>
                     <div>
@@ -142,9 +141,7 @@ export default function InstallmentDetailModal({
 
                   {payment.status === 'paid' && payment.paid_at && (
                     <p className="text-xs text-emerald-600 font-medium">
-                      Paid on {new Date(payment.paid_at).toLocaleDateString('en-US', {
-                        month: 'short', day: 'numeric', year: 'numeric'
-                      })}
+                      Paid on {formatDate(payment.paid_at)}
                     </p>
                   )}
 

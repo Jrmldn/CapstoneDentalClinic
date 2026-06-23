@@ -1,7 +1,7 @@
 import { useState, useTransition } from 'react'
 import { addService, addServiceToAllBranches, updateService, deleteService } from '@/actions/serviceActions'
-import { Service } from '@/components/features/clinic-services/types'
-import { EMPTY_FORM } from '@/components/features/clinic-services/constants'
+import { Service } from './types'
+import { EMPTY_FORM } from './constants'
 
 interface UseServicesProps {
   clinicId: number

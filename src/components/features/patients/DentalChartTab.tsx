@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Plus, RefreshCw, Layers } from 'lucide-react'
 import type { DentalChart, ToothCondition } from './types'
 import { updateDentalChart, ToothConditionData } from '@/actions/dentalChartActions'
+import { formatDate, formatDateTime } from '@/lib/date'
 
 interface DentalChartTabProps {
   patientId: number
@@ -452,7 +453,7 @@ export default function DentalChartTab({
             const updateDate = latestChart.updated_at || latestChart.created_at
             return (
               <span className="text-[10px] text-slate-400 font-semibold">
-                Last updated by {dentistName} ({branchName}) at {updateDate ? new Date(updateDate).toLocaleString() : '—'}
+                Last updated by {dentistName} ({branchName}) at {formatDateTime(updateDate)}
               </span>
             )
           })()}
@@ -474,7 +475,7 @@ export default function DentalChartTab({
                 chart.tooth_conditions?.map((cond: ToothCondition) => (
                   <tr key={cond.id} className="hover:bg-slate-50/50">
                     <td className="px-4 py-3 font-semibold text-gray-400">
-                      {new Date(cond.recorded_at).toLocaleDateString()}
+                      {formatDate(cond.recorded_at)}
                     </td>
                     <td className="px-4 py-3 font-bold text-slate-800">
                       Tooth #{displayToothLabel(cond.tooth_number)}

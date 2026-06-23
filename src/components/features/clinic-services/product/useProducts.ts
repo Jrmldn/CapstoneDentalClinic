@@ -1,7 +1,7 @@
 import { useState, useTransition } from 'react'
 import { addProduct, addProductToAllBranches, updateProduct, deleteProduct } from '@/actions/serviceActions'
-import { Product } from '@/components/features/clinic-services/types'
-import { EMPTY_PRODUCT_FORM } from '@/components/features/clinic-services/constants'
+import { Product } from './types'
+import { EMPTY_PRODUCT_FORM } from './constants'
 
 interface UseProductsProps {
   clinicId: number
@@ -30,15 +30,10 @@ export const useProducts = ({ clinicId, initialProducts, allClinicIds = [] }: Us
   }
 
   const openEdit = (p: Product) => {
-    const isRange =
-      p.price_min != null && p.price_max != null && p.price_min !== p.price_max
     setEditingId(p.id)
     setForm({
       name: p.name,
       price: String(p.price),
-      price_type: isRange ? 'range' : 'fixed',
-      price_min: p.price_min != null ? String(p.price_min) : String(p.price),
-      price_max: p.price_max != null ? String(p.price_max) : String(p.price),
       addToAllBranches: false,
     })
     setShowForm(true)
@@ -55,14 +50,12 @@ export const useProducts = ({ clinicId, initialProducts, allClinicIds = [] }: Us
     e.preventDefault()
     setMsg(null)
     startTransition(async () => {
-      const isRange = form.price_type === 'range'
-      const price = isRange ? Number(form.price_min) : Number(form.price)
       const payload = {
         clinic_id: clinicId,
         name: form.name.trim(),
-        price,
-        price_min: isRange ? Number(form.price_min) : null,
-        price_max: isRange ? Number(form.price_max) : null,
+        price: Number(form.price),
+        price_min: null,
+        price_max: null,
       }
 
       let result

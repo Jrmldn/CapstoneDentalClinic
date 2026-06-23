@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Calendar, Clock, Lock, Trash2, CalendarDays, AlertCircle, Sparkles } from 'lucide-react'
 import { addBlockedSlot, deleteBlockedSlot } from '@/actions/dentistScheduleActions'
+import { formatDateLong } from '@/lib/date'
 
 export interface BlockedSlot {
   id: number
@@ -263,7 +264,7 @@ export default function AvailabilityClient({ dentistId, initialBlockedSlots }: A
               <div className="border-b border-gray-100 pb-2">
                 <span className="text-xs font-bold text-slate-800 block">Manage Blocks</span>
                 <p className="text-[11px] text-gray-500 mt-0.5">
-                  Date: <span className="font-semibold">{new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                  Date: <span className="font-semibold">{formatDateLong(selectedDate)}</span>
                 </p>
               </div>
 
