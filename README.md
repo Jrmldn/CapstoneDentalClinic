@@ -1,4 +1,4 @@
-## 🐳 Docker Setup
+## Docker Setup
 
 ### 1. Prerequisites
 Install [Docker Desktop](https://www.docker.com/products/docker-desktop/).
