@@ -88,7 +88,6 @@ export default async function DentistDashboardPage() {
   }
 
   const dentistName = `${dentistRecord.first_name} ${dentistRecord.last_name}`
-  const specialty = dentistRecord.specialty
 
   const servicesRes = await fetchServices(clinicId)
   const services = (servicesRes.services ?? []) as Service[]
@@ -98,7 +97,6 @@ export default async function DentistDashboardPage() {
       dentistId={dentistId}
       dentistUserId={authUser.id}
       dentistName={dentistName}
-      specialty={specialty}
       clinicId={clinicId}
       todayAppts={todayAppts}
       upcomingAppts={upcomingAppts}

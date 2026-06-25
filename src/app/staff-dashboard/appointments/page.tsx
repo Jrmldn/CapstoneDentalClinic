@@ -38,7 +38,7 @@ export default async function AppointmentsPage() {
       payment_status,
       patients ( id, first_name, last_name, phone ),
       services ( id, name, price, slot_duration_min ),
-      dentists ( id, first_name, last_name, specialty )
+      dentists ( id, first_name, last_name )
     `)
     .eq('clinic_id', clinicId)
     .order('scheduled_at', { ascending: false })
@@ -78,7 +78,6 @@ export default async function AppointmentsPage() {
         id: dentistObj.id,
         first_name: dentistObj.first_name,
         last_name: dentistObj.last_name,
-        specialty: dentistObj.specialty ?? ''
       } : null,
     }
   })
@@ -97,7 +96,7 @@ export default async function AppointmentsPage() {
       .order('name', { ascending: true }),
     supabase
       .from('dentists')
-      .select('id, first_name, last_name, specialty')
+      .select('id, first_name, last_name')
       .eq('clinic_id', clinicId)
       .order('first_name', { ascending: true }),
   ])

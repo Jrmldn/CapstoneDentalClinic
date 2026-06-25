@@ -8,7 +8,6 @@ export interface BranchDentist {
   id: number
   first_name: string
   last_name: string
-  specialty: string | null
 }
 
 export interface BranchService {
@@ -38,7 +37,7 @@ export async function getBranchData(clinicId: number): Promise<{
     const [dentistsRes, servicesRes, clinicRes] = await Promise.all([
       supabaseAdmin
         .from('dentists')
-        .select('id, first_name, last_name, specialty')
+        .select('id, first_name, last_name')
         .eq('clinic_id', clinicId),
       supabaseAdmin
         .from('services')

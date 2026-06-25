@@ -211,16 +211,16 @@ export async function fetchPatientRecord(
     if (patientRes.error) throw new Error(patientRes.error.message)
 
     // Decrypt medical history fields
-    const rawMed = medHistoryRes.data as Record<string, string | null | boolean | string[]>
+    const rawMed = medHistoryRes.data as unknown as Record<string, string | null | boolean | string[]>
     const medicalHistory = rawMed ? {
       ...rawMed,
-      blood_type:           rawMed.blood_type           ? await decryptMedicalData(rawMed.blood_type)           : null,
-      blood_pressure:       rawMed.blood_pressure       ? await decryptMedicalData(rawMed.blood_pressure)       : null,
-      medical_flags:        rawMed.medical_flags        ? await decryptMedicalData(rawMed.medical_flags)        : null,
-      previous_surgeries:   rawMed.previous_surgeries   ? await decryptMedicalData(rawMed.previous_surgeries)   : null,
-      allergies:            rawMed.allergies            ? JSON.parse(await decryptMedicalData(rawMed.allergies))            : [],
-      current_medications:  rawMed.current_medications  ? JSON.parse(await decryptMedicalData(rawMed.current_medications))  : [],
-      medical_conditions:   rawMed.medical_conditions   ? JSON.parse(await decryptMedicalData(rawMed.medical_conditions))   : [],
+      blood_type:           rawMed.blood_type           ? await decryptMedicalData(rawMed.blood_type as string)           : null,
+      blood_pressure:       rawMed.blood_pressure       ? await decryptMedicalData(rawMed.blood_pressure as string)       : null,
+      medical_flags:        rawMed.medical_flags        ? await decryptMedicalData(rawMed.medical_flags as string)        : null,
+      previous_surgeries:   rawMed.previous_surgeries   ? await decryptMedicalData(rawMed.previous_surgeries as string)   : null,
+      allergies:            rawMed.allergies            ? JSON.parse(await decryptMedicalData(rawMed.allergies as string))            : [],
+      current_medications:  rawMed.current_medications  ? JSON.parse(await decryptMedicalData(rawMed.current_medications as string))  : [],
+      medical_conditions:   rawMed.medical_conditions   ? JSON.parse(await decryptMedicalData(rawMed.medical_conditions as string))   : [],
     } : null
 
     // Decrypt prescriptions

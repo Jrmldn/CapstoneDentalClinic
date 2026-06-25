@@ -51,7 +51,6 @@ interface DentistDashboardViewProps {
   dentistId: number
   dentistUserId: string
   dentistName: string
-  specialty: string
   clinicId: number
   todayAppts: Appointment[]
   upcomingAppts: Appointment[]
@@ -88,7 +87,6 @@ export default function DentistDashboardView({
   dentistId,
   dentistUserId,
   dentistName,
-  specialty,
   clinicId,
   todayAppts,
   upcomingAppts,
@@ -194,7 +192,7 @@ export default function DentistDashboardView({
           {greeting}, Dr. {dentistName} !
         </h1>
         <p className="text-sm text-gray-500 mt-1">
-          Specialty: {specialty || 'General Dentist'} · {formatDateLong(new Date())}
+          {formatDateLong(new Date())}
         </p>
       </div>
 

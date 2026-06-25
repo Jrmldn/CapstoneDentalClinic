@@ -1,18 +1,15 @@
-export interface ClinicSpecialty {
-  specialty_name: string;
-}
 
 
 export interface ClinicOperatingHour {
   day_of_week: number;
   open_time: string;
   close_time: string;
-  is_closed: boolean;
+  is_closed: boolean | null;
 }
 
 export interface ClinicGallery {
   image_url: string;
-  sort_order: number;
+  sort_order: number | null;
 }
 
 export interface ClinicFeedback {
@@ -20,14 +17,13 @@ export interface ClinicFeedback {
 }
 
 export interface Clinic {
-  id: string;
+  id: number;
   name: string;
   address: string;
-  phone: string;
+  phone: string | null;
   manual_status: string | null;
   latitude: number | null;
   longitude: number | null;
-  clinic_specialties: ClinicSpecialty[];
   clinic_operating_hours: ClinicOperatingHour[];
   clinic_gallery: ClinicGallery[];
   feedback: ClinicFeedback[];
@@ -35,5 +31,4 @@ export interface Clinic {
 
 export interface ClinicMapProps {
   clinics: Clinic[];
-  availableSpecialties?: string[];
 }

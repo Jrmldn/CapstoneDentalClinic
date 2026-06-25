@@ -7,14 +7,13 @@ import { ClinicCard } from '@/app/components/ClinicCard'
 import { getEffectiveClinicStatus } from '@/lib/clinicStatus'
 
 interface Clinic {
-  id: string
+  id: number
   name: string
   address: string
-  phone: string
+  phone: string | null
   manual_status: string | null
-  clinic_operating_hours: { day_of_week: number; open_time: string; close_time: string; is_closed: boolean }[]
-  clinic_specialties: { specialty_name: string }[]
-  clinic_gallery?: { image_url: string; sort_order: number }[]
+  clinic_operating_hours: { day_of_week: number; open_time: string; close_time: string; is_closed: boolean | null }[]
+  clinic_gallery?: { image_url: string; sort_order: number | null }[]
   feedback: { rating: number }[]
   latitude: number | null
   longitude: number | null
@@ -23,15 +22,15 @@ interface Clinic {
 interface LeafletMapInnerProps {
   clinics: Clinic[]
   onMapReady: () => void
-  activeClinicId: string | null
-  onMarkerClick: (id: string) => void
+  activeClinicId: number | null
+  onMarkerClick: (id: number) => void
 }
 
 const LeafletMapInner = ({ clinics, onMapReady, activeClinicId, onMarkerClick }: LeafletMapInnerProps) => {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
-  const markersRef = useRef<{ [key: string]: L.Marker }>({})
-  const popupRootsRef = useRef<Map<string, Root>>(new Map())
+  const markersRef = useRef<{ [key: number]: L.Marker }>({})
+  const popupRootsRef = useRef<Map<number, Root>>(new Map())
 
   // Helper to safely unmount a React root asynchronously
   const safeUnmount = (root: Root) => {
@@ -66,6 +65,8 @@ const LeafletMapInner = ({ clinics, onMapReady, activeClinicId, onMarkerClick }:
   // Initialize Map
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return
+
+    const popupRoots = popupRootsRef.current
 
     try {
       // Create map instance
@@ -108,8 +109,8 @@ const LeafletMapInner = ({ clinics, onMapReady, activeClinicId, onMarkerClick }:
         mapRef.current.remove()
         mapRef.current = null
       }
-      popupRootsRef.current.forEach(root => safeUnmount(root))
-      popupRootsRef.current.clear()
+      popupRoots.forEach(root => safeUnmount(root))
+      popupRoots.clear()
     }
   }, [onMapReady])
 
@@ -138,7 +139,6 @@ const LeafletMapInner = ({ clinics, onMapReady, activeClinicId, onMarkerClick }:
           name={clinic.name}
           address={clinic.address}
           phone={clinic.phone}
-          specialties={clinic.clinic_specialties}
           gallery={clinic.clinic_gallery}
           feedback={clinic.feedback}
           isOpen={getEffectiveClinicStatus(clinic.manual_status, clinic.clinic_operating_hours) === 'open'}

@@ -51,6 +51,7 @@ export async function fetchClinics(
     let query = supabaseAdmin
       .from('clinics')
       .select('*', { count: 'exact' })
+      .order('is_active', { ascending: false })
       .order('created_at', { ascending: false })
 
     if (searchQuery) {
@@ -64,7 +65,11 @@ export async function fetchClinics(
 
     query = query.range(from, to)
 
-    const { data: clinics, count, error } = await query
+    const [{ data: clinics, count, error }, activeRes, inactiveRes] = await Promise.all([
+      query,
+      supabaseAdmin.from('clinics').select('*', { count: 'exact', head: true }).eq('is_active', true),
+      supabaseAdmin.from('clinics').select('*', { count: 'exact', head: true }).eq('is_active', false),
+    ])
 
     if (error) {
       console.error('Database error in fetchClinics:', error)
@@ -75,6 +80,8 @@ export async function fetchClinics(
       success: true,
       clinics: clinics || [],
       totalCount: count || 0,
+      activeCount: activeRes.count || 0,
+      inactiveCount: inactiveRes.count || 0,
     }
   } catch (error) {
     console.error('Error in fetchClinics:', error)
@@ -83,6 +90,8 @@ export async function fetchClinics(
       error: sanitizeServerError(error),
       clinics: [],
       totalCount: 0,
+      activeCount: 0,
+      inactiveCount: 0,
     }
   }
 }

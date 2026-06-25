@@ -38,30 +38,30 @@ export async function retriggerNotification(notificationId: number) {
   }
 }
 
-/** Fetch notifications across branches (superadmin), optionally scoped to one clinic and filterable by status */
+/** Fetch notifications across branches (superadmin), optionally scoped to one clinic and filterable by status and trigger type */
 export async function fetchNotifications(
   clinicId?: number,
-  status?: 'pending' | 'sent' | 'failed'
+  status?: 'pending' | 'sent' | 'failed',
+  triggerType?: string
 ) {
   try {
     const auth = await ensureRole('superadmin')
     if (!auth.success) return { success: false, error: auth.error, notifications: [] }
 
-    // Single Query Join Filter (Class G/B/A optimization)
     let baseQuery = supabaseAdmin
       .from('notifications')
       .select(`
         *,
         patients ( id, first_name, last_name, phone ),
-        appointments!inner ( id, scheduled_at, clinic_id, clinics ( name ) )
+        appointments ( id, scheduled_at, clinic_id, clinics ( name ) )
       `)
       .order('created_at', { ascending: false })
 
-    if (clinicId) baseQuery = baseQuery.eq('appointments.clinic_id', clinicId)
+    if (clinicId) baseQuery = baseQuery.not('appointment_id', 'is', null).eq('appointments.clinic_id', clinicId)
+    if (status) baseQuery = baseQuery.eq('status', status)
+    if (triggerType) baseQuery = baseQuery.eq('trigger_type', triggerType as never)
 
-    const { data: notifications, error } = status
-      ? await baseQuery.eq('status', status)
-      : await baseQuery
+    const { data: notifications, error } = await baseQuery
 
     if (error) throw new Error(error.message)
 

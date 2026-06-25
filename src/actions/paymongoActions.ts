@@ -50,7 +50,7 @@ async function applyPaymentToContext(contextType: PaymentContextType, contextId:
   if (contextType === 'transaction') {
     await supabaseAdmin
       .from('transactions')
-      .update({ payment_status: 'paid', payment_method: paymentMethod })
+      .update({ payment_status: 'paid', payment_method: paymentMethod as never })
       .eq('id', contextId)
 
     revalidatePath('/staff-dashboard/billing')
@@ -59,13 +59,13 @@ async function applyPaymentToContext(contextType: PaymentContextType, contextId:
   if (contextType === 'appointment') {
     const { data: appt } = await supabaseAdmin
       .from('appointments')
-      .update({ payment_method: paymentMethod, payment_status: 'downpaid' })
+      .update({ payment_method: paymentMethod as never, payment_status: 'downpaid' })
       .eq('id', contextId)
       .select('patient_id, clinic_id, downpayment')
       .single()
 
     // Create an issued transaction for the downpayment so it appears in Transactions tabs
-    if (appt && appt.downpayment > 0) {
+    if (appt && appt.downpayment != null && appt.downpayment > 0) {
       const { data: txRow } = await supabaseAdmin
         .from('transactions')
         .insert({
@@ -74,7 +74,7 @@ async function applyPaymentToContext(contextType: PaymentContextType, contextId:
           clinic_id:          appt.clinic_id,
           billing_status:     'issued',
           payment_status:     'paid',
-          payment_method:     paymentMethod,
+          payment_method:     paymentMethod as never,
           discount_type:      'none',
           discount_amount:    0,
           hmo_coverage:       0,
@@ -167,7 +167,7 @@ export async function confirmPaymongoPayment(paymongoLinkId: string) {
 
     if (fetchError || !record) throw new Error('paymongo_payments record not found')
 
-    await applyPaymentToContext(record.context_type, record.context_id, record.payment_method)
+    await applyPaymentToContext(record.context_type as PaymentContextType, record.context_id, record.payment_method ?? '')
 
     return { success: true }
   } catch (error) {

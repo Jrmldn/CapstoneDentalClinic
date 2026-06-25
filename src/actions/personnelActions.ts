@@ -23,6 +23,7 @@ import {
 } from '@/services/personnelService'
 import { sendEmail } from '@/lib/email/resend'
 import { staffVerificationEmail } from '@/lib/email/templates'
+import { logNotification } from '@/lib/notifications/logNotification'
 import {
   getPaginationRange,
   formatStaff,
@@ -33,7 +34,6 @@ interface PersonnelUpdatePayload {
   first_name: string
   last_name: string
   clinic_id: number
-  specialty?: string
 }
 
 export async function addStaff(data: StaffData) {
@@ -83,6 +83,13 @@ export async function addStaff(data: StaffData) {
     const template = staffVerificationEmail(callbackUrl.toString(), `${data.firstName} ${data.lastName}`)
     const sent = await sendEmail({ to: data.email, ...template })
 
+    await logNotification({
+      triggerType: 'account_created',
+      channel: 'email',
+      status: sent.success ? 'sent' : 'failed',
+      errorMessage: sent.error,
+    })
+
     if (!sent.success) {
       await deleteUserRecord(authData.user.id)
       await deleteAuthUser(authData.user.id)
@@ -117,7 +124,6 @@ export async function addDentist(data: DentistData) {
       clinicId: data.clinicId,
       firstName: data.firstName,
       lastName: data.lastName,
-      specialty: data.specialty,
     })
 
     if (dentistError) {
@@ -144,6 +150,13 @@ export async function addDentist(data: DentistData) {
 
     const template = staffVerificationEmail(callbackUrl.toString(), `${data.firstName} ${data.lastName}`)
     const sent = await sendEmail({ to: data.email, ...template })
+
+    await logNotification({
+      triggerType: 'account_created',
+      channel: 'email',
+      status: sent.success ? 'sent' : 'failed',
+      errorMessage: sent.error,
+    })
 
     if (!sent.success) {
       await deleteUserRecord(authData.user.id)
@@ -327,7 +340,6 @@ export async function updatePersonnel(
     firstName: string;
     lastName: string;
     clinicId: number;
-    specialty?: string
   }
 ) {
   const auth = await ensureRole('superadmin')
@@ -340,10 +352,6 @@ export async function updatePersonnel(
       first_name: data.firstName,
       last_name: data.lastName,
       clinic_id: data.clinicId,
-    }
-
-    if (type === 'dentist' && data.specialty) {
-      updatePayload.specialty = data.specialty
     }
 
     const { error } = await updatePersonnelRecord(table, userId, updatePayload)

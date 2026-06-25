@@ -12,30 +12,24 @@ import { Footer } from "@/components/features/landing-page/Footer"
 import { ClinicMap } from "@/components/features/landing-page/ClinicMap"
 
 interface Clinic {
-  id: string
+  id: number
   name: string
   address: string
-  phone: string
+  phone: string | null
   manual_status: string | null
   latitude: number | null
   longitude: number | null
-  clinic_specialties: { specialty_name: string }[]
-  clinic_operating_hours: { day_of_week: number; open_time: string; close_time: string; is_closed: boolean }[]
-  clinic_gallery: { image_url: string; sort_order: number }[]
+  clinic_operating_hours: { day_of_week: number; open_time: string; close_time: string; is_closed: boolean | null }[]
+  clinic_gallery: { image_url: string; sort_order: number | null }[]
   feedback: { rating: number }[]
 }
 
 export default async function Home() {
-  // Use the standard client (anon) for public browsing. 
-  // IMPORTANT: Ensure you have run database/003_fix_public_rls_policies.sql 
-  // so public users can readJoined data like specialties and feedback.
   const supabase = await createClient()
 
-  // Run all independent public landing page database queries in parallel (Class A Optimization)
+  // Run all independent public landing page database queries in parallel
   const [
     clinicsRes,
-    specialtiesRes,
-    dentistsRes,
     patientsCountRes,
     feedbackRes,
   ] = await Promise.all([
@@ -43,20 +37,11 @@ export default async function Home() {
       .from('clinics')
       .select(`
         id, name, address, phone, manual_status, latitude, longitude,
-        clinic_specialties(specialty_name),
         clinic_operating_hours(day_of_week, open_time, close_time, is_closed),
         clinic_gallery(image_url, sort_order),
         feedback(rating)
       `)
       .eq('is_active', true),
-
-    supabase
-      .from('clinic_specialties')
-      .select('specialty_name'),
-
-    supabase
-      .from('dentists')
-      .select('specialty'),
 
     supabaseAdmin
       .from('patients')
@@ -68,14 +53,11 @@ export default async function Home() {
   ])
 
   const clinics = clinicsRes.data
-  const allSpecialties = specialtiesRes.data
-  const dentistSpecialties = dentistsRes.data
   const patientsCountResult = patientsCountRes.count
   const allFeedback = feedbackRes.data as { rating: number }[] | null
 
   const clinicsList: Clinic[] = clinics || []
 
-  // Fetch statistics from database bypass RLS (using service role)
   // 1. Partner Clinics: count of active clinics
   const clinicsCount = clinicsList.length
 
@@ -83,27 +65,20 @@ export default async function Home() {
   const patientsCount = patientsCountResult || 0
 
   // 3. Average Rating: calculate average feedback rating across all clinics
-
   let averageRating = 4.9
   if (allFeedback && allFeedback.length > 0) {
     const sum = allFeedback.reduce((acc, f) => acc + f.rating, 0)
     averageRating = sum / allFeedback.length
   }
 
-  // Extract unique names and filter out empty values
-  const specialtyOptions = Array.from(new Set([
-    ...(allSpecialties || []).map(s => s.specialty_name),
-    ...(dentistSpecialties || []).map(d => d.specialty)
-  ])).filter(Boolean).sort()
-
   return (
     <div className="relative min-h-screen bg-background antialiased">
       {/* 1. New Elegant Navigation Bar */}
       <Header />
-      
+
       <main>
         {/* 2. Brand New Hero Section (with Book Appointment buttons and real statistics) */}
-        <Hero 
+        <Hero
           clinicsCount={clinicsCount}
           patientsCount={patientsCount}
           averageRating={averageRating}
@@ -122,19 +97,18 @@ export default async function Home() {
                 Find a Clinic Near You
               </h2>
               <p className="text-xl text-gray-600">
-                Discover partner clinics near you with our interactive map. Filter by health card, rating, and status.
+                Discover partner clinics near you with our interactive map. Filter by rating and status.
               </p>
             </div>
-            <ClinicMap 
-              clinics={clinicsList} 
-              availableSpecialties={specialtyOptions}
+            <ClinicMap
+              clinics={clinicsList}
             />
           </div>
         </section>
-        
+
         {/* 4. Beautiful Presentational Core Feature Grid */}
         <Features />
-        
+
         {/* 5. Smooth Step-by-Step Process Infographic */}
         <HowItWorks />
       </main>

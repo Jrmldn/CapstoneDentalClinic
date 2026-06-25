@@ -42,11 +42,6 @@ export default function DentistTable({
         </span>
       ),
     },
-    {
-      key: 'specialty',
-      label: 'Specialty',
-      render: (specialty) => specialty || 'General Dentistry',
-    },
     { key: 'email', label: 'Email' },
     { key: 'clinicName', label: 'Clinic' },
   ]

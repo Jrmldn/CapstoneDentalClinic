@@ -11,7 +11,6 @@ interface RawStaffItem {
 }
 
 interface RawDentistItem extends RawStaffItem {
-  specialty?: string
 }
 
 /**
@@ -56,7 +55,6 @@ export function formatDentists(dentistsList: RawDentistItem[]): FormattedDentist
       clinicId: dentist.clinic_id,
       firstName: dentist.first_name,
       lastName: dentist.last_name,
-      specialty: dentist.specialty || '',
       email: userRelation?.email || 'No email',
       clinicName: clinicRelation?.name || 'Unassigned',
       isDisabled: userRelation?.is_disabled ?? false,

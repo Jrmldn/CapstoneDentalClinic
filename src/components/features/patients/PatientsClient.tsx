@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Search, Plus, User, RefreshCw } from 'lucide-react'
 import { fetchPatientRecord } from '@/actions/patientMedicalActions'
 import RegisterPatientModal from './RegisterPatientModal'
@@ -16,6 +17,7 @@ interface PatientsClientProps {
 }
 
 export default function PatientsClient({ clinicId, initialPatients, dentistId, viewerRole = 'staff' }: PatientsClientProps) {
+  const router = useRouter()
   const [patients, setPatients] = useState<PatientSummary[]>(initialPatients)
   const [searchTerm, setSearchTerm] = useState('')
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false)
@@ -34,11 +36,8 @@ export default function PatientsClient({ clinicId, initialPatients, dentistId, v
     }
   }
 
-  // Success handler for patient registration
   const handleRegisterSuccess = (newPatient: PatientSummary) => {
-    alert('Patient registered successfully!')
     setPatients(prev => [newPatient, ...prev])
-    setIsRegisterModalOpen(false)
   }
 
   // Filter patients
@@ -109,6 +108,9 @@ export default function PatientsClient({ clinicId, initialPatients, dentistId, v
         onClose={() => setIsRegisterModalOpen(false)}
         clinicId={clinicId}
         onSuccess={handleRegisterSuccess}
+        onBookNow={(patient) =>
+          router.push(`/staff-dashboard/appointments?bookForPatient=${patient.id}`)
+        }
       />
 
       {/* MODAL: Full Patient Record */}

@@ -18,7 +18,7 @@ export interface OperatingHourRow {
   day_of_week: number  // 0 = Sunday … 6 = Saturday (JS convention)
   open_time:   string  // 'HH:MM:SS'
   close_time:  string  // 'HH:MM:SS'
-  is_closed:   boolean
+  is_closed:   boolean | null
 }
 
 /**

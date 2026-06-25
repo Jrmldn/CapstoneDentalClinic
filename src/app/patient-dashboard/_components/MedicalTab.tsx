@@ -347,7 +347,7 @@ export function MedicalTab({ record }: MedicalTabProps) {
                     <h5 className="font-bold text-slate-900">{pr.medication_name || 'Prescription'}</h5>
                     <p className="text-xs text-slate-500 mt-1">Dr. {pr.dentists?.first_name} {pr.dentists?.last_name}</p>
                   </div>
-                  <span className="text-xs text-slate-400">{formatDate(pr.prescribed_at)}</span>
+                  <span className="text-xs text-slate-400">{formatDate(pr.prescribed_at ?? '')}</span>
                 </div>
                 <div className="text-xs text-slate-600 mt-2 space-y-1">
                   <p><span className="font-semibold text-slate-500">Dosage: </span>{pr.dosage || 'As indicated'}</p>

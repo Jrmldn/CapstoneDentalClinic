@@ -11,7 +11,7 @@ export const getAppointmentsByDateRange = cache(async (clinicId: number, start: 
       *,
       patients ( id, first_name, last_name, phone, is_guest ),
       services ( id, name, price, slot_duration_min ),
-      dentists ( id, first_name, last_name, specialty )
+      dentists ( id, first_name, last_name )
     `)
     .eq('clinic_id', clinicId)
     .gte('scheduled_at', start)
@@ -138,7 +138,7 @@ export interface AppointmentLogInsertData {
 export async function insertAppointment(insertData: CreateAppointmentInsertData) {
   return supabaseAdmin
     .from('appointments')
-    .insert([insertData])
+    .insert([insertData as never])
     .select()
     .single()
 }
@@ -149,7 +149,7 @@ export async function insertAppointment(insertData: CreateAppointmentInsertData)
 export async function insertAppointmentLog(logData: AppointmentLogInsertData) {
   return supabaseAdmin
     .from('appointment_logs')
-    .insert([logData])
+    .insert([logData as never])
 }
 
 /**
@@ -172,7 +172,7 @@ export async function updateAppointmentDetails(
 ) {
   return supabaseAdmin
     .from('appointments')
-    .update(updateData)
+    .update(updateData as never)
     .eq('id', appointmentId)
 }
 

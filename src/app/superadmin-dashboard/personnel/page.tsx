@@ -187,9 +187,9 @@ export default function PersonnelPage() {
         onClinicChange={(v) => setClinicFilter(String(v))}
         clinics={clinics}
         roleFilter={roleFilter}
-        onRoleChange={setRoleFilter}
+        onRoleChange={(v) => setRoleFilter(String(v))}
         statusFilter={statusFilter}
-        onStatusChange={setStatusFilter}
+        onStatusChange={(v) => setStatusFilter(String(v))}
       />
 
       {isLoading ? (

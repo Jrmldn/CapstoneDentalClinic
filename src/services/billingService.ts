@@ -32,7 +32,7 @@ export interface TransactionLineItemInsertData {
 export async function insertTransactionHeader(txData: TransactionHeaderInsertData) {
   return supabaseAdmin
     .from('transactions')
-    .insert([txData])
+    .insert([txData as never])
     .select()
     .single()
 }
@@ -53,7 +53,7 @@ export async function insertTransactionItems(items: TransactionLineItemInsertDat
 export async function syncAppointmentPayment(appointmentId: number, paymentStatus: string) {
   return supabaseAdmin
     .from('appointments')
-    .update({ payment_status: paymentStatus })
+    .update({ payment_status: paymentStatus as never })
     .eq('id', appointmentId)
 }
 
@@ -67,7 +67,7 @@ export async function syncAppointmentPaymentDetails(
 ) {
   return supabaseAdmin
     .from('appointments')
-    .update({ payment_status: paymentStatus, payment_method: paymentMethod })
+    .update({ payment_status: paymentStatus as never, payment_method: paymentMethod as never })
     .eq('id', appointmentId)
 }
 
@@ -131,8 +131,8 @@ export async function updateTransactionPayment(
   return supabaseAdmin
     .from('transactions')
     .update({
-      payment_method: paymentMethod,
-      payment_status: paymentStatus,
+      payment_method: paymentMethod as never,
+      payment_status: paymentStatus as never,
     })
     .eq('id', transactionId)
     .select('appointment_id')

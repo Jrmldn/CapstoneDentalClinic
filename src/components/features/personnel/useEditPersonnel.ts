@@ -21,7 +21,6 @@ export const useEditPersonnel = ({
     lastName: person?.lastName || '',
     email: person?.email || '',
     clinicId: person?.clinicId?.toString() || '',
-    specialty: (person as FormattedDentist)?.specialty || ''
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)

@@ -6,25 +6,13 @@ import { FormattedStaff, FormattedDentist } from '@/types/clinic'
 
 import { useEditPersonnel } from '@/components/features/personnel/useEditPersonnel'
 
-const SPECIALTIES = [
-  'General Dentistry',
-  'Orthodontics',
-  'Endodontics',
-  'Periodontics',
-  'Oral Surgery',
-  'Pediatric Dentistry',
-  'Prosthodontics',
-  'Oral Pathology',
-]
-
-
 interface EditPersonnelModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => Promise<void>
   person: FormattedStaff | FormattedDentist | null
   type: 'staff' | 'dentist'
-  clinics: { id: number; name: string }[]
+  clinics?: { id: number; name: string }[]
   fixedClinicId?: number
 }
 
@@ -102,23 +90,7 @@ export default function EditPersonnelModal({
                 value={formData.clinicId} 
                 onChange={e => setFormData({...formData, clinicId: e.target.value})}
               >
-                {clinics.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-          )}
-
-          {type === 'dentist' && (
-            <div className="space-y-1.5">
-              <label className="font-medium">Specialty</label>
-              <select
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white"
-                value={formData.specialty}
-                onChange={e => setFormData({...formData, specialty: e.target.value})}
-              >
-                <option value="">Select a specialty...</option>
-                {SPECIALTIES.map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
+                {(clinics ?? []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
           )}

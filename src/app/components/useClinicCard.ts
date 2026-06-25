@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react'
 
 interface UseClinicCardProps {
-  gallery?: { image_url: string; sort_order: number }[]
+  gallery?: { image_url: string; sort_order: number | null }[]
   feedback?: { rating: number }[]
-  operatingHours?: { day_of_week: number; open_time: string; close_time: string; is_closed: boolean }[]
+  operatingHours?: { day_of_week: number; open_time: string; close_time: string; is_closed: boolean | null }[]
 }
 
 /**
@@ -16,7 +16,7 @@ export const useClinicCard = ({
   operatingHours,
 }: UseClinicCardProps) => {
   const images = useMemo(() => {
-    return (gallery || []).sort((a, b) => a.sort_order - b.sort_order)
+    return (gallery || []).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
   }, [gallery])
 
   const [currentImgIndex, setCurrentImgIndex] = useState(0)

@@ -166,7 +166,6 @@ export async function updateDentistProfile(
   data: {
     first_name: string
     last_name: string
-    specialty?: string | null
     license_no?: string | null
   }
 ) {
@@ -189,7 +188,6 @@ export async function updateDentistProfile(
       .update({
         first_name: data.first_name,
         last_name: data.last_name,
-        specialty: data.specialty,
         license_no: data.license_no,
       })
       .eq('id', dentistId)

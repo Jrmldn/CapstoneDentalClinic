@@ -2,7 +2,6 @@ export interface Dentist {
   id: number
   first_name: string
   last_name: string
-  specialty: string | null
 }
 
 export interface Service {
@@ -18,6 +17,7 @@ export interface PatientAppointment {
   status: string
   booked_at?: string
   clinic_id?: number
+  notes?: string | null
   services?: { id?: number; name: string } | null
   dentists?: { id?: number; first_name: string; last_name: string } | null
   clinics?: { id: number; name: string } | null
@@ -27,7 +27,8 @@ export interface PatientTreatment {
   id: number
   performed_at?: string | null
   treatment?: string
-  services?: { name: string } | null
+  notes?: string | null
+  services?: { name: string; price?: number } | null
   dentists?: { first_name: string; last_name: string } | null
 }
 
@@ -35,6 +36,8 @@ export interface PatientPrescription {
   id: number
   prescribed_at?: string | null
   medication_name?: string
+  dosage?: string | null
+  instructions?: string | null
   dentists?: { first_name: string; last_name: string } | null
 }
 
@@ -68,7 +71,6 @@ export interface PatientRecord {
     detailed_info: {
       last_dental_visit?: string
       physician_name?: string
-      physician_specialty?: string
       physician_office_address?: string
       physician_office_phone?: string
       good_condition?: 'yes' | 'no' | ''

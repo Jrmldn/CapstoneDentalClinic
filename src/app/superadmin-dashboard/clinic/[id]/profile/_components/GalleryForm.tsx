@@ -1,11 +1,17 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { Save, Loader2, Plus, X, GripVertical, ImageIcon } from 'lucide-react'
-import { manageClinicGallery } from '@/actions/clinicSetupActions'
+import { useState, useRef } from 'react'
+import { Loader2, X, GripVertical, ImageIcon, Upload } from 'lucide-react'
+import {
+  uploadClinicGalleryImage,
+  deleteClinicGalleryImage,
+  reorderClinicGalleryImages,
+} from '@/actions/clinicSetupActions'
 
 interface GalleryItem {
+  id: number
   url: string
+  filename: string
   sort_order: number
 }
 
@@ -15,24 +21,63 @@ interface Props {
 }
 
 export default function GalleryForm({ clinicId, gallery }: Props) {
-  const [isPending, startTransition] = useTransition()
-  const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [urlInput, setUrlInput] = useState('')
-
   const [images, setImages] = useState<GalleryItem[]>(
-    gallery.map((g, i) => ({ url: String(g.image_url), sort_order: Number(g.sort_order ?? i) }))
+    gallery
+      .map((g) => ({
+        id: Number(g.id),
+        url: String(g.image_url),
+        filename: String(g.image_url).split('/').pop() ?? '',
+        sort_order: Number(g.sort_order ?? 0),
+      }))
       .sort((a, b) => a.sort_order - b.sort_order)
   )
 
-  const addImage = () => {
-    const url = urlInput.trim()
-    if (!url) return
-    setImages(prev => [...prev, { url, sort_order: prev.length }])
-    setUrlInput('')
+  const [uploading, setUploading] = useState(false)
+  const [reordering, setReordering] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileSelected = async (file: File) => {
+    setUploadError(null)
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('File size must be under 5 MB.')
+      return
+    }
+    setUploading(true)
+    const formData = new FormData()
+    formData.append('file', file)
+    const result = await uploadClinicGalleryImage(clinicId, formData)
+    setUploading(false)
+    if (result.success && result.row) {
+      const row = result.row as Record<string, unknown>
+      setImages(prev => [
+        ...prev,
+        {
+          id: Number(row.id),
+          url: String(row.image_url),
+          filename: String(row.image_url).split('/').pop() ?? '',
+          sort_order: Number(row.sort_order ?? prev.length),
+        },
+      ])
+    } else {
+      setUploadError(result.error ?? 'Upload failed.')
+    }
   }
 
-  const removeImage = (idx: number) => {
-    setImages(prev => prev.filter((_, i) => i !== idx).map((img, i) => ({ ...img, sort_order: i })))
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    const file = e.dataTransfer.files[0]
+    if (file) handleFileSelected(file)
+  }
+
+  const handleDelete = async (item: GalleryItem) => {
+    const result = await deleteClinicGalleryImage(item.id, item.url)
+    if (result.success) {
+      setImages(prev => prev.filter(i => i.id !== item.id).map((img, i) => ({ ...img, sort_order: i })))
+    } else {
+      setMsg({ type: 'error', text: result.error ?? 'Delete failed.' })
+    }
   }
 
   const moveUp = (idx: number) => {
@@ -53,56 +98,72 @@ export default function GalleryForm({ clinicId, gallery }: Props) {
     })
   }
 
-  const handleSave = () => {
+  const handleSaveOrder = async () => {
+    setReordering(true)
     setMsg(null)
-    startTransition(async () => {
-      const r = await manageClinicGallery(clinicId, images)
-      setMsg(r.success
-        ? { type: 'success', text: 'Gallery saved successfully.' }
-        : { type: 'error', text: r.error ?? 'Failed to save gallery.' })
-    })
+    const result = await reorderClinicGalleryImages(images.map(({ id, sort_order }) => ({ id, sort_order })))
+    setReordering(false)
+    setMsg(result.success
+      ? { type: 'success', text: 'Order saved.' }
+      : { type: 'error', text: result.error ?? 'Failed to save order.' })
   }
 
   return (
     <div className="space-y-5 max-w-2xl">
       <h2 className="text-base font-semibold text-slate-800">Clinic Gallery</h2>
 
-      {/* Add image */}
-      <div className="flex gap-2">
-        <input
-          id="gallery-url-input"
-          type="url"
-          value={urlInput}
-          onChange={e => setUrlInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addImage())}
-          placeholder="Paste image URL…"
-          className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <button
-          id="add-gallery-image-btn"
-          type="button"
-          onClick={addImage}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-50 text-blue-600 text-sm font-medium hover:bg-blue-100 transition"
-        >
-          <Plus className="w-4 h-4" /> Add
-        </button>
+      {/* Upload area */}
+      <div
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
+        className="border-2 border-dashed border-gray-200 rounded-xl py-10 flex flex-col items-center gap-2 text-gray-400 cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition"
+      >
+        {uploading ? (
+          <>
+            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            <p className="text-sm text-blue-600">Uploading…</p>
+            <div className="w-48 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-full bg-blue-500 animate-pulse rounded-full" style={{ width: '60%' }} />
+            </div>
+          </>
+        ) : (
+          <>
+            <Upload className="w-8 h-8" />
+            <p className="text-sm font-medium text-gray-600">Click or drag &amp; drop an image</p>
+            <p className="text-xs">PNG, JPG, WEBP — max 5 MB</p>
+          </>
+        )}
       </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) handleFileSelected(file)
+          e.target.value = ''
+        }}
+      />
+
+      {uploadError && (
+        <p className="text-sm text-red-600">{uploadError}</p>
+      )}
 
       {/* Image list */}
       {images.length === 0 ? (
-        <div className="border-2 border-dashed border-gray-200 rounded-xl py-12 flex flex-col items-center gap-2 text-gray-400">
+        <div className="border-2 border-dashed border-gray-200 rounded-xl py-10 flex flex-col items-center gap-2 text-gray-400">
           <ImageIcon className="w-8 h-8" />
           <p className="text-sm">No images in gallery yet.</p>
-          <p className="text-xs">Paste an image URL above to get started.</p>
         </div>
       ) : (
         <div className="space-y-2">
           {images.map((img, idx) => (
             <div
-              key={idx}
+              key={img.id}
               className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200"
             >
-              {/* Preview */}
               <div className="w-16 h-12 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -113,15 +174,12 @@ export default function GalleryForm({ clinicId, gallery }: Props) {
                 />
               </div>
 
-              {/* URL truncated */}
-              <p className="flex-1 text-xs text-gray-650 truncate">{img.url}</p>
+              <p className="flex-1 text-xs text-gray-600 truncate">{img.filename}</p>
 
-              {/* Order badge */}
               <span className="text-[10px] font-semibold px-2 py-0.5 bg-white border border-gray-200 rounded-full text-gray-500">
                 #{idx + 1}
               </span>
 
-              {/* Controls */}
               <div className="flex items-center gap-1">
                 <button
                   type="button"
@@ -143,7 +201,7 @@ export default function GalleryForm({ clinicId, gallery }: Props) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => removeImage(idx)}
+                  onClick={() => handleDelete(img)}
                   className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition"
                   title="Remove"
                 >
@@ -163,18 +221,20 @@ export default function GalleryForm({ clinicId, gallery }: Props) {
         </div>
       )}
 
-      <div className="flex justify-end">
-        <button
-          id="save-gallery-btn"
-          type="button"
-          onClick={handleSave}
-          disabled={isPending}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-60 transition"
-        >
-          {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          {isPending ? 'Saving…' : 'Save Gallery'}
-        </button>
-      </div>
+      {images.length > 0 && (
+        <div className="flex justify-end">
+          <button
+            id="save-order-btn"
+            type="button"
+            onClick={handleSaveOrder}
+            disabled={reordering}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-60 transition"
+          >
+            {reordering ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            {reordering ? 'Saving…' : 'Save Order'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

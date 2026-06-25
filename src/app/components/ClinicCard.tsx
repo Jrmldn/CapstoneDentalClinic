@@ -9,15 +9,14 @@ import ImageSlider from './ImageSlider'
 import { formatTo12h } from './clinicCardHelpers'
 
 export interface ClinicCardProps {
-  id: string
+  id: number
   name: string
   address: string
-  phone: string
-  specialties?: { specialty_name: string }[]
-  gallery?: { image_url: string; sort_order: number }[]
+  phone: string | null
+  gallery?: { image_url: string; sort_order: number | null }[]
   feedback?: { rating: number }[]
   isOpen?: boolean
-  operatingHours?: { day_of_week: number; open_time: string; close_time: string; is_closed: boolean }[]
+  operatingHours?: { day_of_week: number; open_time: string; close_time: string; is_closed: boolean | null }[]
   className?: string
   compact?: boolean
   onClick?: () => void
@@ -25,11 +24,11 @@ export interface ClinicCardProps {
 
 /**
  * ClinicCard Component
- * Presentational UI component displaying clinic details, specialties, schedules, and images.
+ * Presentational UI component displaying clinic details, schedules, and images.
  * Delegates slider logic and scheduling calculations to useClinicCard hook.
  */
 export function ClinicCard({
-  name, address, specialties, gallery,
+  name, address, gallery,
   feedback, isOpen, operatingHours, className, compact, onClick
 }: ClinicCardProps) {
   const {
@@ -60,7 +59,7 @@ export function ClinicCard({
         handlePrevImg={handlePrevImg}
         handleNextImg={handleNextImg}
       />
-      
+
       <div className={cn("flex-1 flex flex-col", compact ? "pt-3 px-1 pb-1" : "p-5")}>
         {/* Title and Badge Row */}
         <div className="flex items-start justify-between mb-2">
@@ -79,7 +78,7 @@ export function ClinicCard({
             </div>
           </div>
           <Badge className={cn(
-            "font-bold shrink-0", 
+            "font-bold shrink-0",
             compact ? "text-[10px] px-1.5 py-0.5" : "text-xs px-2.5 py-0.5",
             isOpen ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"
           )}>
@@ -87,31 +86,12 @@ export function ClinicCard({
           </Badge>
         </div>
 
-        {/* Specialties */}
-        {specialties && specialties.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-4">
-            {specialties.map((spec, i) => (
-              <Badge 
-                key={i} 
-                variant="secondary" 
-                className={cn(
-                  "bg-blue-50 text-blue-600 border-blue-100 py-0.5 font-semibold shrink-0",
-                  compact ? "text-[9px]" : "text-[11px]"
-                )}
-              >
-                {spec.specialty_name}
-              </Badge>
-            ))}
-          </div>
-        )}
-
         {/* Details Section */}
         <div className={cn("space-y-2.5 text-slate-800 mb-5", compact ? "text-[12px]" : "text-sm")}>
           <div className="flex items-start gap-2">
             <MapPin className={cn("text-blue-600 shrink-0", compact ? "w-3.5 h-3.5 mt-0.5" : "w-4 h-4 mt-0.5")} />
             <span className="leading-relaxed">{address}</span>
           </div>
-          
 
           <div className="flex items-center gap-2">
             <Clock className={cn("text-blue-600 shrink-0", compact ? "w-3.5 h-3.5" : "w-4 h-4")} />
@@ -122,7 +102,7 @@ export function ClinicCard({
             </span>
           </div>
         </div>
-        
+
         <a
           href="/login"
           onClick={() => {

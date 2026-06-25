@@ -12,7 +12,6 @@ interface ProfileClientProps {
   clinicId: number
   initialFirstName: string
   initialLastName: string
-  initialSpecialty: string
 }
 
 export default function ProfileClient({
@@ -20,12 +19,10 @@ export default function ProfileClient({
   clinicId,
   initialFirstName,
   initialLastName,
-  initialSpecialty
 }: ProfileClientProps) {
   const router = useRouter()
   const [firstName, setFirstName] = useState(initialFirstName || '')
   const [lastName, setLastName] = useState(initialLastName || '')
-  const [specialty, setSpecialty] = useState(initialSpecialty || '')
   const [status, setStatus] = useState<{ success?: boolean; error?: string; loading?: boolean }>({})
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,11 +33,10 @@ export default function ProfileClient({
     }
 
     setStatus({ loading: true })
-    const res = await updatePersonnel(userId, 'dentists', {
+    const res = await updatePersonnel(userId, 'dentist', {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       clinicId,
-      specialty: specialty.trim() || undefined
     })
 
     if (res.success) {
@@ -97,23 +93,6 @@ export default function ProfileClient({
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition"
                 />
               </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase text-slate-555 block">Clinical Specialty</label>
-              <select
-                value={specialty}
-                onChange={e => setSpecialty(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition"
-              >
-                <option value="General Dentistry">General Dentistry</option>
-                <option value="Orthodontics">Orthodontics</option>
-                <option value="Endodontics">Endodontics</option>
-                <option value="Periodontics">Periodontics</option>
-                <option value="Oral & Maxillofacial Surgery">Oral & Maxillofacial Surgery</option>
-                <option value="Pediatric Dentistry">Pediatric Dentistry</option>
-                <option value="Prosthodontics">Prosthodontics</option>
-              </select>
             </div>
 
             <div className="flex justify-end pt-4 border-t border-gray-100">

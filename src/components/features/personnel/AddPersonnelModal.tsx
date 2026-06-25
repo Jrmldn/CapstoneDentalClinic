@@ -4,17 +4,6 @@ import React, { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { useAddPersonnel } from '@/components/features/personnel/useAddPersonnel'
 
-const SPECIALTIES = [
-  'General Dentistry',
-  'Orthodontics',
-  'Endodontics',
-  'Periodontics',
-  'Oral Surgery',
-  'Pediatric Dentistry',
-  'Prosthodontics',
-  'Oral Pathology',
-]
-
 interface AddPersonnelModalProps {
   isOpen: boolean
   onClose: () => void
@@ -41,8 +30,6 @@ export default function AddPersonnelModal({ isOpen, onClose, onSuccess, fixedCli
     setPassword,
     clinicId,
     setClinicId,
-    specialty,
-    setSpecialty,
     isSubmitting,
     error,
     handleSubmit,
@@ -154,22 +141,6 @@ export default function AddPersonnelModal({ isOpen, onClose, onSuccess, fixedCli
                   <option key={clinic.id} value={clinic.id}>
                     {clinic.name}
                   </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {role === 'dentist' && (
-            <div className="space-y-1.5">
-              <label className="font-medium">Specialty</label>
-              <select
-                value={specialty}
-                onChange={(e) => setSpecialty(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:border-slate-900 outline-none transition bg-white"
-              >
-                <option value="">Select a specialty...</option>
-                {SPECIALTIES.map(s => (
-                  <option key={s} value={s}>{s}</option>
                 ))}
               </select>
             </div>

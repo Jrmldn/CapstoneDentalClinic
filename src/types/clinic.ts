@@ -1,14 +1,14 @@
 export interface Clinic {
   id: number
   name: string
-  email: string
-  phone: string
+  email: string | null
+  phone: string | null
   address: string
-  max_appointments_per_day: number
+  max_appointments_per_day: number | null
   latitude?: number | null
   longitude?: number | null
-  is_active: boolean
-  created_at?: string
+  is_active: boolean | null
+  created_at?: string | null
 }
 
 export interface AddClinicData {
@@ -30,7 +30,6 @@ export interface StaffData {
 }
 
 export interface DentistData extends StaffData {
-  specialty: string
 }
 
 export interface FormattedStaff {
@@ -45,7 +44,6 @@ export interface FormattedStaff {
 }
 
 export interface FormattedDentist extends FormattedStaff {
-  specialty: string
 }
 
 export type UnifiedPersonnel =

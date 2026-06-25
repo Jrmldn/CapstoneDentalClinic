@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase/server'
 import { sendEmail } from '@/lib/email/resend'
 import { passwordResetEmail } from '@/lib/email/templates'
 import { sanitizeServerError } from '@/lib/errors/sanitizeError'
+import { logNotification } from '@/lib/notifications/logNotification'
 
 export async function requestPasswordReset(email: string): Promise<{ success: boolean; error?: string }> {
   try {
@@ -34,6 +35,13 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
 
     const template = passwordResetEmail(callbackUrl.toString())
     const sent = await sendEmail({ to: email, ...template })
+
+    await logNotification({
+      triggerType: 'password_reset',
+      channel: 'email',
+      status: sent.success ? 'sent' : 'failed',
+      errorMessage: sent.error,
+    })
 
     if (!sent.success) {
       return { success: false, error: 'Failed to send password reset email. Please try again.' }

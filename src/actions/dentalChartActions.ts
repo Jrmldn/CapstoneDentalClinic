@@ -61,7 +61,7 @@ export async function updateDentalChart(
     const conditionsData = toothConditions.map(tc => ({
       dental_chart_id: chartId,
       tooth_number: tc.tooth_number,
-      tooth_type: tc.tooth_type,
+      tooth_type: tc.tooth_type as 'permanent' | 'temporary',
       condition: tc.condition,
       surface: tc.surface ?? null,
       notes: tc.notes ?? null,

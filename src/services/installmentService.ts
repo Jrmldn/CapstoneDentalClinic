@@ -85,7 +85,7 @@ export async function updateInstallmentPaymentStatus(
   if (status === 'paid') updateData.paid_at = new Date().toISOString()
   return supabaseAdmin
     .from('installment_payments')
-    .update(updateData)
+    .update(updateData as never)
     .eq('id', paymentId)
     .select()
     .single()

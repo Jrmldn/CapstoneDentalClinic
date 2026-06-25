@@ -30,7 +30,7 @@ export const getStaffDashboardData = cache(async (clinicId: number, today: strin
     // Total patients (central directory)
     supabaseAdmin
       .from('patients')
-      .select('id')
+      .select('patient_id:id')
       .eq('is_guest', false),
 
     // Low stock inventory items
@@ -71,7 +71,7 @@ export const getSuperadminDashboardStatsData = cache(async () => {
 export const getDentistRecordByUserId = cache(async (userId: string) => {
   return supabaseAdmin
     .from('dentists')
-    .select('id, clinic_id, first_name, last_name, specialty')
+    .select('id, clinic_id, first_name, last_name, license_no')
     .eq('user_id', userId)
     .maybeSingle()
 })

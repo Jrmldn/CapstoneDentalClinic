@@ -298,7 +298,7 @@ export function AppointmentsTab({
                         size="sm"
                         className="bg-amber-500 hover:bg-amber-600 text-white font-semibold"
                         disabled={feedbackLoading || feedbackRating === 0}
-                        onClick={() => handleFeedbackSubmit(appt.id, appt.clinic_id)}
+                        onClick={() => handleFeedbackSubmit(appt.id, appt.clinic_id!)}
                       >
                         {feedbackLoading ? 'Submitting...' : 'Submit Feedback'}
                       </Button>

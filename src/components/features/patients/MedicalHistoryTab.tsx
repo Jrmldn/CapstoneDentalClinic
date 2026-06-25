@@ -282,7 +282,6 @@ export default function MedicalHistoryTab({ localRecord, viewerRole, lastVisitDa
                     <span className="text-[10px] text-gray-400 font-semibold uppercase block">Primary Physician Details</span>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-1">
                       <p className="text-slate-600"><span className="font-bold text-slate-700">Name:</span> {localRecord.medicalHistory.detailed_info.physician_name || '—'}</p>
-                      <p className="text-slate-600"><span className="font-bold text-slate-700">Specialty:</span> {localRecord.medicalHistory.detailed_info.physician_specialty || '—'}</p>
                       <p className="text-slate-600"><span className="font-bold text-slate-700">Office Address:</span> {localRecord.medicalHistory.detailed_info.physician_office_address || '—'}</p>
                       <p className="text-slate-600"><span className="font-bold text-slate-700">Office Phone:</span> {localRecord.medicalHistory.detailed_info.physician_office_phone || '—'}</p>
                     </div>

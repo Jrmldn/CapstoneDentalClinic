@@ -7,7 +7,7 @@ import StaffTable from '@/components/features/personnel/StaffTable'
 import DentistTable from '@/components/features/personnel/DentistTable'
 import AddPersonnelModal from '@/components/features/personnel/AddPersonnelModal'
 import EditPersonnelModal from '@/components/features/personnel/EditPersonnelModal'
-import { fetchStaff, fetchDentists } from '@/actions/personnelActions'
+import { fetchStaff, fetchDentists, disableUserAccount, enableUserAccount } from '@/actions/personnelActions'
 import { FormattedStaff, FormattedDentist } from '@/types/clinic'
 
 const ITEMS_PER_PAGE = 10
@@ -109,6 +109,26 @@ export default function StaffPersonnelClient({ clinicId }: StaffPersonnelClientP
     setSelectedPerson(null)
   }
 
+  const handleDisableStaff = async (person: FormattedStaff) => {
+    await disableUserAccount(person.userId)
+    await loadPersonnelData(false)
+  }
+
+  const handleEnableStaff = async (person: FormattedStaff) => {
+    await enableUserAccount(person.userId)
+    await loadPersonnelData(false)
+  }
+
+  const handleDisableDentist = async (person: FormattedDentist) => {
+    await disableUserAccount(person.userId)
+    await loadPersonnelData(false)
+  }
+
+  const handleEnableDentist = async (person: FormattedDentist) => {
+    await enableUserAccount(person.userId)
+    await loadPersonnelData(false)
+  }
+
   return (
     <div className="w-full text-slate-900">
       {/* Header Section */}
@@ -159,6 +179,8 @@ export default function StaffPersonnelClient({ clinicId }: StaffPersonnelClientP
             staff={staffData}
             onRefresh={handleRefresh}
             onEdit={handleEdit}
+            onDisable={handleDisableStaff}
+            onEnable={handleEnableStaff}
             currentPage={currentPage}
             totalCount={totalCount}
             itemsPerPage={ITEMS_PER_PAGE}
@@ -169,6 +191,8 @@ export default function StaffPersonnelClient({ clinicId }: StaffPersonnelClientP
             dentists={dentistData}
             onRefresh={handleRefresh}
             onEdit={handleEdit}
+            onDisable={handleDisableDentist}
+            onEnable={handleEnableDentist}
             currentPage={currentPage}
             totalCount={totalCount}
             itemsPerPage={ITEMS_PER_PAGE}
@@ -182,7 +206,6 @@ export default function StaffPersonnelClient({ clinicId }: StaffPersonnelClientP
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSuccess={handleRefresh}
-        type={activeTab}
         fixedClinicId={clinicId}
       />
 
@@ -192,7 +215,7 @@ export default function StaffPersonnelClient({ clinicId }: StaffPersonnelClientP
         onClose={handleCloseEditModal}
         onSuccess={handleRefresh}
         person={selectedPerson}
-        type={activeTab}
+        type={activeTab === 'dentists' ? 'dentist' : 'staff'}
         fixedClinicId={clinicId}
       />
     </div>

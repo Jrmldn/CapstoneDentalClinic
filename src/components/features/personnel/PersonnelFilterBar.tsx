@@ -9,9 +9,9 @@ interface PersonnelFilterBarProps {
   onClinicChange: (clinicId: string | number) => void
   clinics: { id: number; name: string }[]
   roleFilter: string
-  onRoleChange: (v: string) => void
+  onRoleChange: (v: string | number) => void
   statusFilter: string
-  onStatusChange: (v: string) => void
+  onStatusChange: (v: string | number) => void
 }
 
 export default function PersonnelFilterBar({
