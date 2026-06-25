@@ -5,9 +5,6 @@ import { useRouter } from 'next/navigation'
 import { Search, Plus, Calendar } from 'lucide-react'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
 import type {
-  Patient,
-  Service,
-  Dentist,
   Appointment,
   AppointmentsClientProps
 } from './AppointmentTypes'

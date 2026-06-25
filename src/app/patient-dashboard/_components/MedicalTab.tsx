@@ -312,7 +312,7 @@ export function MedicalTab({ record }: MedicalTabProps) {
         </CardHeader>
         <CardContent className="space-y-3">
           {record.treatmentHistory.length > 0 ? (
-            record.treatmentHistory.map((tr: any) => (
+            record.treatmentHistory.map((tr) => (
               <div key={tr.id} className="p-4 bg-white border border-slate-200 rounded-xl shadow-xs">
                 <div className="flex justify-between items-start">
                   <div>
@@ -340,7 +340,7 @@ export function MedicalTab({ record }: MedicalTabProps) {
         </CardHeader>
         <CardContent className="space-y-3">
           {record.prescriptions.length > 0 ? (
-            record.prescriptions.map((pr: any) => (
+            record.prescriptions.map((pr) => (
               <div key={pr.id} className="p-4 bg-white border border-slate-200 rounded-xl shadow-xs">
                 <div className="flex justify-between items-start">
                   <div>

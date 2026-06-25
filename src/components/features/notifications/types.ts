@@ -8,10 +8,10 @@ export interface Notification {
   error_message?: string | null
   created_at: string
   patients: { id: number; first_name: string; last_name: string; phone: string } | null
-  appointments: { id: number; scheduled_at: string } | null
+  appointments: { id: number; scheduled_at: string; clinic_id: number; clinics: { name: string } | null } | null
 }
 
 export interface NotificationsClientProps {
-  clinicId: number
   initialNotifications: Notification[]
+  clinics: { id: number; name: string }[]
 }

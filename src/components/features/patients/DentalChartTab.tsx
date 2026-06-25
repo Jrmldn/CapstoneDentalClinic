@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, RefreshCw, Layers } from 'lucide-react'
+import { Plus, Layers } from 'lucide-react'
 import type { DentalChart, ToothCondition } from './types'
 import { updateDentalChart, ToothConditionData } from '@/actions/dentalChartActions'
 import { formatDate, formatDateTime } from '@/lib/date'

@@ -106,11 +106,6 @@ type PatientSummary = {
   created_at: string
 }
 
-type ClinicPatientRow = {
-  is_active: boolean
-  patients: PatientSummary | PatientSummary[] | null
-}
-
 // REGISTER PATIENT (walk-in / guest / full user)
 
 export async function registerPatient(data: RegisterPatientData) {
@@ -233,7 +228,7 @@ export async function fetchPatientsByClinic(
 
     if (error) throw new Error(error.message)
 
-    const patients = (patientsData || []).map((p: any) => ({
+    const patients = (patientsData || []).map((p) => ({
       id: p.id,
       first_name: p.first_name,
       last_name: p.last_name,

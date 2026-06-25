@@ -1,26 +1,21 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { updatePersonnel } from '@/actions/personnelActions'
-import { getClinics } from '@/lib/queries/clinics'
 import { FormattedStaff, FormattedDentist } from '@/types/clinic'
 
 
 interface UseEditPersonnelProps {
-  isOpen: boolean
   onClose: () => void
   onSuccess: () => Promise<void>
   person: FormattedStaff | FormattedDentist | null
-  type: 'staff' | 'dentists'
+  type: 'staff' | 'dentist'
 }
 
 export const useEditPersonnel = ({
-  isOpen,
   onClose,
   onSuccess,
   person,
   type,
 }: UseEditPersonnelProps) => {
-  const [clinics, setClinics] = useState<{ id: number; name: string }[]>([])
-  
   const [formData, setFormData] = useState({
     firstName: person?.firstName || '',
     lastName: person?.lastName || '',
@@ -28,20 +23,9 @@ export const useEditPersonnel = ({
     clinicId: person?.clinicId?.toString() || '',
     specialty: (person as FormattedDentist)?.specialty || ''
   })
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
-
-  // Load clinic options when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      const fetchClinics = async () => {
-        const result = await getClinics()
-        if (result.success && result.data) setClinics(result.data)
-      }
-      fetchClinics()
-    }
-  }, [isOpen])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -65,7 +49,6 @@ export const useEditPersonnel = ({
   }
 
   return {
-    clinics,
     formData,
     setFormData,
     isSubmitting,

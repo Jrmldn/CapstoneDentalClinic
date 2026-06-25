@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, X, ClipboardCheck, Pill, Printer } from 'lucide-react'
+import { Plus, X, Pill, Printer } from 'lucide-react'
 import { addPrescription } from '@/actions/clinicalRecordActions'
 import { formatDate } from '@/lib/date'
 import type { Prescription, PatientInfo } from './types'

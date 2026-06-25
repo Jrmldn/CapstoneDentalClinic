@@ -120,7 +120,7 @@ export async function initiatePayment(data: InitiatePaymentData): Promise<
     // const link = await createPayMongoLink({ amount: data.amount * 100, description: data.description })
     // const checkoutUrl = link.attributes.checkout_url
     // const paymongoLinkId = link.id
-    let checkoutUrl: string | null = null
+    const checkoutUrl: string | null = null
 
     const { data: record, error } = await supabaseAdmin
       .from('paymongo_payments')

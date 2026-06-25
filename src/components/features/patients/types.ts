@@ -15,6 +15,10 @@ export type RecordTab = 'chart' | 'treatments' | 'prescriptions' | 'info' | 'per
 export interface FullPatientDetail extends PatientSummary {
   address: string | null
   updated_at?: string
+  previous_dentist?: string | null
+  guardian_name?: string | null
+  guardian_phone?: string | null
+  guardian_address?: string | null
 }
 
 export interface DetailedInfo {

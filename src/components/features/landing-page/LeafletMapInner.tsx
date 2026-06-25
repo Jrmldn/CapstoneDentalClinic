@@ -38,7 +38,7 @@ const LeafletMapInner = ({ clinics, onMapReady, activeClinicId, onMarkerClick }:
     setTimeout(() => {
       try {
         root.unmount()
-      } catch (err) {
+      } catch {
         // Ignore unmount errors
       }
     }, 0)

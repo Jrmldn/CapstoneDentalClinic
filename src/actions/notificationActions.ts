@@ -27,7 +27,7 @@ export async function retriggerNotification(notificationId: number) {
       throw new Error('Notification not found or not in a failed state')
     }
 
-    revalidatePath('/staff-dashboard/notifications')
+    revalidatePath('/superadmin-dashboard/notifications')
     return { success: true, notification }
   } catch (error) {
     console.error('Error in retriggerNotification:', error)
@@ -38,25 +38,26 @@ export async function retriggerNotification(notificationId: number) {
   }
 }
 
-/** Fetch all notifications for a clinic's appointments, filterable by status */
+/** Fetch notifications across branches (superadmin), optionally scoped to one clinic and filterable by status */
 export async function fetchNotifications(
-  clinicId: number,
+  clinicId?: number,
   status?: 'pending' | 'sent' | 'failed'
 ) {
   try {
-    const auth = await ensureRole('staff')
+    const auth = await ensureRole('superadmin')
     if (!auth.success) return { success: false, error: auth.error, notifications: [] }
 
     // Single Query Join Filter (Class G/B/A optimization)
-    const baseQuery = supabaseAdmin
+    let baseQuery = supabaseAdmin
       .from('notifications')
       .select(`
         *,
         patients ( id, first_name, last_name, phone ),
-        appointments!inner ( id, scheduled_at, clinic_id )
+        appointments!inner ( id, scheduled_at, clinic_id, clinics ( name ) )
       `)
-      .eq('appointments.clinic_id', clinicId)
       .order('created_at', { ascending: false })
+
+    if (clinicId) baseQuery = baseQuery.eq('appointments.clinic_id', clinicId)
 
     const { data: notifications, error } = status
       ? await baseQuery.eq('status', status)

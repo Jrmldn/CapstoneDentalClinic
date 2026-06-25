@@ -32,7 +32,7 @@ export interface PatientMedicalHistoryData {
   previous_surgeries?: string | null
   is_pregnant?: boolean
   is_smoker?: boolean
-  detailed_info?: any
+  detailed_info?: Record<string, unknown>
 }
 
 // FETCH PATIENT RECORD
@@ -211,7 +211,7 @@ export async function fetchPatientRecord(
     if (patientRes.error) throw new Error(patientRes.error.message)
 
     // Decrypt medical history fields
-    const rawMed = medHistoryRes.data as any
+    const rawMed = medHistoryRes.data as Record<string, string | null | boolean | string[]>
     const medicalHistory = rawMed ? {
       ...rawMed,
       blood_type:           rawMed.blood_type           ? await decryptMedicalData(rawMed.blood_type)           : null,
@@ -225,7 +225,7 @@ export async function fetchPatientRecord(
 
     // Decrypt prescriptions
     const prescriptions = await Promise.all(
-      (prescriptionsRes.data ?? []).map(async (rx: any) => ({
+      (prescriptionsRes.data ?? []).map(async (rx) => ({
         ...rx,
         medication: rx.medication ? await decryptMedicalData(rx.medication) : rx.medication,
         dosage:     rx.dosage     ? await decryptMedicalData(rx.dosage)     : rx.dosage,
@@ -237,7 +237,7 @@ export async function fetchPatientRecord(
 
     // Decrypt clinical assessments
     const assessments = await Promise.all(
-      (assessmentsRes.data ?? []).map(async (a: any) => ({
+      (assessmentsRes.data ?? []).map(async (a) => ({
         ...a,
         diagnosis:      a.diagnosis      ? await decryptMedicalData(a.diagnosis)      : a.diagnosis,
         treatment_plan: a.treatment_plan ? await decryptMedicalData(a.treatment_plan) : a.treatment_plan,
@@ -247,7 +247,7 @@ export async function fetchPatientRecord(
 
     // Decrypt treatment history
     const treatmentHistory = await Promise.all(
-      (treatmentHistoryRes.data ?? []).map(async (t: any) => ({
+      (treatmentHistoryRes.data ?? []).map(async (t) => ({
         ...t,
         treatment: t.treatment ? await decryptMedicalData(t.treatment) : t.treatment,
         notes:     t.notes     ? await decryptMedicalData(t.notes)     : t.notes,
@@ -256,7 +256,7 @@ export async function fetchPatientRecord(
 
     // Decrypt periodontal screenings
     const periodontalScreenings = await Promise.all(
-      (periodontalRes.data ?? []).map(async (p: any) => ({
+      (periodontalRes.data ?? []).map(async (p) => ({
         ...p,
         findings: p.findings ? await decryptMedicalData(p.findings) : p.findings,
       }))

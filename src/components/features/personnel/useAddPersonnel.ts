@@ -6,7 +6,7 @@ interface UseAddPersonnelProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
-  type: 'staff' | 'dentists'
+  type: 'staff' | 'dentist'
   fixedClinicId?: number
 }
 

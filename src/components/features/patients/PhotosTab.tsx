@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Camera, Upload, Trash, Eye, FileImage, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase/client'
 import { formatDateTime } from '@/lib/date'
 import imageCompression from 'browser-image-compression'
@@ -58,7 +57,7 @@ export default function PhotosTab({ patientId, viewerRole }: PhotosTabProps) {
             .single()
           if (dentist) {
             name = `Dr. ${dentist.first_name} ${dentist.last_name}`
-            branch = (dentist.clinics as any)?.name || 'Unknown Branch'
+            branch = (dentist.clinics as { name?: string } | null)?.name || 'Unknown Branch'
           }
         } else if (profile.role === 'staff') {
           const { data: staff } = await supabase
@@ -68,7 +67,7 @@ export default function PhotosTab({ patientId, viewerRole }: PhotosTabProps) {
             .single()
           if (staff) {
             name = `${staff.first_name} ${staff.last_name}`
-            branch = (staff.clinics as any)?.name || 'Unknown Branch'
+            branch = (staff.clinics as { name?: string } | null)?.name || 'Unknown Branch'
           }
         } else if (profile.role === 'superadmin') {
           name = 'Superadmin'
@@ -117,7 +116,7 @@ export default function PhotosTab({ patientId, viewerRole }: PhotosTabProps) {
       }
 
       // 3. Map to our state structure
-      const mappedPhotos: MedicalPhoto[] = files.map((file, index) => {
+      const mappedPhotos: MedicalPhoto[] = files.map((file) => {
         const signedUrlObj = signedUrls?.find(url => url.path === `${patientIdStr}/${file.name}`)
         
         // Parse metadata from filename
@@ -156,7 +155,7 @@ export default function PhotosTab({ patientId, viewerRole }: PhotosTabProps) {
       })
 
       setPhotos(mappedPhotos.filter(p => p.url !== ''))
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error loading medical photos:', err)
       setError('Failed to load medical photos from private storage.')
     } finally {
@@ -222,9 +221,9 @@ export default function PhotosTab({ patientId, viewerRole }: PhotosTabProps) {
 
       setSuccess('Photo uploaded successfully.')
       loadPhotos()
-    } catch (err: any) {
+    } catch (err) {
       console.error('Upload error:', err)
-      setError(err.message || 'Failed to compress or upload photo.')
+      setError(err instanceof Error ? err.message : 'Failed to compress or upload photo.')
     } finally {
       setIsUploading(false)
       setUploadProgress(null)
@@ -256,7 +255,7 @@ export default function PhotosTab({ patientId, viewerRole }: PhotosTabProps) {
         setPreviewPhoto(null)
       }
       loadPhotos()
-    } catch (err: any) {
+    } catch (err) {
       console.error('Delete error:', err)
       setError('Failed to delete photo from storage.')
     }

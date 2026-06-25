@@ -37,6 +37,23 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const userRole = user?.user_metadata?.role
 
+  // 0. DISABLED ACCOUNT CHECK — must run before any redirect logic
+  if (user) {
+    const { data: userData } = await supabase
+      .from('users')
+      .select('is_disabled')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (userData?.is_disabled) {
+      if (pathname !== '/login' && pathname !== '/superadmin-login') {
+        return addSecurityHeaders(NextResponse.redirect(new URL('/login?error=ACCOUNT_DISABLED', request.url)))
+      }
+      // On login pages — fall through so the error modal renders
+      return addSecurityHeaders(supabaseResponse)
+    }
+  }
+
   // 1. PROTECTION: If not logged in
   if (!user) {
     if (pathname.startsWith('/patient-dashboard') || pathname.startsWith('/staff-dashboard') || pathname.startsWith('/dentist-dashboard')) {

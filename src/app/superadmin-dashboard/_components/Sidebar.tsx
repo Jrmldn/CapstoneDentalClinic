@@ -11,6 +11,7 @@ import {
   ShoppingBag,
   Image as ImageIcon,
   CalendarDays,
+  Bell,
 } from 'lucide-react'
 
 const menuGroups = [
@@ -34,6 +35,7 @@ const menuGroups = [
     label: 'Analytics',
     items: [
       { label: 'Reports & Stats',    href: '/superadmin-dashboard/reports',   icon: BarChart3,     key: 'reports' },
+      { label: 'Notification Logs',  href: '/superadmin-dashboard/notifications', icon: Bell,      key: 'notifications' },
     ],
   },
 ]

@@ -14,6 +14,15 @@ import {
   updateClinicMaxLimit
 } from '@/services/appointmentService'
 
+interface AppointmentCurrentData {
+  status: string
+  reschedule_count: number | null
+  booked_at: string | null
+  scheduled_at: string
+  end_at: string
+  patient_id: number | null
+}
+
 // TYPES
 
 export type AppointmentStatus =
@@ -154,9 +163,10 @@ export async function updateAppointmentStatus(
 
   try {
     // Fetch current status (and reschedule tracking fields) for the log
-    const { data: current, error: fetchError } = await getAppointmentStatus(appointmentId)
+    const { data: rawCurrent, error: fetchError } = await getAppointmentStatus(appointmentId)
 
-    if (fetchError || !current) throw new Error('Appointment not found')
+    if (fetchError || !rawCurrent) throw new Error('Appointment not found')
+    const current = rawCurrent as AppointmentCurrentData
 
     // Patients may only update their own appointments
     if (role === 'patient') {
@@ -166,7 +176,7 @@ export async function updateAppointmentStatus(
         .eq('user_id', performedBy)
         .maybeSingle()
 
-      if (!patientRecord || (current as any).patient_id !== patientRecord.id) {
+      if (!patientRecord || current.patient_id !== patientRecord.id) {
         return { success: false, error: 'Insufficient permissions' }
       }
     }
@@ -174,11 +184,11 @@ export async function updateAppointmentStatus(
     // A2: Enforce reschedule limits for patients
     const isPatientReschedule = role === 'patient' && rescheduledAt
     if (isPatientReschedule) {
-      const rescheduleCount = (current as any).reschedule_count ?? 0
+      const rescheduleCount = current.reschedule_count ?? 0
       if (rescheduleCount >= 3) {
         return { success: false, error: 'Reschedule limit reached. You may only reschedule up to 3 times per appointment.' }
       }
-      const bookedAt = (current as any).booked_at
+      const bookedAt = current.booked_at
       if (bookedAt) {
         const hoursSinceBooking = (Date.now() - new Date(bookedAt).getTime()) / (1000 * 60 * 60)
         if (hoursSinceBooking < 1) {
@@ -192,7 +202,7 @@ export async function updateAppointmentStatus(
     if (rescheduledEnd)  updateData.end_at      = rescheduledEnd
     // A2: Increment reschedule_count when patient reschedules
     if (isPatientReschedule) {
-      updateData.reschedule_count = ((current as any).reschedule_count ?? 0) + 1
+      updateData.reschedule_count = (current.reschedule_count ?? 0) + 1
     }
 
     // If declining a reschedule (moving from pending_patient_confirm to pending),
@@ -244,7 +254,7 @@ export async function updateAppointmentStatus(
 
     let logNotes = notes ?? null
     if (newStatus === 'pending_patient_confirm') {
-      logNotes = `${notes ?? ''} [Original: ${(current as any).scheduled_at} | ${(current as any).end_at}]`
+      logNotes = `${notes ?? ''} [Original: ${current.scheduled_at} | ${current.end_at}]`
     }
 
     await insertAppointmentLog({

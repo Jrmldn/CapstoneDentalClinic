@@ -1,6 +1,6 @@
 'use client'
 
-import { Calendar, Clock, Check, X, DollarSign } from 'lucide-react'
+import { Calendar, Clock, Check, DollarSign } from 'lucide-react'
 import type { Appointment } from './AppointmentTypes'
 import { formatPhone } from '@/utils/phone-helpers'
 import { formatDate, formatTime } from '@/lib/date'

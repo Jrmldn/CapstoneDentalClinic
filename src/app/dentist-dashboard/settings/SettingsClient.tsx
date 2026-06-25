@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { User, Check, RefreshCw } from 'lucide-react'
+import { User } from 'lucide-react'
 import { updateDentistProfile } from '@/actions/dentistScheduleActions'
 
 interface SettingsClientProps {
@@ -31,7 +31,7 @@ export default function SettingsClient({
   // Mocked for display as per mockup
   const [contactNo, setContactNo] = useState('+63 917 000 1234')
 
-  const [isPending, startTransition] = useTransition()
+  const [, startTransition] = useTransition()
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault()

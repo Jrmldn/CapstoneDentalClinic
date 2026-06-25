@@ -1,25 +1,18 @@
 import { enforceRole } from '@/lib/auth/protection'
-import { getStaffClinicId } from '@/lib/auth/getClinicId'
+import { getClinics } from '@/lib/queries/clinics'
 import { fetchNotifications } from '@/actions/notificationActions'
 import NotificationsClient from '@/components/features/notifications/NotificationsClient'
 
-export const metadata = { title: 'Notifications — AppoinDent' }
+export const metadata = { title: 'Notification Dispatcher Logs — AppointDent' }
+export const dynamic = 'force-dynamic'
 
 export default async function NotificationsPage() {
-  const authUser = await enforceRole('staff')
+  await enforceRole('superadmin')
 
-  // Resolve clinicId
-  const clinicId = await getStaffClinicId(authUser.id)
-  if (!clinicId) {
-    return (
-      <div className="p-8 text-center text-gray-400">
-        No clinic assigned to your account. Contact a superadmin.
-      </div>
-    )
-  }
+  const clinicsRes = await getClinics()
+  const clinics = clinicsRes.data || []
 
-  // Fetch initial notifications
-  const res = await fetchNotifications(clinicId)
+  const res = await fetchNotifications()
   const initialNotifications = res.notifications || []
 
   return (
@@ -27,13 +20,13 @@ export default async function NotificationsPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">Notification Dispatcher Logs</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Monitor SMS &amp; Email dispatches, view failure reasons, and manually retrigger failed notifications.
+          Monitor SMS &amp; Email dispatches across all branches, view failure reasons, and manually retrigger failed notifications.
         </p>
       </div>
 
       <NotificationsClient
-        clinicId={clinicId}
         initialNotifications={initialNotifications}
+        clinics={clinics}
       />
     </div>
   )

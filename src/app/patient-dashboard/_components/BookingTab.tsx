@@ -8,7 +8,6 @@ import {
   AlertCircle,
   ShieldAlert,
   MapPin,
-  ChevronRight,
   Loader2,
 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
@@ -113,7 +112,7 @@ export function BookingTab({
   // Pre-fill from reschedule mode (use the existing appointment's clinic)
   useEffect(() => {
     if (rescheduleMode && existingAppt) {
-      const clinicId = (existingAppt as any).clinic_id
+      const clinicId = existingAppt.clinic_id
       if (clinicId) handleBranchSelect(clinicId)
 
       const dId = String(existingAppt.dentists?.id || '')

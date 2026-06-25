@@ -158,7 +158,7 @@ export async function insertAppointmentLog(logData: AppointmentLogInsertData) {
 export const getAppointmentStatus = cache(async (appointmentId: number) => {
   return supabaseAdmin
     .from('appointments')
-    .select('status, reschedule_count, booked_at, scheduled_at, end_at')
+    .select('status, reschedule_count, booked_at, scheduled_at, end_at, patient_id')
     .eq('id', appointmentId)
     .single()
 })
@@ -168,7 +168,7 @@ export const getAppointmentStatus = cache(async (appointmentId: number) => {
  */
 export async function updateAppointmentDetails(
   appointmentId: number,
-  updateData: Record<string, any>
+  updateData: Record<string, unknown>
 ) {
   return supabaseAdmin
     .from('appointments')

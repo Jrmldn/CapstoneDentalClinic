@@ -12,7 +12,6 @@ import {
   RefreshCw,
   ArrowRight,
   User,
-  HeartPulse,
   ChevronDown,
   ChevronUp,
   ShieldAlert

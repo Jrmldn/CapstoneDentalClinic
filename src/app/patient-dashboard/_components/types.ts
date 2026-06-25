@@ -12,6 +12,32 @@ export interface Service {
   slot_duration_min: number
 }
 
+export interface PatientAppointment {
+  id: number
+  scheduled_at: string
+  status: string
+  booked_at?: string
+  clinic_id?: number
+  services?: { id?: number; name: string } | null
+  dentists?: { id?: number; first_name: string; last_name: string } | null
+  clinics?: { id: number; name: string } | null
+}
+
+export interface PatientTreatment {
+  id: number
+  performed_at?: string | null
+  treatment?: string
+  services?: { name: string } | null
+  dentists?: { first_name: string; last_name: string } | null
+}
+
+export interface PatientPrescription {
+  id: number
+  prescribed_at?: string | null
+  medication_name?: string
+  dentists?: { first_name: string; last_name: string } | null
+}
+
 export interface PatientRecord {
   patient: {
     id: number
@@ -23,6 +49,10 @@ export interface PatientRecord {
     address: string
     email: string | null
     updated_at?: string
+    previous_dentist?: string | null
+    guardian_name?: string | null
+    guardian_phone?: string | null
+    guardian_address?: string | null
   }
   medicalHistory: {
     blood_type: string | null
@@ -64,9 +94,9 @@ export interface PatientRecord {
       updated_by_branch?: string
     } | null
   } | null
-  dentalCharts: any[]
-  treatmentHistory: any[]
-  assessments: any[]
-  prescriptions: any[]
-  appointments: any[]
+  dentalCharts: unknown[]
+  treatmentHistory: PatientTreatment[]
+  assessments: unknown[]
+  prescriptions: PatientPrescription[]
+  appointments: PatientAppointment[]
 }

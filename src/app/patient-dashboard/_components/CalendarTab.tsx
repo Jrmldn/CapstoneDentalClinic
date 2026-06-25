@@ -71,7 +71,7 @@ export function CalendarTab({
   }
 
   const getApptsByDate = (dateStr: string) =>
-    record.appointments.filter((a: any) => {
+    record.appointments.filter((a) => {
       if (!a.scheduled_at) return false
       const d = new Date(a.scheduled_at)
       const apptDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -214,7 +214,7 @@ export function CalendarTab({
                       No appointments scheduled for this day.
                     </p>
                   ) : (
-                    selectedCalAppts.map((appt: any) => {
+                    selectedCalAppts.map((appt) => {
                       const time = formatTime(appt.scheduled_at)
                       const colors = getStatusColor(appt.status)
                       return (

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, X, HeartPulse, ShieldAlert, CheckCircle, HelpCircle } from 'lucide-react'
+import { Plus, X } from 'lucide-react'
 import { addPeriodontalScreening, addTmjAssessment } from '@/actions/clinicalRecordActions'
 import { formatDate } from '@/lib/date'
 import type { PeriodontalScreening, TmjAssessment } from './types'
@@ -53,7 +53,7 @@ export default function PeriodontalTab({
       if (findingsStr && findingsStr.startsWith('{')) {
         return JSON.parse(findingsStr)
       }
-    } catch (e) {}
+    } catch {}
     return { mobility: findingsStr || 'Grade 0', furcation: 'None detected', plaque_index: '—' }
   }
 
@@ -62,7 +62,7 @@ export default function PeriodontalTab({
       if (findingsStr && findingsStr.startsWith('{')) {
         return JSON.parse(findingsStr)
       }
-    } catch (e) {}
+    } catch {}
     return {
       clicking: findingsStr || 'None',
       pain_level: '—',

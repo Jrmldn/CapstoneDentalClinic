@@ -113,7 +113,7 @@ export const getAllStaff = cache(async () => {
       clinic_id,
       first_name,
       last_name,
-      users ( email ),
+      users ( email, is_disabled ),
       clinics ( name )
     `)
     .order('first_name', { ascending: true })
@@ -132,7 +132,7 @@ export const getAllDentists = cache(async () => {
       first_name,
       last_name,
       specialty,
-      users ( email ),
+      users ( email, is_disabled ),
       clinics ( name )
     `)
     .order('first_name', { ascending: true })
@@ -156,7 +156,7 @@ export async function getStaffList(params: {
       clinic_id,
       first_name,
       last_name,
-      users ( email ),
+      users ( email, is_disabled ),
       clinics ( name )
     `, { count: 'exact' })
     .order('first_name', { ascending: false })
@@ -197,7 +197,7 @@ export async function getDentistsList(params: {
       first_name,
       last_name,
       specialty,
-      users ( email ),
+      users ( email, is_disabled ),
       clinics ( name )
     `, { count: 'exact' })
     .order('first_name', { ascending: false })

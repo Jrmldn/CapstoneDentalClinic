@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, Plus, X, Clock, HelpCircle } from 'lucide-react'
+import { Calendar, Plus, X, Clock } from 'lucide-react'
 import { createAppointment } from '@/actions/appointmentActions'
 import { getAvailableSlots } from '@/actions/slotAvailabilityActions'
 import { fetchServices } from '@/actions/serviceActions'

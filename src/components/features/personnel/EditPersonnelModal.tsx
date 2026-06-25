@@ -6,32 +6,44 @@ import { FormattedStaff, FormattedDentist } from '@/types/clinic'
 
 import { useEditPersonnel } from '@/components/features/personnel/useEditPersonnel'
 
+const SPECIALTIES = [
+  'General Dentistry',
+  'Orthodontics',
+  'Endodontics',
+  'Periodontics',
+  'Oral Surgery',
+  'Pediatric Dentistry',
+  'Prosthodontics',
+  'Oral Pathology',
+]
+
 
 interface EditPersonnelModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => Promise<void>
   person: FormattedStaff | FormattedDentist | null
-  type: 'staff' | 'dentists'
+  type: 'staff' | 'dentist'
+  clinics: { id: number; name: string }[]
   fixedClinicId?: number
 }
 
-export default function EditPersonnelModal({ 
-  isOpen, 
-  onClose, 
-  onSuccess, 
-  person, 
+export default function EditPersonnelModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  person,
   type,
+  clinics,
   fixedClinicId
 }: EditPersonnelModalProps) {
   const {
-    clinics,
     formData,
     setFormData,
     isSubmitting,
     error,
     handleSubmit,
-  } = useEditPersonnel({ isOpen, onClose, onSuccess, person, type })
+  } = useEditPersonnel({ onClose, onSuccess, person, type })
 
   if (!isOpen || !person) return null
 
@@ -95,14 +107,19 @@ export default function EditPersonnelModal({
             </div>
           )}
 
-          {type === 'dentists' && (
+          {type === 'dentist' && (
             <div className="space-y-1.5">
               <label className="font-medium">Specialty</label>
-              <input 
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg" 
-                value={formData.specialty} 
-                onChange={e => setFormData({...formData, specialty: e.target.value})} 
-              />
+              <select
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white"
+                value={formData.specialty}
+                onChange={e => setFormData({...formData, specialty: e.target.value})}
+              >
+                <option value="">Select a specialty...</option>
+                {SPECIALTIES.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
             </div>
           )}
 

@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { StaffData, DentistData } from '@/types/clinic'
 import { ensureRole } from '@/lib/auth/ensureRole'
 
+import { supabaseAdmin } from '@/lib/supabase/server'
 import {
   getMatchingUserIds,
   createAuthUser,
@@ -158,22 +159,44 @@ export async function addDentist(data: DentistData) {
   }
 }
 
-export async function deletePersonnel(userId: string) {
+export async function disableUserAccount(userId: string) {
   const auth = await ensureRole('superadmin')
   if (!auth.success) return { success: false, error: auth.error }
 
   try {
-    const { error: dbError } = await deleteUserRecord(userId)
+    const { error: dbError } = await supabaseAdmin
+      .from('users')
+      .update({ is_disabled: true })
+      .eq('id', userId)
 
     if (dbError) throw new Error(dbError.message)
 
-    const { error: authError } = await deleteAuthUser(userId)
-    if (authError) throw new Error(authError.message)
+    await supabaseAdmin.auth.admin.signOut(userId)
 
     revalidatePath('/superadmin-dashboard/personnel')
     return { success: true }
   } catch (error) {
-    console.error('Error in deletePersonnel:', error)
+    console.error('Error in disableUserAccount:', error)
+    return { success: false, error: sanitizeServerError(error) }
+  }
+}
+
+export async function enableUserAccount(userId: string) {
+  const auth = await ensureRole('superadmin')
+  if (!auth.success) return { success: false, error: auth.error }
+
+  try {
+    const { error: dbError } = await supabaseAdmin
+      .from('users')
+      .update({ is_disabled: false })
+      .eq('id', userId)
+
+    if (dbError) throw new Error(dbError.message)
+
+    revalidatePath('/superadmin-dashboard/personnel')
+    return { success: true }
+  } catch (error) {
+    console.error('Error in enableUserAccount:', error)
     return { success: false, error: sanitizeServerError(error) }
   }
 }
@@ -299,7 +322,7 @@ export async function fetchDentists(
 
 export async function updatePersonnel(
   userId: string,
-  type: 'staff' | 'dentists',
+  type: 'staff' | 'dentist',
   data: {
     firstName: string;
     lastName: string;
@@ -319,7 +342,7 @@ export async function updatePersonnel(
       clinic_id: data.clinicId,
     }
 
-    if (type === 'dentists' && data.specialty) {
+    if (type === 'dentist' && data.specialty) {
       updatePayload.specialty = data.specialty
     }
 

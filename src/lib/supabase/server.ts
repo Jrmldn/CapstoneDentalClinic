@@ -17,9 +17,11 @@ export function getSupabaseAdmin() {
   return supabaseAdminInstance
 }
 
+type SupabaseAdminClient = ReturnType<typeof createClient>
+
 // Backward compatibility: lazy-loaded proxy
-export const supabaseAdmin = new Proxy({} as any, {
-  get: (target, prop) => {
-    return getSupabaseAdmin()[prop as keyof typeof supabaseAdminInstance]
+export const supabaseAdmin = new Proxy({} as SupabaseAdminClient, {
+  get: (_target, prop) => {
+    return getSupabaseAdmin()[prop as keyof SupabaseAdminClient]
   }
 })

@@ -43,7 +43,7 @@ export default async function AppointmentsPage() {
     .eq('clinic_id', clinicId)
     .order('scheduled_at', { ascending: false })
 
-  const mappedAppointments: Appointment[] = (appointments || []).map((appt: any) => {
+  const mappedAppointments: Appointment[] = (appointments || []).map((appt) => {
     const rawPatient = appt.patients
     const rawService = appt.services
     const rawDentist = appt.dentists
@@ -103,7 +103,7 @@ export default async function AppointmentsPage() {
   ])
 
   // Map and flatten nested items
-  const activePatients: Patient[] = (patientsRes.data || []).map((p: any) => ({
+  const activePatients: Patient[] = (patientsRes.data || []).map((p) => ({
     id: p.id,
     first_name: p.first_name,
     last_name: p.last_name,

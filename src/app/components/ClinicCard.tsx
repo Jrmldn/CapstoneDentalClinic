@@ -28,9 +28,9 @@ export interface ClinicCardProps {
  * Presentational UI component displaying clinic details, specialties, schedules, and images.
  * Delegates slider logic and scheduling calculations to useClinicCard hook.
  */
-export function ClinicCard({ 
-  id, name, address, phone, specialties, gallery, 
-  feedback, isOpen, operatingHours, className, compact, onClick 
+export function ClinicCard({
+  name, address, specialties, gallery,
+  feedback, isOpen, operatingHours, className, compact, onClick
 }: ClinicCardProps) {
   const {
     images,
@@ -125,7 +125,7 @@ export function ClinicCard({
         
         <a
           href="/login"
-          onClick={(e) => {
+          onClick={() => {
             // Let the global listener handle smooth navigation to avoid "no router context" errors in Leaflet popups
           }}
           className={cn(

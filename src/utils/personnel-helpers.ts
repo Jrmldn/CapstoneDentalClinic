@@ -6,7 +6,7 @@ interface RawStaffItem {
   clinic_id: number
   first_name: string
   last_name: string
-  users: { email: string } | { email: string }[] | null
+  users: { email: string; is_disabled: boolean } | { email: string; is_disabled: boolean }[] | null
   clinics: { name: string } | { name: string }[] | null
 }
 
@@ -38,6 +38,7 @@ export function formatStaff(staffList: RawStaffItem[]): FormattedStaff[] {
       lastName: staff.last_name,
       email: userRelation?.email || 'No email',
       clinicName: clinicRelation?.name || 'Unassigned',
+      isDisabled: userRelation?.is_disabled ?? false,
     }
   })
 }
@@ -58,6 +59,7 @@ export function formatDentists(dentistsList: RawDentistItem[]): FormattedDentist
       specialty: dentist.specialty || '',
       email: userRelation?.email || 'No email',
       clinicName: clinicRelation?.name || 'Unassigned',
+      isDisabled: userRelation?.is_disabled ?? false,
     }
   })
 }

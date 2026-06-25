@@ -41,8 +41,13 @@ export interface FormattedStaff {
   lastName: string
   email: string
   clinicName: string
+  isDisabled: boolean
 }
 
 export interface FormattedDentist extends FormattedStaff {
   specialty: string
 }
+
+export type UnifiedPersonnel =
+  | (FormattedStaff & { role: 'staff' })
+  | (FormattedDentist & { role: 'dentist' })
