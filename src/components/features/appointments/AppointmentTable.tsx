@@ -20,7 +20,7 @@ function getStatusBadgeClass(status: string): string {
     case 'pending': return 'bg-amber-50 text-amber-700 border border-amber-200'
     case 'completed': return 'bg-slate-50 text-slate-600 border border-slate-200'
     case 'cancelled': return 'bg-red-50 text-red-700 border border-red-200'
-    case 'rescheduled': return 'bg-purple-50 text-purple-700 border border-purple-200'
+    case 'rescheduled': return 'bg-blue-50 text-blue-700 border border-blue-200'
     case 'no_show': return 'bg-orange-50 text-orange-700 border border-orange-200'
     case 'follow_up': return 'bg-teal-50 text-teal-700 border border-teal-200'
     case 'pending_patient_confirm': return 'bg-purple-50 text-purple-700 border border-purple-200'
@@ -116,7 +116,7 @@ export default function AppointmentTable({
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      {(appt.status === 'pending' || appt.status === 'rescheduled') && (
+                      {appt.status === 'pending' && (
                         <button
                           onClick={() => onConfirm(appt.id)}
                           className="p-1 text-blue-600 hover:bg-blue-50 rounded"
@@ -126,42 +126,38 @@ export default function AppointmentTable({
                         </button>
                       )}
                       {(appt.status === 'pending' || appt.status === 'confirmed' || appt.status === 'rescheduled' || appt.status === 'pending_patient_confirm') && (
-                        <>
-                          <button
-                            onClick={() => onReschedule(appt)}
-                            className="px-2 py-1 text-slate-600 bg-slate-50 border border-slate-200 rounded hover:bg-slate-100 text-xs font-semibold"
-                          >
-                            Reschedule
-                          </button>
-                          <button
-                            onClick={() => onOpenBilling(appt)}
-                            className="px-2 py-1 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded hover:bg-emerald-100 text-xs font-semibold flex items-center gap-1"
-                          >
-                            <DollarSign className="w-3.5 h-3.5" />
-                            Complete &amp; Bill
-                          </button>
-                          <button
-                            onClick={() => onCancel(appt.id)}
-                            className="px-2 py-1 text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100 text-xs font-semibold"
-                          >
-                            Cancel
-                          </button>
-                          {/* No-show: only show when appointment scheduled time has passed */}
-                          {(() => {
-                            const apptTime = new Date(appt.scheduled_at)
-                            const now = new Date()
-                            const hasPassed = apptTime < now
-                            return hasPassed ? (
-                              <button
-                                onClick={() => onNoShow(appt.id)}
-                                className="px-2 py-1 text-orange-700 bg-orange-50 border border-orange-200 rounded hover:bg-orange-100 text-xs font-semibold"
-                                title="Mark as No-Show"
-                              >
-                                No Show
-                              </button>
-                            ) : null
-                          })()}
-                        </>
+                        <button
+                          onClick={() => onReschedule(appt)}
+                          className="px-2 py-1 text-slate-600 bg-slate-50 border border-slate-200 rounded hover:bg-slate-100 text-xs font-semibold"
+                        >
+                          Reschedule
+                        </button>
+                      )}
+                      {appt.status === 'confirmed' && (
+                        <button
+                          onClick={() => onOpenBilling(appt)}
+                          className="px-2 py-1 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded hover:bg-emerald-100 text-xs font-semibold flex items-center gap-1"
+                        >
+                          <DollarSign className="w-3.5 h-3.5" />
+                          Complete &amp; Bill
+                        </button>
+                      )}
+                      {(appt.status === 'pending' || appt.status === 'confirmed' || appt.status === 'rescheduled' || appt.status === 'pending_patient_confirm') && (
+                        <button
+                          onClick={() => onCancel(appt.id)}
+                          className="px-2 py-1 text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100 text-xs font-semibold"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                      {(appt.status === 'pending' || appt.status === 'confirmed') && new Date(appt.scheduled_at) < new Date() && (
+                        <button
+                          onClick={() => onNoShow(appt.id)}
+                          className="px-2 py-1 text-orange-700 bg-orange-50 border border-orange-200 rounded hover:bg-orange-100 text-xs font-semibold"
+                          title="Mark as No-Show"
+                        >
+                          No Show
+                        </button>
                       )}
                     </div>
                   </td>

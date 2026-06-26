@@ -31,16 +31,18 @@ interface StaffDashboardViewProps {
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    confirmed: 'bg-emerald-50 text-emerald-700',
-    pending: 'bg-amber-50 text-amber-700',
-    completed: 'bg-slate-100 text-slate-600',
-    rescheduled: 'bg-purple-50 text-purple-700',
-    cancelled: 'bg-red-50 text-red-600',
-    no_show: 'bg-gray-100 text-gray-500',
+    confirmed:               'bg-emerald-50 text-emerald-700',
+    pending:                 'bg-amber-50 text-amber-700',
+    completed:               'bg-slate-100 text-slate-600',
+    rescheduled:             'bg-blue-50 text-blue-700',
+    cancelled:               'bg-red-50 text-red-600',
+    no_show:                 'bg-orange-50 text-orange-700',
+    follow_up:               'bg-teal-50 text-teal-700',
+    pending_patient_confirm: 'bg-purple-50 text-purple-700',
   }
   return (
     <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold capitalize ${styles[status] ?? 'bg-gray-100 text-gray-500'}`}>
-      {status.replace('_', ' ')}
+      {status.replace(/_/g, ' ')}
     </span>
   )
 }
@@ -66,7 +68,7 @@ export default function StaffDashboardView({ staffName, todayAppts, stats }: Sta
         <StatCard
           label="Today's Appointments"
           value={todayAppts.length}
-          sub={`${stats.confirmedToday} confirmed · ${stats.pendingToday} pending`}
+          sub={`${stats.confirmedToday} confirmed · ${stats.pendingToday} pending${stats.awaitingConfirmToday > 0 ? ` · ${stats.awaitingConfirmToday} awaiting confirm` : ''}`}
           icon={CalendarDays}
           color="blue"
           href="/staff-dashboard/appointments"

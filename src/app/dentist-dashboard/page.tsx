@@ -58,6 +58,7 @@ export default async function DentistDashboardPage() {
     }))
     .filter(a => a.payment_status !== 'unpaid' || a.is_walk_in)
 
+  const ACTIVE_STATUSES = ['pending', 'confirmed', 'rescheduled', 'follow_up', 'pending_patient_confirm']
   const upcomingAppts: Appointment[] = upcomingApptsRaw
     .map(appt => ({
       id: appt.id,
@@ -69,7 +70,7 @@ export default async function DentistDashboardPage() {
       patients: normalizeRelation(appt.patients),
       services: normalizeRelation(appt.services),
     }))
-    .filter(a => a.payment_status !== 'unpaid' || a.is_walk_in)
+    .filter(a => ACTIVE_STATUSES.includes(a.status) && (a.payment_status !== 'unpaid' || a.is_walk_in))
 
   // Calculate statistics
   const completedToday = todayAppts.filter(a => a.status === 'completed').length

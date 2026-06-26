@@ -66,14 +66,14 @@ interface DentistDashboardViewProps {
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    confirmed: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-    completed: 'bg-slate-50 text-slate-600 border border-slate-200',
-    pending: 'bg-amber-50 text-amber-700 border border-amber-200',
-    rescheduled: 'bg-purple-50 text-purple-700 border border-purple-200',
-    cancelled: 'bg-red-50 text-red-650 border border-red-200',
-    no_show: 'bg-gray-100 text-gray-500 border border-gray-200',
-    in_progress: 'bg-blue-50 text-blue-700 border border-blue-200 font-semibold',
-    follow_up: 'bg-teal-50 text-teal-700 border border-teal-200',
+    confirmed:               'bg-emerald-50 text-emerald-700 border border-emerald-200',
+    completed:               'bg-slate-50 text-slate-600 border border-slate-200',
+    pending:                 'bg-amber-50 text-amber-700 border border-amber-200',
+    rescheduled:             'bg-blue-50 text-blue-700 border border-blue-200',
+    cancelled:               'bg-red-50 text-red-700 border border-red-200',
+    no_show:                 'bg-orange-50 text-orange-700 border border-orange-200',
+    in_progress:             'bg-blue-50 text-blue-700 border border-blue-200 font-semibold',
+    follow_up:               'bg-teal-50 text-teal-700 border border-teal-200',
     pending_patient_confirm: 'bg-purple-50 text-purple-700 border border-purple-200',
   }
   return (
@@ -350,9 +350,9 @@ export default function DentistDashboardView({
                         </div>
 
                         {/* Status updates action buttons inside expanded panel */}
-                        {(appt.status === 'pending' || appt.status === 'confirmed' || appt.status === 'rescheduled') && (
+                        {(appt.status === 'pending' || appt.status === 'confirmed' || appt.status === 'rescheduled' || appt.status === 'pending_patient_confirm') && (
                           <div className="flex justify-end gap-2.5 pt-3">
-                            {(appt.status === 'pending' || appt.status === 'rescheduled') && (
+                            {appt.status === 'pending' && (
                               <button
                                 onClick={() => handleStatusUpdate(appt.id, 'confirmed')}
                                 disabled={isBusy}
@@ -361,7 +361,7 @@ export default function DentistDashboardView({
                                 Approve
                               </button>
                             )}
-                            {appt.status === 'confirmed' ? (
+                            {appt.status === 'confirmed' && (
                               <button
                                 onClick={() => setCompletingAppt(appt)}
                                 disabled={isBusy}
@@ -369,22 +369,16 @@ export default function DentistDashboardView({
                               >
                                 Complete &amp; Send to Billing
                               </button>
-                            ) : (
+                            )}
+                            {(appt.status === 'pending' || appt.status === 'confirmed') && (
                               <button
-                                onClick={() => handleStatusUpdate(appt.id, 'completed')}
+                                onClick={() => handleStatusUpdate(appt.id, 'no_show')}
                                 disabled={isBusy}
-                                className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-2xs transition disabled:opacity-50"
+                                className="px-4 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-bold transition disabled:opacity-50"
                               >
-                                Complete Appointment
+                                No Show
                               </button>
                             )}
-                            <button
-                              onClick={() => handleStatusUpdate(appt.id, 'no_show')}
-                              disabled={isBusy}
-                              className="px-4 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-bold transition disabled:opacity-50"
-                            >
-                              No Show
-                            </button>
                             <button
                               onClick={() => {
                                 if (confirm('Are you sure you want to cancel this appointment?')) {
