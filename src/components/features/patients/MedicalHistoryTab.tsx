@@ -70,7 +70,7 @@ export default function MedicalHistoryTab({ localRecord, viewerRole, lastVisitDa
         </div>
         <div>
           <span className="text-[10px] text-gray-400 block font-semibold">PREVIOUS DENTIST</span>
-          <span className="text-sm font-medium text-slate-800">{(localRecord.patient as any).previous_dentist || 'None'}</span>
+          <span className="text-sm font-medium text-slate-800">{localRecord.patient.previous_dentist || 'None'}</span>
         </div>
         <div className="col-span-3">
           <span className="text-[10px] text-gray-400 block font-semibold">ADDRESS</span>
@@ -90,15 +90,15 @@ export default function MedicalHistoryTab({ localRecord, viewerRole, lastVisitDa
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 block font-semibold">GUARDIAN NAME</span>
-                <span className="text-xs font-semibold text-slate-800">{(localRecord.patient as any).guardian_name || '—'}</span>
+                <span className="text-xs font-semibold text-slate-800">{localRecord.patient.guardian_name || '—'}</span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 block font-semibold">GUARDIAN PHONE</span>
-                <span className="text-xs font-semibold text-slate-800">{(localRecord.patient as any).guardian_phone || '—'}</span>
+                <span className="text-xs font-semibold text-slate-800">{localRecord.patient.guardian_phone || '—'}</span>
               </div>
               <div className="col-span-2">
                 <span className="text-[10px] text-slate-400 block font-semibold">GUARDIAN ADDRESS</span>
-                <span className="text-xs font-semibold text-slate-800">{(localRecord.patient as any).guardian_address || '—'}</span>
+                <span className="text-xs font-semibold text-slate-800">{localRecord.patient.guardian_address || '—'}</span>
               </div>
             </div>
           )
@@ -282,7 +282,6 @@ export default function MedicalHistoryTab({ localRecord, viewerRole, lastVisitDa
                     <span className="text-[10px] text-gray-400 font-semibold uppercase block">Primary Physician Details</span>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-1">
                       <p className="text-slate-600"><span className="font-bold text-slate-700">Name:</span> {localRecord.medicalHistory.detailed_info.physician_name || '—'}</p>
-                      <p className="text-slate-600"><span className="font-bold text-slate-700">Specialty:</span> {localRecord.medicalHistory.detailed_info.physician_specialty || '—'}</p>
                       <p className="text-slate-600"><span className="font-bold text-slate-700">Office Address:</span> {localRecord.medicalHistory.detailed_info.physician_office_address || '—'}</p>
                       <p className="text-slate-600"><span className="font-bold text-slate-700">Office Phone:</span> {localRecord.medicalHistory.detailed_info.physician_office_phone || '—'}</p>
                     </div>

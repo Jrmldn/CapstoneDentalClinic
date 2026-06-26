@@ -99,7 +99,6 @@ import { updateAppointmentStatus } from '@/actions/appointmentActions'
 import {
   addStaff,
   addDentist,
-  deletePersonnel,
   fetchPersonnel,
   fetchStaff,
   fetchDentists,
@@ -147,7 +146,7 @@ describe('2.3 updateAppointmentStatus — patient access control', () => {
         booked_at: null,
       },
       error: null,
-    })
+    } as never)
 
     // patients table lookup → this patient has id 1 (≠ 99)
     mockSupabaseFrom.mockReturnValue(makeChain({ data: { id: 1 }, error: null }) as ReturnType<typeof supabaseAdmin.from>)
@@ -171,7 +170,7 @@ describe('2.3 updateAppointmentStatus — patient access control', () => {
         booked_at: null,
       },
       error: null,
-    })
+    } as never)
 
     // patients table lookup → this patient has id 7 (matches)
     mockSupabaseFrom.mockReturnValue(makeChain({ data: { id: 7 }, error: null }) as ReturnType<typeof supabaseAdmin.from>)
@@ -224,16 +223,6 @@ describe('2.4 personnelActions — superadmin-only enforcement', () => {
       it(`blocks ${role}`, async () => {
         mockEnsureRole.mockResolvedValue({ success: false, error: 'Insufficient permissions' })
         const result = await addDentist({ email: 'x@x.com', password: 'p', firstName: 'A', lastName: 'B', clinicId: 1 } as never)
-        expect(result.success).toBe(false)
-      })
-    }
-  })
-
-  describe('deletePersonnel()', () => {
-    for (const role of nonSuperadminRoles) {
-      it(`blocks ${role}`, async () => {
-        mockEnsureRole.mockResolvedValue({ success: false, error: 'Insufficient permissions' })
-        const result = await deletePersonnel('some-user-id')
         expect(result.success).toBe(false)
       })
     }

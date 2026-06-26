@@ -5,7 +5,7 @@ export interface Service {
   price_min?: number | null
   price_max?: number | null
   slot_duration_min: number
-  is_active: boolean
+  is_active: boolean | null
   allows_installment?: boolean
   downpayment_amount?: number | null
   num_installments?: number | null

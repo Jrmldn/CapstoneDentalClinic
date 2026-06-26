@@ -1,18 +1,16 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Search, Plus, Calendar } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Search, Plus, Calendar, UserPlus } from 'lucide-react'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
 import type {
-  Patient,
-  Service,
-  Dentist,
   Appointment,
   AppointmentsClientProps
 } from './AppointmentTypes'
 import AppointmentTable from './AppointmentTable'
 import BookAppointmentModal from './BookAppointmentModal'
+import WalkInModal from './WalkInModal'
 import RescheduleModal from './RescheduleModal'
 import AppointmentBillingModal from './AppointmentBillingModal'
 
@@ -25,6 +23,7 @@ export default function AppointmentsClient({
   dentists
 }: AppointmentsClientProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments)
 
   // Filters
@@ -41,8 +40,24 @@ export default function AppointmentsClient({
 
   // Modals state
   const [isBookModalOpen, setIsBookModalOpen] = useState(false)
+  const [preSelectedPatientId, setPreSelectedPatientId] = useState<number | null>(null)
+  const [isWalkInModalOpen, setIsWalkInModalOpen] = useState(false)
   const [reschedulingAppt, setReschedulingAppt] = useState<Appointment | null>(null)
   const [billingAppt, setBillingAppt] = useState<Appointment | null>(null)
+
+  // Open Book modal with pre-selected patient when navigating from Patient Directory
+  useEffect(() => {
+    const bookForPatient = searchParams.get('bookForPatient')
+    if (bookForPatient) {
+      const patientId = parseInt(bookForPatient)
+      if (!isNaN(patientId)) {
+        setPreSelectedPatientId(patientId)
+        setIsBookModalOpen(true)
+        router.replace('/staff-dashboard/appointments')
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const refreshAppointments = () => {
     router.refresh()
@@ -160,13 +175,22 @@ export default function AppointmentsClient({
             <option value="online">Online Booking</option>
           </select>
         </div>
-        <button
-          onClick={() => setIsBookModalOpen(true)}
-          className="flex items-center justify-center gap-2 px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition shadow-sm font-medium text-sm"
-        >
-          <Plus className="w-4 h-4" />
-          Book Appointment
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setIsWalkInModalOpen(true)}
+            className="flex items-center justify-center gap-2 px-5 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition shadow-sm font-medium text-sm"
+          >
+            <UserPlus className="w-4 h-4" />
+            Walk-in
+          </button>
+          <button
+            onClick={() => { setPreSelectedPatientId(null); setIsBookModalOpen(true) }}
+            className="flex items-center justify-center gap-2 px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition shadow-sm font-medium text-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Book Appointment
+          </button>
+        </div>
       </div>
 
       {/* Appointments List / Table */}
@@ -182,12 +206,23 @@ export default function AppointmentsClient({
       {/* MODAL: Book Appointment */}
       <BookAppointmentModal
         isOpen={isBookModalOpen}
-        onClose={() => setIsBookModalOpen(false)}
+        onClose={() => { setIsBookModalOpen(false); setPreSelectedPatientId(null) }}
         patients={patients}
         services={services}
         dentists={dentists}
         clinicId={clinicId}
         onSuccess={refreshAppointments}
+        initialPatientId={preSelectedPatientId ?? undefined}
+      />
+
+      {/* MODAL: Walk-in Appointment */}
+      <WalkInModal
+        isOpen={isWalkInModalOpen}
+        onClose={() => setIsWalkInModalOpen(false)}
+        onSuccess={refreshAppointments}
+        clinicId={clinicId}
+        services={services}
+        dentists={dentists}
       />
 
       {/* MODAL: Reschedule */}
@@ -198,8 +233,6 @@ export default function AppointmentsClient({
         clinicId={clinicId}
         onSuccess={refreshAppointments}
       />
-
-
 
       {/* MODAL: Complete & Billing */}
       <AppointmentBillingModal

@@ -32,7 +32,7 @@ const features = [
   {
     icon: Filter,
     title: "Smart Filtering",
-    description: "Filter clinics by specialty, ratings, and open/closed hours.",
+    description: "Filter clinics by ratings and open/closed hours.",
     gradient: "from-orange-500 to-red-500",
   },
   {

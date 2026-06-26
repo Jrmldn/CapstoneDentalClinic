@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface ImageSliderProps {
-  images: { image_url: string; sort_order: number }[]
+  images: { image_url: string; sort_order: number | null }[]
   name: string
   compact?: boolean
   currentImgIndex: number

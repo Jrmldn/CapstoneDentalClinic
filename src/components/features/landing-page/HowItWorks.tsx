@@ -10,7 +10,7 @@ const steps = [
   {
     icon: Search,
     title: "Find the Perfect Clinic",
-    description: "Browse nearby clinics on the map, filter by specialty, ratings, and availability.",
+    description: "Browse nearby clinics on the map, filter by ratings and availability.",
     step: "02",
   },
   {

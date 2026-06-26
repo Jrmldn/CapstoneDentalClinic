@@ -77,7 +77,7 @@ export default function BillingClient({
 
     const patientName = `${tx.patients?.first_name || ''} ${tx.patients?.last_name || ''}`.toLowerCase()
     const matchesSearch = patientName.includes(searchTerm.toLowerCase())
-    const txDate = tx.created_at.slice(0, 10)
+    const txDate = (tx.created_at ?? '').slice(0, 10)
     const matchesDate = (!dateFrom || txDate >= dateFrom) && (!dateTo || txDate <= dateTo)
     let matchesStatus = true
     if (statusFilter === 'draft') matchesStatus = tx.billing_status === 'draft'

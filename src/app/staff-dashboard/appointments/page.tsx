@@ -38,12 +38,12 @@ export default async function AppointmentsPage() {
       payment_status,
       patients ( id, first_name, last_name, phone ),
       services ( id, name, price, slot_duration_min ),
-      dentists ( id, first_name, last_name, specialty )
+      dentists ( id, first_name, last_name )
     `)
     .eq('clinic_id', clinicId)
     .order('scheduled_at', { ascending: false })
 
-  const mappedAppointments: Appointment[] = (appointments || []).map((appt: any) => {
+  const mappedAppointments: Appointment[] = (appointments || []).map((appt) => {
     const rawPatient = appt.patients
     const rawService = appt.services
     const rawDentist = appt.dentists
@@ -78,7 +78,6 @@ export default async function AppointmentsPage() {
         id: dentistObj.id,
         first_name: dentistObj.first_name,
         last_name: dentistObj.last_name,
-        specialty: dentistObj.specialty ?? ''
       } : null,
     }
   })
@@ -97,13 +96,13 @@ export default async function AppointmentsPage() {
       .order('name', { ascending: true }),
     supabase
       .from('dentists')
-      .select('id, first_name, last_name, specialty')
+      .select('id, first_name, last_name')
       .eq('clinic_id', clinicId)
       .order('first_name', { ascending: true }),
   ])
 
   // Map and flatten nested items
-  const activePatients: Patient[] = (patientsRes.data || []).map((p: any) => ({
+  const activePatients: Patient[] = (patientsRes.data || []).map((p) => ({
     id: p.id,
     first_name: p.first_name,
     last_name: p.last_name,

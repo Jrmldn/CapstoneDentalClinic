@@ -6,7 +6,7 @@ interface UseAddPersonnelProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
-  type: 'staff' | 'dentists'
+  type: 'staff' | 'dentist'
   fixedClinicId?: number
 }
 
@@ -19,7 +19,6 @@ export const useAddPersonnel = ({ isOpen, onClose, onSuccess, type, fixedClinicI
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [clinicId, setClinicId] = useState(fixedClinicId ? fixedClinicId.toString() : '')
-  const [specialty, setSpecialty] = useState('')
   const [prevFixedClinicId, setPrevFixedClinicId] = useState(fixedClinicId)
 
   // Derived state adjustment during render to avoid useEffect cascading renders
@@ -68,7 +67,7 @@ export const useAddPersonnel = ({ isOpen, onClose, onSuccess, type, fixedClinicI
       if (type === 'staff') {
         result = await addStaff(baseData)
       } else {
-        result = await addDentist({ ...baseData, specialty })
+        result = await addDentist({ ...baseData })
       }
 
       if (result.success) {
@@ -78,7 +77,6 @@ export const useAddPersonnel = ({ isOpen, onClose, onSuccess, type, fixedClinicI
         setEmail('')
         setPassword('')
         setClinicId('')
-        setSpecialty('')
         onSuccess() 
         onClose()
       } else {
@@ -103,8 +101,6 @@ export const useAddPersonnel = ({ isOpen, onClose, onSuccess, type, fixedClinicI
     setPassword,
     clinicId,
     setClinicId,
-    specialty,
-    setSpecialty,
     isSubmitting,
     error,
     handleSubmit,

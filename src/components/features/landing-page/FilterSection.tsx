@@ -3,9 +3,6 @@ import { cn } from '@/lib/utils'
 import { RATING_OPTIONS } from './constants'
 
 interface FilterSectionProps {
-  selectedSpecialty: string
-  setSelectedSpecialty: (val: string) => void
-  specialtyOptions: string[]
   minRating: number
   setMinRating: (val: number) => void
   showOpenOnly: boolean
@@ -14,35 +11,16 @@ interface FilterSectionProps {
 
 /**
  * FilterSection Component
- * Renders the filter controls (Specialty dropdown, Rating dropdown, Open Status checkbox).
+ * Renders the filter controls (Rating dropdown, Open Status checkbox).
  */
 export const FilterSection = ({
-  selectedSpecialty,
-  setSelectedSpecialty,
-  specialtyOptions,
   minRating,
   setMinRating,
   showOpenOnly,
   setShowOpenOnly,
 }: FilterSectionProps) => (
   <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-6">
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <div>
-        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-          Specialty
-        </label>
-        <select
-          value={selectedSpecialty}
-          onChange={(e) => setSelectedSpecialty(e.target.value)}
-          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-        >
-          {specialtyOptions.map((spec) => (
-            <option key={spec} value={spec}>
-              {spec}
-            </option>
-          ))}
-        </select>
-      </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
           Minimum Rating

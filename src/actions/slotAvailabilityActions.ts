@@ -97,7 +97,7 @@ export async function getAvailableSlots(
       windowEnd,
       duration,
       existingAppts ?? [],
-      blockedSlots ?? []
+      (blockedSlots ?? []).filter(s => s.start_time != null && s.end_time != null) as { start_time: string; end_time: string }[]
     )
 
     return { success: true, slots }

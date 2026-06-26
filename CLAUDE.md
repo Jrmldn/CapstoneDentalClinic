@@ -4,12 +4,19 @@
 - State assumptions explicitly; ask if uncertain.
 - Present multiple interpretations rather than picking silently.
 - Minimum code to solve the problem — no speculative features, unused flexibility, or impossible-case error handling.
+- Do not over-engineer. Use the absolute simplest, most vanilla approach possible to solve the problem.
 - Touch only what the request requires. No unrelated refactors/reformatting.
 - Match existing style even if you'd choose differently.
 - Remove only imports/vars your own change orphaned. Mention, don't delete, pre-existing dead code.
 - For multi-step work, state a brief plan with verification steps per step.
 - `npm run lint` must pass clean before any PR.
 - Flatten nested conditionals into early-return guard clauses (`if (!x) return`), not 3-level nesting. Applies everywhere — server actions, services, query builders, components — not just client components.
+- No leftover `console.log` statements for debugging. `console.error` is permitted only inside `catch` blocks for genuine error logging.
+
+## TypeScript & Type Safety
+- Strictly no non-null assertions (`!`). Use optional chaining (`?.`) or early-return guard clauses if data might be null/undefined.
+- Strictly no `as never` or `as unknown as X` double-casting. Work with the type system, do not override it. Let implicit type inference do the heavy lifting.
+- For complex Supabase relational queries (joins), never hand-write response interfaces and cast the result. Extract the exact type automatically using Supabase's built-in `QueryData<typeof yourQuery>`.
 
 ## Stack
 Next.js 16 (App Router), React 19, TypeScript, Supabase, Tailwind v4, Framer Motion.
@@ -54,16 +61,15 @@ Roles: `patient`, `dentist`, `staff`, `superadmin`.
 - Props: `viewerRole`, `clinicId`, `dentistId`/`patientId`.
 - Normalize Supabase relations (`T | T[] | null`) via shared `normalizeRelation<T>()`. Never inline `Array.isArray` checks or `as any`.
 - Modals: `createPortal`, gated behind a `mounted` flag (SSR-safe). Required for all modals.
-- No native dialogs (`alert()`, `confirm()`, `window.location.reload()`). [TODO: toast vs. `<ConfirmDialog>` — pending]
-- ClassName ternary with >2 branches → extract to a named function (e.g. `getDayCellStyles(...)`). Never inline in JSX.
+- ClassName ternary with >2 branches → extract to a named function or variable before the return statement. Never inline in JSX.
 - Shared interfaces used in 2+ files → shared types file, not redefined per-file.
 - Remove decorative-only UI (e.g. non-functional dividers) during refactors.
-
-## Dates
-[TODO: confirm canonical date util/timezone convention — UTC storage? shared `toDateKey()`?]
+- No `window.location.href` for internal navigation. Use Next.js `useRouter().push()` client-side or `redirect()` server-side.
+- *(Temporary Exception):* Native dialogs (`alert`, `confirm`) are permitted until the global UI replacement is built.
 
 ## Verification
 - `npm run lint` clean.
+- `npx tsc --noEmit` clean.
 - Run the relevant tests after a successful implementation of a feature or function.
 - Walk the exact role/dashboard changed.
 - State success as a concrete click-path.
@@ -73,6 +79,7 @@ Roles: `patient`, `dentist`, `staff`, `superadmin`.
 ## Supabase
 - Use local Supabase CLI for schema changes/migrations.
 - Migration filenames: `supabase/migrations/<timestamp>_<verb_noun>.sql`
+- After any schema change, regenerate types: `npx supabase gen types typescript --project-id <PROJECT_ID> > database/supabase-types.ts`
 - Never run destructive commands (`db reset`) on a `--linked` remote.
 - Custom functions: `verb_noun` naming.
 

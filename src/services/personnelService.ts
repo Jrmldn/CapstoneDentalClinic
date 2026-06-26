@@ -78,7 +78,6 @@ export async function insertDentist(data: {
   clinicId: number
   firstName: string
   lastName: string
-  specialty: string
 }) {
   return supabaseAdmin
     .from('dentists')
@@ -87,7 +86,6 @@ export async function insertDentist(data: {
       clinic_id: data.clinicId,
       first_name: data.firstName,
       last_name: data.lastName,
-      specialty: data.specialty,
     })
 }
 
@@ -113,7 +111,7 @@ export const getAllStaff = cache(async () => {
       clinic_id,
       first_name,
       last_name,
-      users ( email ),
+      users ( email, is_disabled ),
       clinics ( name )
     `)
     .order('first_name', { ascending: true })
@@ -131,8 +129,7 @@ export const getAllDentists = cache(async () => {
       clinic_id,
       first_name,
       last_name,
-      specialty,
-      users ( email ),
+      users ( email, is_disabled ),
       clinics ( name )
     `)
     .order('first_name', { ascending: true })
@@ -156,7 +153,7 @@ export async function getStaffList(params: {
       clinic_id,
       first_name,
       last_name,
-      users ( email ),
+      users ( email, is_disabled ),
       clinics ( name )
     `, { count: 'exact' })
     .order('first_name', { ascending: false })
@@ -196,8 +193,7 @@ export async function getDentistsList(params: {
       clinic_id,
       first_name,
       last_name,
-      specialty,
-      users ( email ),
+      users ( email, is_disabled ),
       clinics ( name )
     `, { count: 'exact' })
     .order('first_name', { ascending: false })
@@ -229,11 +225,10 @@ export async function updatePersonnelRecord(
     first_name: string
     last_name: string
     clinic_id: number
-    specialty?: string
   }
 ) {
   return supabaseAdmin
     .from(table)
-    .update(payload)
+    .update(payload as never)
     .eq('user_id', userId)
 }

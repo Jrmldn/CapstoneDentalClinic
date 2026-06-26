@@ -108,7 +108,7 @@ export default function TreatmentTab({
       if (notesStr && notesStr.startsWith('{')) {
         return JSON.parse(notesStr)
       }
-    } catch (e) {}
+    } catch {}
     return { clinical_notes: notesStr || '—', prescription_notes: '—' }
   }
 

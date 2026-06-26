@@ -49,8 +49,8 @@ export interface PeriodontalScreeningData {
   clinic_id: number
   dentist_id: number
   appointment_id?: number | null
-  pocket_depths: any
-  bleeding_points: any
+  pocket_depths: Record<string, number>
+  bleeding_points: Record<string, boolean>
   findings?: string | null
 }
 

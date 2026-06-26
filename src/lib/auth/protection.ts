@@ -15,9 +15,13 @@ export const enforceRole = cache(async (requiredRole: 'patient' | 'superadmin' |
 
   const { data: userData } = await supabase
     .from('users')
-    .select('role')
+    .select('role, is_disabled')
     .eq('id', authUser.id)
     .maybeSingle()
+
+  if (userData?.is_disabled) {
+    redirect('/login?error=ACCOUNT_DISABLED')
+  }
 
   if (!userData || userData.role !== requiredRole) {
     if (userData?.role === 'superadmin') redirect('/superadmin-dashboard')

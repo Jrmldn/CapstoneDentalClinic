@@ -8,7 +8,6 @@ import {
   AlertCircle,
   ShieldAlert,
   MapPin,
-  ChevronRight,
   Loader2,
 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
@@ -113,7 +112,7 @@ export function BookingTab({
   // Pre-fill from reschedule mode (use the existing appointment's clinic)
   useEffect(() => {
     if (rescheduleMode && existingAppt) {
-      const clinicId = (existingAppt as any).clinic_id
+      const clinicId = existingAppt.clinic_id
       if (clinicId) handleBranchSelect(clinicId)
 
       const dId = String(existingAppt.dentists?.id || '')
@@ -125,7 +124,8 @@ export function BookingTab({
         setBookingDate(datePart)
       }
     }
-  }, [rescheduleMode])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rescheduleMode, existingAppt])
 
   // Fetch slots when dentist/service/date/branch all set
   const fetchSlots = async (dateVal: string, dentistVal: string, serviceVal: string) => {
@@ -195,7 +195,7 @@ export function BookingTab({
         downpayment: finalDownpayment,
       })
 
-      if (res.success) {
+      if (res.success && res.appointment) {
         setPendingPayment({
           appointmentId: res.appointment.id,
           amount: finalDownpayment,
@@ -347,7 +347,7 @@ export function BookingTab({
                       <option value="">-- Choose Dentist --</option>
                       {dentists.map(d => (
                         <option key={d.id} value={d.id}>
-                          Dr. {d.first_name} {d.last_name}{d.specialty ? ` (${d.specialty})` : ''}
+                          Dr. {d.first_name} {d.last_name}
                         </option>
                       ))}
                     </select>

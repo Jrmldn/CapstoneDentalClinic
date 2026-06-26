@@ -36,10 +36,9 @@ const menuGroups = [
 
 interface DentistSidebarProps {
   dentistName: string
-  specialty: string
 }
 
-export default function DentistSidebar({ dentistName, specialty }: DentistSidebarProps) {
+export default function DentistSidebar({ dentistName }: DentistSidebarProps) {
   const pathname = usePathname()
 
   const isActive = (key: string, href: string) => {
@@ -101,7 +100,6 @@ export default function DentistSidebar({ dentistName, specialty }: DentistSideba
           </div>
           <div className="truncate min-w-0">
             <span className="text-xs text-slate-400 font-semibold block truncate">Dr. {dentistName}</span>
-            <span className="text-[10px] text-slate-500 font-medium block truncate">{specialty || 'General Dentist'}</span>
           </div>
         </div>
       </div>

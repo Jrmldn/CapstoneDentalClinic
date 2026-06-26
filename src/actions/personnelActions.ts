@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { StaffData, DentistData } from '@/types/clinic'
 import { ensureRole } from '@/lib/auth/ensureRole'
 
+import { supabaseAdmin } from '@/lib/supabase/server'
 import {
   getMatchingUserIds,
   createAuthUser,
@@ -22,6 +23,7 @@ import {
 } from '@/services/personnelService'
 import { sendEmail } from '@/lib/email/resend'
 import { staffVerificationEmail } from '@/lib/email/templates'
+import { logNotification } from '@/lib/notifications/logNotification'
 import {
   getPaginationRange,
   formatStaff,
@@ -32,7 +34,6 @@ interface PersonnelUpdatePayload {
   first_name: string
   last_name: string
   clinic_id: number
-  specialty?: string
 }
 
 export async function addStaff(data: StaffData) {
@@ -82,6 +83,13 @@ export async function addStaff(data: StaffData) {
     const template = staffVerificationEmail(callbackUrl.toString(), `${data.firstName} ${data.lastName}`)
     const sent = await sendEmail({ to: data.email, ...template })
 
+    await logNotification({
+      triggerType: 'account_created',
+      channel: 'email',
+      status: sent.success ? 'sent' : 'failed',
+      errorMessage: sent.error,
+    })
+
     if (!sent.success) {
       await deleteUserRecord(authData.user.id)
       await deleteAuthUser(authData.user.id)
@@ -116,7 +124,6 @@ export async function addDentist(data: DentistData) {
       clinicId: data.clinicId,
       firstName: data.firstName,
       lastName: data.lastName,
-      specialty: data.specialty,
     })
 
     if (dentistError) {
@@ -144,6 +151,13 @@ export async function addDentist(data: DentistData) {
     const template = staffVerificationEmail(callbackUrl.toString(), `${data.firstName} ${data.lastName}`)
     const sent = await sendEmail({ to: data.email, ...template })
 
+    await logNotification({
+      triggerType: 'account_created',
+      channel: 'email',
+      status: sent.success ? 'sent' : 'failed',
+      errorMessage: sent.error,
+    })
+
     if (!sent.success) {
       await deleteUserRecord(authData.user.id)
       await deleteAuthUser(authData.user.id)
@@ -158,22 +172,44 @@ export async function addDentist(data: DentistData) {
   }
 }
 
-export async function deletePersonnel(userId: string) {
+export async function disableUserAccount(userId: string) {
   const auth = await ensureRole('superadmin')
   if (!auth.success) return { success: false, error: auth.error }
 
   try {
-    const { error: dbError } = await deleteUserRecord(userId)
+    const { error: dbError } = await supabaseAdmin
+      .from('users')
+      .update({ is_disabled: true })
+      .eq('id', userId)
 
     if (dbError) throw new Error(dbError.message)
 
-    const { error: authError } = await deleteAuthUser(userId)
-    if (authError) throw new Error(authError.message)
+    await supabaseAdmin.auth.admin.signOut(userId)
 
     revalidatePath('/superadmin-dashboard/personnel')
     return { success: true }
   } catch (error) {
-    console.error('Error in deletePersonnel:', error)
+    console.error('Error in disableUserAccount:', error)
+    return { success: false, error: sanitizeServerError(error) }
+  }
+}
+
+export async function enableUserAccount(userId: string) {
+  const auth = await ensureRole('superadmin')
+  if (!auth.success) return { success: false, error: auth.error }
+
+  try {
+    const { error: dbError } = await supabaseAdmin
+      .from('users')
+      .update({ is_disabled: false })
+      .eq('id', userId)
+
+    if (dbError) throw new Error(dbError.message)
+
+    revalidatePath('/superadmin-dashboard/personnel')
+    return { success: true }
+  } catch (error) {
+    console.error('Error in enableUserAccount:', error)
     return { success: false, error: sanitizeServerError(error) }
   }
 }
@@ -299,12 +335,11 @@ export async function fetchDentists(
 
 export async function updatePersonnel(
   userId: string,
-  type: 'staff' | 'dentists',
+  type: 'staff' | 'dentist',
   data: {
     firstName: string;
     lastName: string;
     clinicId: number;
-    specialty?: string
   }
 ) {
   const auth = await ensureRole('superadmin')
@@ -317,10 +352,6 @@ export async function updatePersonnel(
       first_name: data.firstName,
       last_name: data.lastName,
       clinic_id: data.clinicId,
-    }
-
-    if (type === 'dentists' && data.specialty) {
-      updatePayload.specialty = data.specialty
     }
 
     const { error } = await updatePersonnelRecord(table, userId, updatePayload)

@@ -4,6 +4,7 @@ export const ERROR_CODES = {
   NO_SESSION: 'NO_SESSION',
   INVALID_LINK: 'INVALID_LINK',
   LINK_EXPIRED: 'LINK_EXPIRED',
+  ACCOUNT_DISABLED: 'ACCOUNT_DISABLED',
 } as const;
 
 export const AUTH_ERRORS = {
@@ -26,6 +27,10 @@ export const AUTH_ERRORS = {
   [ERROR_CODES.LINK_EXPIRED]: {
     title: "Link Expired",
     message: "This link has expired or was already used. Request a new one below.",
+  },
+  [ERROR_CODES.ACCOUNT_DISABLED]: {
+    title: "Account Disabled",
+    message: "Your account has been disabled. Please contact a superadmin.",
   },
   DEFAULT: {
     title: "Authentication Error",

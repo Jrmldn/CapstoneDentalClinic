@@ -1,6 +1,6 @@
 'use client'
 
-import { Calendar, Clock, Check, X, DollarSign } from 'lucide-react'
+import { Calendar, Clock, Check, DollarSign } from 'lucide-react'
 import type { Appointment } from './AppointmentTypes'
 import { formatPhone } from '@/utils/phone-helpers'
 import { formatDate, formatTime } from '@/lib/date'
@@ -72,7 +72,6 @@ export default function AppointmentTable({
                       <p className="font-medium">
                         Dr. {appt.dentists ? `${appt.dentists.first_name} ${appt.dentists.last_name}` : 'TBD'}
                       </p>
-                      <p className="text-xs text-gray-400">{appt.dentists?.specialty || 'General Dentist'}</p>
                     </div>
                   </td>
                   <td className="px-6 py-4">

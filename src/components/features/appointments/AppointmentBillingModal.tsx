@@ -130,7 +130,7 @@ export default function AppointmentBillingModal({
                 onChange={(e) => setCustomPrice(e.target.value)}
               />
             </div>
-            {appointment.downpayment > 0 && (
+            {appointment.downpayment != null && appointment.downpayment > 0 && (
               <p className="flex justify-between text-xs text-indigo-650 font-medium">
                 <span>Downpayment paid:</span>
                 <span>- ₱{appointment.downpayment.toLocaleString()}</span>

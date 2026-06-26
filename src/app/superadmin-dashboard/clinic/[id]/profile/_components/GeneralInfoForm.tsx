@@ -20,11 +20,14 @@ export default function GeneralInfoForm({ clinicId, clinic }: Props) {
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const [form, setForm] = useState({
-    phone:                    String(clinic.phone ?? ''),
-    email:                    String(clinic.email ?? ''),
-    address:                  String(clinic.address ?? ''),
-    manual_status:            String(clinic.manual_status ?? 'open'),
-    max_appointments_per_day: Number(clinic.max_appointments_per_day ?? 20),
+    name:                       String(clinic.name ?? ''),
+    phone:                      String(clinic.phone ?? ''),
+    email:                      String(clinic.email ?? ''),
+    address:                    String(clinic.address ?? ''),
+    latitude:                   clinic.latitude != null ? String(clinic.latitude) : '',
+    longitude:                  clinic.longitude != null ? String(clinic.longitude) : '',
+    manual_status:              String(clinic.manual_status ?? 'open'),
+    max_appointments_per_day:   Number(clinic.max_appointments_per_day ?? 20),
     default_downpayment_amount: Number(clinic.default_downpayment_amount ?? 0),
   })
 
@@ -37,9 +40,12 @@ export default function GeneralInfoForm({ clinicId, clinic }: Props) {
     setMsg(null)
     startTransition(async () => {
       const result = await updateClinicProfile(clinicId, {
+        name:                       form.name,
         phone:                      form.phone,
         email:                      form.email,
         address:                    form.address,
+        latitude:                   form.latitude !== '' ? Number(form.latitude) : null,
+        longitude:                  form.longitude !== '' ? Number(form.longitude) : null,
         manual_status:              form.manual_status,
         max_appointments_per_day:   Number(form.max_appointments_per_day),
         default_downpayment_amount: Number(form.default_downpayment_amount),
@@ -56,16 +62,20 @@ export default function GeneralInfoForm({ clinicId, clinic }: Props) {
       <div>
         <h2 className="text-base font-semibold text-slate-800 mb-4">General Information</h2>
 
-        {/* Readonly name */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Clinic Name</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Clinic Name <span className="text-red-500">*</span>
+          </label>
           <input
+            id="field-name"
             type="text"
-            value={String(clinic.name ?? '')}
-            readOnly
-            className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-400 text-sm cursor-not-allowed"
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            required
+            placeholder="Clinic name"
+            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
-          <p className="text-xs text-gray-400 mt-1">Edit the clinic name from the main Clinics & Branches page.</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -83,6 +93,11 @@ export default function GeneralInfoForm({ clinicId, clinic }: Props) {
             className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
             placeholder="Full clinic address"
           />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+          <Field label="Latitude" name="latitude" type="number" value={form.latitude} onChange={handleChange} placeholder="e.g. 14.5995" step="any" />
+          <Field label="Longitude" name="longitude" type="number" value={form.longitude} onChange={handleChange} placeholder="e.g. 120.9842" step="any" />
         </div>
       </div>
 
@@ -105,17 +120,17 @@ export default function GeneralInfoForm({ clinicId, clinic }: Props) {
             </select>
             {form.manual_status === 'auto' && (
               <p className="text-xs text-blue-600 mt-1 leading-snug">
-                🕐 Status will automatically switch between Open / Closed based on today&apos;s operating hours.
+                Status will automatically switch between Open / Closed based on today&apos;s operating hours.
               </p>
             )}
             {form.manual_status === 'open' && (
               <p className="text-xs text-emerald-600 mt-1">
-                ✅ Always shown as Open regardless of operating hours.
+                Always shown as Open regardless of operating hours.
               </p>
             )}
             {form.manual_status === 'closed' && (
               <p className="text-xs text-red-500 mt-1">
-                🔒 Always shown as Closed regardless of operating hours.
+                Always shown as Closed regardless of operating hours.
               </p>
             )}
           </div>
@@ -142,7 +157,6 @@ export default function GeneralInfoForm({ clinicId, clinic }: Props) {
         </div>
       </div>
 
-      {/* Feedback */}
       {msg && (
         <div className={`px-4 py-3 rounded-lg text-sm font-medium ${
           msg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'

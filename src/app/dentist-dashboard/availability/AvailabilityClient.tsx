@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { Calendar, Clock, Lock, Trash2, CalendarDays, AlertCircle, Sparkles } from 'lucide-react'
+import { useState } from 'react'
+import { Lock, Trash2 } from 'lucide-react'
 import { addBlockedSlot, deleteBlockedSlot } from '@/actions/dentistScheduleActions'
 import { formatDateLong } from '@/lib/date'
 
@@ -24,8 +24,6 @@ export default function AvailabilityClient({ dentistId, initialBlockedSlots }: A
   const [blockType, setBlockType] = useState<'full' | 'slot' | 'leave'>('full')
   const [startTime, setStartTime] = useState('13:00')
   const [endTime, setEndTime] = useState('14:00')
-  const [isPending, startTransition] = useTransition()
-
   // Calendar state: June 2026 as per mockup
   const [currentYear, setCurrentYear] = useState(2026)
   const [currentMonth, setCurrentMonth] = useState(5) // June (0-indexed, so 5 is June)

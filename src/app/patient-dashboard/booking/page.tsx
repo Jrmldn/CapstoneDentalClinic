@@ -5,6 +5,7 @@ import { fetchPatientRecord } from '@/actions/patientMedicalActions'
 import { createClient } from '@/lib/supabase/serverSSR'
 import { supabaseAdmin } from '@/lib/supabase/server'
 import { BookingTab } from '../_components/BookingTab'
+import type { PatientRecord } from '../_components/types'
 
 export default async function BookPage() {
   const authUser = await enforceRole('patient')
@@ -43,7 +44,7 @@ export default async function BookPage() {
   return (
     <BookingTab
       branches={branches}
-      record={patientDetails.record as any}
+      record={patientDetails.record as unknown as PatientRecord}
       authUserId={authUser.id}
     />
   )

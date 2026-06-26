@@ -8,6 +8,10 @@ interface PersonnelFilterBarProps {
   clinicFilter: string
   onClinicChange: (clinicId: string | number) => void
   clinics: { id: number; name: string }[]
+  roleFilter: string
+  onRoleChange: (v: string | number) => void
+  statusFilter: string
+  onStatusChange: (v: string | number) => void
 }
 
 export default function PersonnelFilterBar({
@@ -16,6 +20,10 @@ export default function PersonnelFilterBar({
   clinicFilter,
   onClinicChange,
   clinics,
+  roleFilter,
+  onRoleChange,
+  statusFilter,
+  onStatusChange,
 }: PersonnelFilterBarProps) {
   const filters: FilterDef[] = [
     {
@@ -29,6 +37,28 @@ export default function PersonnelFilterBar({
           label: clinic.name,
           value: clinic.id.toString(),
         })),
+      ],
+    },
+    {
+      id: 'role',
+      label: 'Role Filter',
+      value: roleFilter,
+      onChange: onRoleChange,
+      options: [
+        { label: 'All Roles', value: 'all' },
+        { label: 'Staff', value: 'staff' },
+        { label: 'Dentist', value: 'dentist' },
+      ],
+    },
+    {
+      id: 'status',
+      label: 'Status Filter',
+      value: statusFilter,
+      onChange: onStatusChange,
+      options: [
+        { label: 'All Status', value: 'all' },
+        { label: 'Active', value: 'active' },
+        { label: 'Inactive', value: 'inactive' },
       ],
     },
   ]

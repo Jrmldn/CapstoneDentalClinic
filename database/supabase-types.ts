@@ -253,28 +253,51 @@ export type Database = {
           },
         ]
       }
-      clinic_specialties: {
+      clinic_patients: {
         Row: {
-          clinic_id: number | null
+          clinic_id: number
+          created_at: string | null
+          enrolled_by: string | null
           id: number
-          specialty_name: string
+          is_active: boolean
+          patient_id: number
         }
         Insert: {
-          clinic_id?: number | null
+          clinic_id: number
+          created_at?: string | null
+          enrolled_by?: string | null
           id?: number
-          specialty_name: string
+          is_active?: boolean
+          patient_id: number
         }
         Update: {
-          clinic_id?: number | null
+          clinic_id?: number
+          created_at?: string | null
+          enrolled_by?: string | null
           id?: number
-          specialty_name?: string
+          is_active?: boolean
+          patient_id?: number
         }
         Relationships: [
           {
-            foreignKeyName: "clinic_specialties_clinic_id_fkey"
+            foreignKeyName: "clinic_patients_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_patients_enrolled_by_fkey"
+            columns: ["enrolled_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_patients_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
         ]
@@ -557,7 +580,6 @@ export type Database = {
           id: number
           last_name: string
           license_no: string | null
-          specialty: string | null
           user_id: string
         }
         Insert: {
@@ -566,7 +588,6 @@ export type Database = {
           id?: number
           last_name: string
           license_no?: string | null
-          specialty?: string | null
           user_id: string
         }
         Update: {
@@ -575,7 +596,6 @@ export type Database = {
           id?: number
           last_name?: string
           license_no?: string | null
-          specialty?: string | null
           user_id?: string
         }
         Relationships: [
@@ -741,6 +761,108 @@ export type Database = {
           },
         ]
       }
+      installment_payments: {
+        Row: {
+          amount: number
+          created_at: string | null
+          due_date: string
+          id: number
+          installment_number: number
+          paid_at: string | null
+          plan_id: number
+          status: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          due_date: string
+          id?: number
+          installment_number: number
+          paid_at?: string | null
+          plan_id: number
+          status?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          due_date?: string
+          id?: number
+          installment_number?: number
+          paid_at?: string | null
+          plan_id?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installment_payments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "installment_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      installment_plans: {
+        Row: {
+          clinic_id: number
+          created_at: string | null
+          id: number
+          notes: string | null
+          num_installments: number
+          patient_id: number
+          status: string
+          total_amount: number
+          transaction_id: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          clinic_id: number
+          created_at?: string | null
+          id?: number
+          notes?: string | null
+          num_installments: number
+          patient_id: number
+          status?: string
+          total_amount: number
+          transaction_id?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          clinic_id?: number
+          created_at?: string | null
+          id?: number
+          notes?: string | null
+          num_installments?: number
+          patient_id?: number
+          status?: string
+          total_amount?: number
+          transaction_id?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installment_plans_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "installment_plans_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "installment_plans_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_categories: {
         Row: {
           clinic_id: number
@@ -897,7 +1019,7 @@ export type Database = {
           created_at: string | null
           error_message: string | null
           id: number
-          patient_id: number
+          patient_id: number | null
           sent_at: string | null
           status: Database["public"]["Enums"]["notification_status"] | null
           trigger_type: Database["public"]["Enums"]["notification_trigger"]
@@ -908,7 +1030,7 @@ export type Database = {
           created_at?: string | null
           error_message?: string | null
           id?: number
-          patient_id: number
+          patient_id?: number | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["notification_status"] | null
           trigger_type: Database["public"]["Enums"]["notification_trigger"]
@@ -919,7 +1041,7 @@ export type Database = {
           created_at?: string | null
           error_message?: string | null
           id?: number
-          patient_id?: number
+          patient_id?: number | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["notification_status"] | null
           trigger_type?: Database["public"]["Enums"]["notification_trigger"]
@@ -1011,45 +1133,45 @@ export type Database = {
       }
       patient_medical_history: {
         Row: {
-          allergies: string[] | null
+          allergies: string | null
           blood_pressure: string | null
           blood_type: string | null
-          current_medications: string[] | null
+          current_medications: string | null
           detailed_info: Json | null
           id: number
           is_pregnant: boolean | null
           is_smoker: boolean | null
-          medical_conditions: string[] | null
+          medical_conditions: string | null
           medical_flags: string | null
           patient_id: number
           previous_surgeries: string | null
           updated_at: string | null
         }
         Insert: {
-          allergies?: string[] | null
+          allergies?: string | null
           blood_pressure?: string | null
           blood_type?: string | null
-          current_medications?: string[] | null
+          current_medications?: string | null
           detailed_info?: Json | null
           id?: number
           is_pregnant?: boolean | null
           is_smoker?: boolean | null
-          medical_conditions?: string[] | null
+          medical_conditions?: string | null
           medical_flags?: string | null
           patient_id: number
           previous_surgeries?: string | null
           updated_at?: string | null
         }
         Update: {
-          allergies?: string[] | null
+          allergies?: string | null
           blood_pressure?: string | null
           blood_type?: string | null
-          current_medications?: string[] | null
+          current_medications?: string | null
           detailed_info?: Json | null
           id?: number
           is_pregnant?: boolean | null
           is_smoker?: boolean | null
-          medical_conditions?: string[] | null
+          medical_conditions?: string | null
           medical_flags?: string | null
           patient_id?: number
           previous_surgeries?: string | null
@@ -1129,6 +1251,77 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      paymongo_events: {
+        Row: {
+          event_type: string | null
+          id: string
+          received_at: string | null
+        }
+        Insert: {
+          event_type?: string | null
+          id: string
+          received_at?: string | null
+        }
+        Update: {
+          event_type?: string | null
+          id?: string
+          received_at?: string | null
+        }
+        Relationships: []
+      }
+      paymongo_payments: {
+        Row: {
+          amount: number
+          checkout_url: string | null
+          context_id: number
+          context_type: string
+          created_at: string | null
+          currency: string
+          id: number
+          paid_at: string | null
+          patient_id: number
+          payment_method: string | null
+          paymongo_link_id: string | null
+          status: string
+        }
+        Insert: {
+          amount: number
+          checkout_url?: string | null
+          context_id: number
+          context_type: string
+          created_at?: string | null
+          currency?: string
+          id?: number
+          paid_at?: string | null
+          patient_id: number
+          payment_method?: string | null
+          paymongo_link_id?: string | null
+          status?: string
+        }
+        Update: {
+          amount?: number
+          checkout_url?: string | null
+          context_id?: number
+          context_type?: string
+          created_at?: string | null
+          currency?: string
+          id?: number
+          paid_at?: string | null
+          patient_id?: number
+          payment_method?: string | null
+          paymongo_link_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paymongo_payments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
         ]
@@ -1277,6 +1470,8 @@ export type Database = {
           is_active: boolean | null
           name: string
           price: number
+          price_max: number | null
+          price_min: number | null
         }
         Insert: {
           clinic_id: number
@@ -1285,6 +1480,8 @@ export type Database = {
           is_active?: boolean | null
           name: string
           price: number
+          price_max?: number | null
+          price_min?: number | null
         }
         Update: {
           clinic_id?: number
@@ -1293,6 +1490,8 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           price?: number
+          price_max?: number | null
+          price_min?: number | null
         }
         Relationships: [
           {
@@ -1306,30 +1505,45 @@ export type Database = {
       }
       services: {
         Row: {
+          allows_installment: boolean
           clinic_id: number
           created_at: string | null
+          downpayment_amount: number | null
           id: number
           is_active: boolean | null
           name: string
+          num_installments: number | null
           price: number
+          price_max: number | null
+          price_min: number | null
           slot_duration_min: number
         }
         Insert: {
+          allows_installment?: boolean
           clinic_id: number
           created_at?: string | null
+          downpayment_amount?: number | null
           id?: number
           is_active?: boolean | null
           name: string
+          num_installments?: number | null
           price: number
+          price_max?: number | null
+          price_min?: number | null
           slot_duration_min?: number
         }
         Update: {
+          allows_installment?: boolean
           clinic_id?: number
           created_at?: string | null
+          downpayment_amount?: number | null
           id?: number
           is_active?: boolean | null
           name?: string
+          num_installments?: number | null
           price?: number
+          price_max?: number | null
+          price_min?: number | null
           slot_duration_min?: number
         }
         Relationships: [
@@ -1502,7 +1716,7 @@ export type Database = {
       }
       transactions: {
         Row: {
-          appointment_id: number
+          appointment_id: number | null
           billing_status: string
           clinic_id: number
           created_at: string | null
@@ -1518,8 +1732,8 @@ export type Database = {
           total_amount: number
         }
         Insert: {
-          appointment_id: number
-          billing_status?: string | null
+          appointment_id?: number | null
+          billing_status?: string
           clinic_id: number
           created_at?: string | null
           discount_amount?: number | null
@@ -1534,8 +1748,8 @@ export type Database = {
           total_amount: number
         }
         Update: {
-          appointment_id?: number
-          billing_status?: string | null
+          appointment_id?: number | null
+          billing_status?: string
           clinic_id?: number
           created_at?: string | null
           discount_amount?: number | null
@@ -1653,6 +1867,7 @@ export type Database = {
           created_at: string | null
           email: string
           id: string
+          is_disabled: boolean
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string | null
         }
@@ -1660,6 +1875,7 @@ export type Database = {
           created_at?: string | null
           email: string
           id: string
+          is_disabled?: boolean
           role: Database["public"]["Enums"]["user_role"]
           updated_at?: string | null
         }
@@ -1667,6 +1883,7 @@ export type Database = {
           created_at?: string | null
           email?: string
           id?: string
+          is_disabled?: boolean
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string | null
         }
@@ -1711,6 +1928,10 @@ export type Database = {
         | "day_before"
         | "follow_up"
         | "manual"
+        | "email_verification"
+        | "password_reset"
+        | "account_created"
+        | "six_month_recall"
       payment_method: "gcash" | "paymaya" | "credit_card" | "cash"
       payment_status: "unpaid" | "downpaid" | "paid" | "refunded" | "partial"
       tooth_type: "permanent" | "temporary"
@@ -1870,6 +2091,10 @@ export const Constants = {
         "day_before",
         "follow_up",
         "manual",
+        "email_verification",
+        "password_reset",
+        "account_created",
+        "six_month_recall",
       ],
       payment_method: ["gcash", "paymaya", "credit_card", "cash"],
       payment_status: ["unpaid", "downpaid", "paid", "refunded", "partial"],

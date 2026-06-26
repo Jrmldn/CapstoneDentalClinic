@@ -22,7 +22,6 @@ interface OverviewTabProps {
 
 export function OverviewTab({
   record,
-  authUserId,
 }: OverviewTabProps) {
   const router = useRouter()
   const upcomingAppointments = record.appointments.filter(

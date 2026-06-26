@@ -312,7 +312,7 @@ export function MedicalTab({ record }: MedicalTabProps) {
         </CardHeader>
         <CardContent className="space-y-3">
           {record.treatmentHistory.length > 0 ? (
-            record.treatmentHistory.map((tr: any) => (
+            record.treatmentHistory.map((tr) => (
               <div key={tr.id} className="p-4 bg-white border border-slate-200 rounded-xl shadow-xs">
                 <div className="flex justify-between items-start">
                   <div>
@@ -340,14 +340,14 @@ export function MedicalTab({ record }: MedicalTabProps) {
         </CardHeader>
         <CardContent className="space-y-3">
           {record.prescriptions.length > 0 ? (
-            record.prescriptions.map((pr: any) => (
+            record.prescriptions.map((pr) => (
               <div key={pr.id} className="p-4 bg-white border border-slate-200 rounded-xl shadow-xs">
                 <div className="flex justify-between items-start">
                   <div>
                     <h5 className="font-bold text-slate-900">{pr.medication_name || 'Prescription'}</h5>
                     <p className="text-xs text-slate-500 mt-1">Dr. {pr.dentists?.first_name} {pr.dentists?.last_name}</p>
                   </div>
-                  <span className="text-xs text-slate-400">{formatDate(pr.prescribed_at)}</span>
+                  <span className="text-xs text-slate-400">{formatDate(pr.prescribed_at ?? '')}</span>
                 </div>
                 <div className="text-xs text-slate-600 mt-2 space-y-1">
                   <p><span className="font-semibold text-slate-500">Dosage: </span>{pr.dosage || 'As indicated'}</p>

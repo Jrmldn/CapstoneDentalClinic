@@ -1,5 +1,3 @@
-export const DEFAULT_SPECIALTY = "All Specialties";
-
 export const RATING_OPTIONS = [
   { value: 0, label: "All Ratings" },
   { value: 4.0, label: "4.0+ Stars" },

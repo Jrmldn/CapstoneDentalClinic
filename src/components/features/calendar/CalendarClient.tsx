@@ -20,8 +20,8 @@ import { toDateKey, formatDate, formatTime } from '@/lib/date'
 interface Holiday {
   id: number
   date: string
-  description: string
-  is_special_day: boolean
+  description: string | null
+  is_special_day: boolean | null
 }
 
 interface Appointment {

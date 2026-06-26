@@ -17,9 +17,12 @@ interface OperatingHourData {
 export async function updateClinicProfile(
   clinicId: number,
   data: {
+    name?: string
     phone?: string
     email?: string
     address?: string
+    latitude?: number | null
+    longitude?: number | null
     manual_status?: string
     max_appointments_per_day?: number
     default_downpayment_amount?: number
@@ -87,38 +90,6 @@ export async function updateOperatingHours(clinicId: number, hours: OperatingHou
 }
 
 
-export async function manageClinicSpecialties(clinicId: number, specialties: string[]) {
-  try {
-    await supabaseAdmin
-      .from('clinic_specialties')
-      .delete()
-      .eq('clinic_id', clinicId)
-
-    if (specialties.length > 0) {
-      const specialtyData = specialties.map(name => ({
-        clinic_id: clinicId,
-        specialty_name: name
-      }))
-
-      const { error } = await supabaseAdmin
-        .from('clinic_specialties')
-        .insert(specialtyData)
-
-      if (error) throw new Error(error.message)
-    }
-
-    revalidatePath('/')
-    revalidatePath(`/superadmin-dashboard/clinic/${clinicId}/profile`)
-    return { success: true }
-  } catch (error) {
-    console.error('Error in manageClinicSpecialties:', error)
-    return {
-      success: false,
-      error: sanitizeServerError(error),
-    }
-  }
-}
-
 export async function manageClinicGallery(clinicId: number, imageUrls: { url: string, sort_order: number }[]) {
   try {
     await supabaseAdmin
@@ -149,6 +120,95 @@ export async function manageClinicGallery(clinicId: number, imageUrls: { url: st
       success: false,
       error: sanitizeServerError(error),
     }
+  }
+}
+
+export async function uploadClinicGalleryImage(clinicId: number, formData: FormData) {
+  const auth = await ensureRole('superadmin')
+  if (!auth.success) return { success: false, error: auth.error }
+
+  try {
+    const file = formData.get('file') as File | null
+    if (!file) throw new Error('No file provided.')
+
+    const path = `${clinicId}/${Date.now()}-${file.name}`
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from('clinic-gallery')
+      .upload(path, file, { upsert: false })
+
+    if (uploadError) throw new Error(uploadError.message)
+
+    const { data: { publicUrl } } = supabaseAdmin.storage
+      .from('clinic-gallery')
+      .getPublicUrl(path)
+
+    const { data: maxRow } = await supabaseAdmin
+      .from('clinic_gallery')
+      .select('sort_order')
+      .eq('clinic_id', clinicId)
+      .order('sort_order', { ascending: false })
+      .limit(1)
+      .single()
+
+    const nextOrder = maxRow ? (maxRow.sort_order as number) + 1 : 0
+
+    const { data: inserted, error: insertError } = await supabaseAdmin
+      .from('clinic_gallery')
+      .insert({ clinic_id: clinicId, image_url: publicUrl, sort_order: nextOrder })
+      .select()
+      .single()
+
+    if (insertError) throw new Error(insertError.message)
+
+    revalidatePath(`/superadmin-dashboard/clinic/${clinicId}/profile`)
+    return { success: true, row: inserted }
+  } catch (error) {
+    console.error('Error in uploadClinicGalleryImage:', error)
+    return { success: false, error: sanitizeServerError(error) }
+  }
+}
+
+export async function deleteClinicGalleryImage(imageId: number, imagePath: string) {
+  const auth = await ensureRole('superadmin')
+  if (!auth.success) return { success: false, error: auth.error }
+
+  try {
+    const { error: dbError } = await supabaseAdmin
+      .from('clinic_gallery')
+      .delete()
+      .eq('id', imageId)
+
+    if (dbError) throw new Error(dbError.message)
+
+    const storagePathMatch = imagePath.match(/clinic-gallery\/(.+)$/)
+    if (storagePathMatch) {
+      await supabaseAdmin.storage.from('clinic-gallery').remove([storagePathMatch[1]])
+    }
+
+    revalidatePath('/')
+    return { success: true }
+  } catch (error) {
+    console.error('Error in deleteClinicGalleryImage:', error)
+    return { success: false, error: sanitizeServerError(error) }
+  }
+}
+
+export async function reorderClinicGalleryImages(rows: { id: number; sort_order: number }[]) {
+  const auth = await ensureRole('superadmin')
+  if (!auth.success) return { success: false, error: auth.error }
+
+  try {
+    await Promise.all(
+      rows.map(({ id, sort_order }) =>
+        supabaseAdmin.from('clinic_gallery').update({ sort_order }).eq('id', id)
+      )
+    )
+
+    revalidatePath('/')
+    return { success: true }
+  } catch (error) {
+    console.error('Error in reorderClinicGalleryImages:', error)
+    return { success: false, error: sanitizeServerError(error) }
   }
 }
 

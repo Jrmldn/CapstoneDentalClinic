@@ -22,7 +22,7 @@ export default async function ProfilePage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">My Portal Profile</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Manage your personal details, clinical credentials, and specialties.
+          Manage your personal details and clinical credentials.
         </p>
       </div>
 
@@ -31,7 +31,6 @@ export default async function ProfilePage() {
         clinicId={dentistRecord.clinic_id}
         initialFirstName={dentistRecord.first_name}
         initialLastName={dentistRecord.last_name}
-        initialSpecialty={dentistRecord.specialty}
       />
     </div>
   )
