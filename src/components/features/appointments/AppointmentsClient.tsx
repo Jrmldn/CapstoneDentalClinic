@@ -159,8 +159,10 @@ export default function AppointmentsClient({
           >
             <option value="all">All Statuses</option>
             <option value="pending">Pending</option>
+            <option value="pending_patient_confirm">Pending Patient Confirm</option>
             <option value="confirmed">Confirmed</option>
             <option value="rescheduled">Rescheduled</option>
+            <option value="follow_up">Follow Up</option>
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
             <option value="no_show">No-Show</option>
@@ -231,7 +233,10 @@ export default function AppointmentsClient({
         onClose={() => setReschedulingAppt(null)}
         userId={userId}
         clinicId={clinicId}
-        onSuccess={refreshAppointments}
+        onSuccess={() => {
+          setReschedulingAppt(null)
+          refreshAppointments()
+        }}
       />
 
       {/* MODAL: Complete & Billing */}

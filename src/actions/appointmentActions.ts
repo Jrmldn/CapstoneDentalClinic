@@ -274,7 +274,7 @@ export async function updateAppointmentStatus(
       notes: logNotes,
     })
 
-    if (newStatus === 'confirmed' || newStatus === 'rescheduled' || newStatus === 'follow_up') {
+    if (newStatus === 'confirmed' || newStatus === 'rescheduled' || newStatus === 'follow_up' || newStatus === 'pending_patient_confirm') {
       const { data: apptData } = await supabaseAdmin
         .from('appointments')
         .select(`
@@ -299,7 +299,7 @@ export async function updateAppointmentStatus(
           const branchName = clinic?.name ?? 'Your Clinic'
 
           let template: { subject: string; html: string } | null = null
-          let triggerType: string
+          let triggerType = ''
 
           if (newStatus === 'confirmed') {
             triggerType = 'confirmation'
@@ -323,7 +323,22 @@ export async function updateAppointmentStatus(
               branchName,
               dentistName,
             })
-          } else {
+          } else if (newStatus === 'pending_patient_confirm') {
+            triggerType = 'reschedule'
+            const oldDate = new Date(current.scheduled_at).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+            const oldTime = new Date(current.scheduled_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+            template = rescheduleEmail({
+              firstName: patient.first_name,
+              oldDate,
+              oldTime,
+              newDate: apptDate,
+              newTime: apptTime,
+              branchName,
+              dentistName,
+            })
+          } else if (rescheduledAt) {
+            // Only send the follow_up email when a new future date was explicitly set.
+            // Without rescheduledAt, scheduled_at is the original (past) appointment time.
             triggerType = 'follow_up'
             template = followUpEmail({
               firstName: patient.first_name,
@@ -334,15 +349,17 @@ export async function updateAppointmentStatus(
             })
           }
 
-          const sent = await sendEmail({ to: patient.email, ...template })
-          await logNotification({
-            appointmentId,
-            patientId: patient.id,
-            triggerType,
-            channel: 'email',
-            status: sent.success ? 'sent' : 'failed',
-            errorMessage: sent.error,
-          })
+          if (template) {
+            const sent = await sendEmail({ to: patient.email, ...template })
+            await logNotification({
+              appointmentId,
+              patientId: patient.id,
+              triggerType,
+              channel: 'email',
+              status: sent.success ? 'sent' : 'failed',
+              errorMessage: sent.error,
+            })
+          }
         }
       }
     }
@@ -352,6 +369,8 @@ export async function updateAppointmentStatus(
     revalidatePath('/patient-dashboard/dashboard')
     revalidatePath('/patient-dashboard/calendar')
     revalidatePath('/dentist-dashboard')
+    revalidatePath('/dentist-dashboard/appointments')
+    revalidatePath('/dentist-dashboard/calendar')
     return { success: true }
   } catch (error) {
     console.error('Error in updateAppointmentStatus:', error)

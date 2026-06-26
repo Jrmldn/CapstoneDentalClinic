@@ -47,6 +47,20 @@ interface CalendarClientProps {
   dentistId?: number
 }
 
+function getStatusBadgeClass(status: string): string {
+  switch (status) {
+    case 'confirmed': return 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+    case 'pending': return 'bg-amber-50 text-amber-700 border border-amber-200'
+    case 'completed': return 'bg-slate-50 text-slate-600 border border-slate-200'
+    case 'cancelled': return 'bg-red-50 text-red-700 border border-red-200'
+    case 'rescheduled': return 'bg-blue-50 text-blue-700 border border-blue-200'
+    case 'no_show': return 'bg-orange-50 text-orange-700 border border-orange-200'
+    case 'follow_up': return 'bg-teal-50 text-teal-700 border border-teal-200'
+    case 'pending_patient_confirm': return 'bg-purple-50 text-purple-700 border border-purple-200'
+    default: return 'bg-gray-50 text-gray-700 border border-gray-200'
+  }
+}
+
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -357,7 +371,12 @@ export default function CalendarClient({
                         dentists: dentistObj
                       } as RescheduleAppt
 
-                      const showActions = userId && role && (appt.status === 'pending' || appt.status === 'confirmed' || appt.status === 'rescheduled')
+                      const showActions = userId && role && (
+                        appt.status === 'pending' ||
+                        appt.status === 'confirmed' ||
+                        appt.status === 'rescheduled' ||
+                        appt.status === 'pending_patient_confirm'
+                      )
 
                       return (
                         <div key={appt.id} className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-1.5">
@@ -365,8 +384,8 @@ export default function CalendarClient({
                             <span className="font-semibold text-slate-800 text-sm">
                               {patientObj ? `${patientObj.first_name} ${patientObj.last_name}` : 'Unknown'}
                             </span>
-                            <span className="text-[10px] font-bold bg-blue-50 text-blue-700 px-2 py-0.5 rounded capitalize">
-                              {appt.status}
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded capitalize ${getStatusBadgeClass(appt.status)}`}>
+                              {appt.status.replace(/_/g, ' ')}
                             </span>
                           </div>
                           <div className="flex items-center gap-4 text-xs text-gray-500">
@@ -378,7 +397,7 @@ export default function CalendarClient({
                           </div>
                           {showActions && (
                             <div className="flex gap-2 pt-2 border-t border-gray-200/60 mt-1.5">
-                              {(appt.status === 'pending' || appt.status === 'rescheduled') && (
+                              {appt.status === 'pending' && (
                                 <button
                                   onClick={() => handleApprove(appt.id)}
                                   disabled={isUpdatingStatus === appt.id}

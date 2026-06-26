@@ -25,6 +25,6 @@ export const getStatusBadge = (status: string) => {
     case 'pending_patient_confirm':
       return <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-none font-semibold">Confirm Reschedule</Badge>
     default:
-      return <Badge variant="secondary" className="bg-gray-100 text-gray-700 border-none font-semibold">{status}</Badge>
+      return <Badge variant="secondary" className="bg-gray-100 text-gray-700 border-none font-semibold">Unknown</Badge>
   }
 }
