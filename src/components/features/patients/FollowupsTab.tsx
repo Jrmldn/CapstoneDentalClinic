@@ -14,6 +14,9 @@ interface FollowupsTabProps {
   dentistId?: number
   appointments: AppointmentRecord[]
   onRefresh: () => Promise<void>
+  readOnly?: boolean
+  stagedFollowups?: Omit<AppointmentRecord, 'id'>[]
+  onAddFollowup?: (f: Omit<AppointmentRecord, 'id'>) => void
 }
 
 interface Service {
@@ -22,12 +25,17 @@ interface Service {
   slot_duration_min: number
 }
 
+const EMPTY_FOLLOWUPS: Omit<AppointmentRecord, 'id'>[] = []
+
 export default function FollowupsTab({
   patientId,
   clinicId,
   dentistId,
   appointments,
   onRefresh,
+  readOnly = false,
+  stagedFollowups = EMPTY_FOLLOWUPS,
+  onAddFollowup,
 }: FollowupsTabProps) {
   const [showForm, setShowForm] = useState(false)
   const [services, setServices] = useState<Service[]>([])
@@ -86,6 +94,28 @@ export default function FollowupsTab({
     const endAtDate = new Date(scheduledAtDate.getTime() + slotDuration * 60 * 1000)
 
     setIsSubmitting(true)
+    if (onAddFollowup) {
+      onAddFollowup({
+        clinic_id: clinicId,
+        patient_id: patientId,
+        dentist_id: dentistId!,
+        service_id: selectedServiceId!,
+        scheduled_at: scheduledAtDate.toISOString(),
+        end_at: endAtDate.toISOString(),
+        notes: notes || 'Follow-up appointment',
+        is_walk_in: false,
+        services: selectedService ? { name: selectedService.name } : null,
+        dentists: dentistId ? { first_name: 'Staged', last_name: 'Follow-up' } : null,
+        status: 'confirmed'
+      })
+      setIsSubmitting(false)
+      setDate('')
+      setSelectedSlot(null)
+      setNotes('')
+      setShowForm(false)
+      return
+    }
+
     const res = await createAppointment({
       clinic_id: clinicId,
       patient_id: patientId,
@@ -110,9 +140,25 @@ export default function FollowupsTab({
     }
   }
 
+  // Combine staged followups and database appointments
+  const allAppointments: (AppointmentRecord & { isStaged?: boolean })[] = [
+    ...stagedFollowups.map((sf, index) => ({
+      id: -1 - index,
+      isStaged: true,
+      scheduled_at: sf.scheduled_at,
+      status: sf.status,
+      services: sf.services,
+      dentists: sf.dentists,
+      notes: sf.notes,
+      clinics: sf.clinics || null,
+      booked_at: sf.booked_at || undefined
+    })),
+    ...appointments
+  ]
+
   // Filter future follow-up appointments (pending/confirmed in the future)
   const now = new Date()
-  const followups = appointments.filter(appt => {
+  const followups = allAppointments.filter(appt => {
     const apptDate = new Date(appt.scheduled_at)
     return (
       apptDate >= now &&
@@ -128,7 +174,7 @@ export default function FollowupsTab({
           <h4 className="font-bold text-slate-800 text-sm">Follow-up Schedule</h4>
           <p className="text-xs text-gray-500 mt-0.5">Plan and review upcoming follow-up appointments.</p>
         </div>
-        {dentistId && (
+        {!readOnly && dentistId && (
           <button
             onClick={() => setShowForm(!showForm)}
             className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition"
@@ -240,7 +286,8 @@ export default function FollowupsTab({
         </form>
       )}
 
-      {/* Follow-ups list (matching followups.png) */}
+      {/* Follow-ups list — hidden in session mode (history viewed elsewhere) */}
+      {!onAddFollowup && (
       <div className="space-y-3">
         {followups.length === 0 ? (
           <div className="bg-white p-10 text-center rounded-xl border border-gray-150 shadow-xs">
@@ -318,6 +365,7 @@ export default function FollowupsTab({
           </span>
         </div>
       </div>
+      )}
     </div>
   )
 }

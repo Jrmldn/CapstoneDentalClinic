@@ -1,4 +1,4 @@
-﻿'use server'
+'use server'
 
 import { sanitizeServerError } from '@/lib/errors/sanitizeError'
 
@@ -226,9 +226,22 @@ export async function createDraftInvoice(data: CreateDraftInvoiceData) {
         notes: line.treatment_notes ?? undefined,
       }))
     if (treatmentRows.length > 0) {
-      const treatmentResult = await addTreatmentRecords(treatmentRows)
-      if (!treatmentResult.success) {
-        console.error('createDraftInvoice: treatment_history write failed:', treatmentResult.error)
+      let skipWrite = false
+      if (data.appointment_id) {
+        const { count, error: countErr } = await supabaseAdmin
+          .from('treatment_history')
+          .select('*', { count: 'exact', head: true })
+          .eq('appointment_id', data.appointment_id)
+        if (!countErr && count !== null && count > 0) {
+          skipWrite = true
+        }
+      }
+
+      if (!skipWrite) {
+        const treatmentResult = await addTreatmentRecords(treatmentRows)
+        if (!treatmentResult.success) {
+          console.error('createDraftInvoice: treatment_history write failed:', treatmentResult.error)
+        }
       }
     }
 

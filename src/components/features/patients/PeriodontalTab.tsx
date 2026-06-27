@@ -6,6 +6,14 @@ import { addPeriodontalScreening, addTmjAssessment } from '@/actions/clinicalRec
 import { formatDate } from '@/lib/date'
 import type { PeriodontalScreening, TmjAssessment } from './types'
 
+export interface PeriodontalStagedData {
+  pocket_depths: Record<string, number>
+  bleeding_points: Record<string, boolean>
+  findings: string
+  tmj_findings: string
+  pain_scale: number
+}
+
 interface PeriodontalTabProps {
   patientId: number
   clinicId: number
@@ -13,6 +21,10 @@ interface PeriodontalTabProps {
   screenings: PeriodontalScreening[]
   tmjAssessments: TmjAssessment[]
   onRefresh: () => Promise<void>
+  readOnly?: boolean
+  stagedScreening?: PeriodontalScreening
+  stagedTmj?: TmjAssessment
+  onAddPeriodontal?: (data: PeriodontalStagedData) => void
 }
 
 export default function PeriodontalTab({
@@ -22,6 +34,10 @@ export default function PeriodontalTab({
   screenings,
   tmjAssessments,
   onRefresh,
+  readOnly = false,
+  stagedScreening,
+  stagedTmj,
+  onAddPeriodontal,
 }: PeriodontalTabProps) {
   const [showForm, setShowForm] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -83,15 +99,6 @@ export default function PeriodontalTab({
       plaque_index: plaqueIndex
     })
 
-    const periodontalRes = await addPeriodontalScreening({
-      patient_id: patientId,
-      clinic_id: clinicId,
-      dentist_id: dentistId || 0,
-      pocket_depths: pocketDepths,
-      bleeding_points: bleedingPoints,
-      findings: periodontalFindings
-    })
-
     // 2. Save TMJ Assessment
     const tmjFindings = JSON.stringify({
       clicking,
@@ -99,6 +106,28 @@ export default function PeriodontalTab({
       max_opening: maxOpening,
       lateral_movement: lateralMovement,
       recommended_treatment: recommendedTreatment
+    })
+
+    if (onAddPeriodontal) {
+      onAddPeriodontal({
+        pocket_depths: pocketDepths,
+        bleeding_points: bleedingPoints,
+        findings: periodontalFindings,
+        tmj_findings: tmjFindings,
+        pain_scale: painScale
+      })
+      setIsSubmitting(false)
+      setShowForm(false)
+      return
+    }
+
+    const periodontalRes = await addPeriodontalScreening({
+      patient_id: patientId,
+      clinic_id: clinicId,
+      dentist_id: dentistId || 0,
+      pocket_depths: pocketDepths,
+      bleeding_points: bleedingPoints,
+      findings: periodontalFindings
     })
 
     const tmjRes = await addTmjAssessment({
@@ -121,8 +150,8 @@ export default function PeriodontalTab({
   }
 
   // Get active/latest screening for display
-  const latestScreening = screenings[0]
-  const latestTmj = tmjAssessments[0]
+  const latestScreening = stagedScreening || screenings[0]
+  const latestTmj = stagedTmj || tmjAssessments[0]
 
   const displayPocketDepths = latestScreening?.pocket_depths || pocketDepths
   const displayBleedingPoints = latestScreening?.bleeding_points || bleedingPoints
@@ -144,7 +173,7 @@ export default function PeriodontalTab({
           <h4 className="font-bold text-slate-800 text-sm">Periodontal &amp; TMJ Screening</h4>
           <p className="text-xs text-gray-500 mt-0.5">Record pocket depths, bleeding indices, and jaw joint movement.</p>
         </div>
-        {dentistId && (
+        {!readOnly && dentistId && (
           <button
             onClick={() => setShowForm(!showForm)}
             className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition"
@@ -328,7 +357,8 @@ export default function PeriodontalTab({
         </form>
       )}
 
-      {/* Periodontal Visual Screen View (matching periodontal.png) */}
+      {/* Periodontal Visual Screen View — hidden in session mode (history viewed elsewhere) */}
+      {!onAddPeriodontal && (
       <div className="bg-white p-6 rounded-xl border border-gray-150 shadow-xs space-y-6">
         {/* PSR section */}
         <div>
@@ -430,6 +460,7 @@ export default function PeriodontalTab({
           </div>
         </div>
       </div>
+      )}
     </div>
   )
 }

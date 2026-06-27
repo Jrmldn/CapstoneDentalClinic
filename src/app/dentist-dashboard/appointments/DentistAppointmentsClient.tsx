@@ -4,17 +4,21 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, Calendar, ClipboardList } from 'lucide-react'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
-import { formatDate, formatTime } from '@/lib/date'
-import DentistCompleteBillingModal from '@/components/features/appointments/DentistCompleteBillingModal'
+import { formatDate, formatTime, toDateKey } from '@/lib/date'
+import DentistChartBillingModal from '@/components/features/appointments/DentistChartBillingModal'
 import type { Appointment } from '@/components/features/dashboard/DentistDashboardView'
 import type { Service } from '@/components/features/billing/types'
+import type { InventoryItem } from '@/components/features/inventory/types'
 
 interface Props {
   appointments: Appointment[]
   clinicId: number
   dentistUserId: string
   dentistId: number
+  dentistName: string
+  branchName: string
   services: Service[]
+  inventoryItems: InventoryItem[]
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -29,11 +33,7 @@ const STATUS_STYLES: Record<string, string> = {
 }
 
 function isPastOrToday(scheduledAt: string): boolean {
-  const d = new Date(scheduledAt)
-  const day = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  return day.getTime() <= today.getTime()
+  return toDateKey(scheduledAt) <= toDateKey()
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -44,7 +44,7 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-export default function DentistAppointmentsClient({ appointments, clinicId, dentistUserId, dentistId, services }: Props) {
+export default function DentistAppointmentsClient({ appointments, clinicId, dentistUserId, dentistId, dentistName, branchName, services, inventoryItems }: Props) {
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [searchTerm, setSearchTerm] = useState('')
@@ -230,13 +230,16 @@ export default function DentistAppointmentsClient({ appointments, clinicId, dent
         </div>
       </div>
 
-      <DentistCompleteBillingModal
+      <DentistChartBillingModal
         appointment={completingAppt}
         onClose={() => setCompletingAppt(null)}
         clinicId={clinicId}
         dentistUserId={dentistUserId}
         dentistId={dentistId}
+        dentistName={dentistName}
+        branchName={branchName}
         services={services}
+        inventoryItems={inventoryItems}
         onSuccess={() => {
           setCompletingAppt(null)
           startTransition(() => router.refresh())

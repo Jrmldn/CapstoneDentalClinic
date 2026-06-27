@@ -1,12 +1,24 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, X, ChevronDown, ChevronUp, Calendar, BookOpen, User } from 'lucide-react'
+import { Plus, X, ChevronDown, ChevronUp, BookOpen, User } from 'lucide-react'
 import { addTreatmentRecord } from '@/actions/clinicalRecordActions'
 import { fetchServices } from '@/actions/serviceActions'
-import { toothInputToNumber, toothNumberToLabel } from '@/utils/teeth'
+import { toothInputToNumber, toothNumberToLabel, serviceRequiresToothNumber } from '@/utils/teeth'
 import { formatDate, formatDateTime } from '@/lib/date'
 import type { TreatmentHistory } from './types'
+
+export interface StagedTreatmentData {
+  patient_id: number
+  clinic_id: number
+  dentist_id: number
+  service_id: number | null
+  tooth_number: number | null
+  treatment: string
+  notes: string
+  performed_at: string
+  services?: { id: number; name: string } | null
+}
 
 interface TreatmentTabProps {
   patientId: number
@@ -14,6 +26,9 @@ interface TreatmentTabProps {
   dentistId?: number
   treatments: TreatmentHistory[]
   onRefresh: () => Promise<void>
+  readOnly?: boolean
+  stagedTreatments?: StagedTreatmentData[]
+  onAddTreatment?: (treatment: StagedTreatmentData) => void
 }
 
 interface Service {
@@ -21,12 +36,17 @@ interface Service {
   name: string
 }
 
+const EMPTY_TREATMENTS: StagedTreatmentData[] = []
+
 export default function TreatmentTab({
   patientId,
   clinicId,
   dentistId,
   treatments,
   onRefresh,
+  readOnly = false,
+  stagedTreatments = EMPTY_TREATMENTS,
+  onAddTreatment,
 }: TreatmentTabProps) {
   const [showForm, setShowForm] = useState(false)
   const [services, setServices] = useState<Service[]>([])
@@ -69,18 +89,48 @@ export default function TreatmentTab({
 
     setIsSubmitting(true)
 
+    const requiresTooth = serviceRequiresToothNumber(treatmentName)
+    const finalToothNum = requiresTooth ? toothInputToNumber(toothNumber) : null
+
+    if (requiresTooth && finalToothNum === null) {
+      alert('Please enter a valid tooth number (1-32 or A-T).')
+      setIsSubmitting(false)
+      return
+    }
+
     // Build the notes description with prescription if needed
     const serializedNotes = JSON.stringify({
       clinical_notes: clinicalNotes,
       prescription_notes: prescriptionNotes,
     })
 
+    if (onAddTreatment) {
+      onAddTreatment({
+        patient_id: patientId,
+        clinic_id: clinicId,
+        dentist_id: dentistId || 0,
+        service_id: selectedServiceId,
+        tooth_number: finalToothNum,
+        treatment: treatmentName,
+        notes: serializedNotes,
+        performed_at: performedAt ? new Date(performedAt).toISOString() : new Date().toISOString(),
+      })
+      setIsSubmitting(false)
+      setTreatmentName(services[0]?.name || '')
+      setToothNumber('')
+      setClinicalNotes('')
+      setPrescriptionNotes('')
+      setPerformedAt('')
+      setShowForm(false)
+      return
+    }
+
     const res = await addTreatmentRecord({
       patient_id: patientId,
       clinic_id: clinicId,
       dentist_id: dentistId || 0,
       service_id: selectedServiceId,
-      tooth_number: toothInputToNumber(toothNumber),
+      tooth_number: finalToothNum,
       treatment: treatmentName,
       notes: serializedNotes,
       performed_at: performedAt ? new Date(performedAt).toISOString() : undefined,
@@ -112,21 +162,40 @@ export default function TreatmentTab({
     return { clinical_notes: notesStr || '—', prescription_notes: '—' }
   }
 
+  // Combine staged treatments and saved treatments
+  const displayTreatments: (TreatmentHistory & { isStaged?: boolean })[] = [
+    ...stagedTreatments.map((st, index) => ({
+      id: -1 - index, // Unique negative ID for staged items
+      isStaged: true,
+      tooth_number: st.tooth_number,
+      treatment: st.treatment,
+      notes: st.notes,
+      performed_at: st.performed_at,
+      dentists: dentistId ? { id: dentistId, first_name: 'Staged', last_name: 'Record' } : null,
+      clinics: null,
+      service_id: st.service_id ?? null,
+      services: st.services ?? null
+    })),
+    ...treatments
+  ]
+
   return (
     <div className="space-y-6">
       {/* Header bar */}
       <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-150 shadow-xs">
         <div>
-          <h4 className="font-bold text-slate-800 text-sm">Treatment History</h4>
-          <p className="text-xs text-gray-500 mt-0.5">Access and log treatment procedures and clinic visits.</p>
+          <h4 className="font-bold text-slate-800 text-sm">Treatment</h4>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {onAddTreatment ? 'Log a treatment for this session.' : 'Access and log treatment procedures and clinic visits.'}
+          </p>
         </div>
-        {dentistId && (
+        {!readOnly && dentistId && (
           <button
             onClick={() => setShowForm(!showForm)}
             className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition"
           >
             {showForm ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-            {showForm ? 'Cancel' : 'Add Record'}
+            {showForm ? 'Close Form' : 'Add Record'}
           </button>
         )}
       </div>
@@ -141,7 +210,8 @@ export default function TreatmentTab({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Service selector + Date — always shown */}
+          <div className={`grid grid-cols-1 gap-4 ${serviceRequiresToothNumber(treatmentName) ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-500 uppercase">Select Service</label>
               <select
@@ -151,7 +221,12 @@ export default function TreatmentTab({
                   const id = parseInt(e.target.value)
                   setSelectedServiceId(id)
                   const matched = services.find(s => s.id === id)
-                  if (matched) setTreatmentName(matched.name)
+                  if (matched) {
+                    setTreatmentName(matched.name)
+                    if (!serviceRequiresToothNumber(matched.name)) {
+                      setToothNumber('')
+                    }
+                  }
                 }}
               >
                 {services.map(s => (
@@ -159,20 +234,23 @@ export default function TreatmentTab({
                 ))}
               </select>
             </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase">Tooth Number / Letter (Optional)</label>
-              <input
-                type="text"
-                placeholder="e.g. 14, 28, A, M"
-                className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs bg-gray-50 focus:bg-white outline-none focus:ring-1 focus:ring-blue-500"
-                value={toothNumber}
-                onChange={e => {
-                  const val = e.target.value.toUpperCase()
-                  // Support letter teeth A-T and numbers 1-32
-                  setToothNumber(val)
-                }}
-              />
-            </div>
+            {/* Tooth Number — visible only for tooth-specific services */}
+            {serviceRequiresToothNumber(treatmentName) && (
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Tooth Number / Letter (Required)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 14, 28, A, M"
+                  className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs bg-gray-50 focus:bg-white outline-none focus:ring-1 focus:ring-blue-500"
+                  value={toothNumber}
+                  onChange={e => {
+                    const val = e.target.value.toUpperCase()
+                    setToothNumber(val)
+                  }}
+                  required
+                />
+              </div>
+            )}
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-500 uppercase">Date Performed</label>
               <input
@@ -184,6 +262,7 @@ export default function TreatmentTab({
             </div>
           </div>
 
+          {/* Clinical Notes only (Prescribed Medicines removed in session mode) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-500 uppercase">Clinical Notes</label>
@@ -195,16 +274,19 @@ export default function TreatmentTab({
                 onChange={e => setClinicalNotes(e.target.value)}
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase">Prescribed Medicines</label>
-              <textarea
-                rows={3}
-                placeholder="Drugs, dosage, and frequency..."
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs bg-gray-50 focus:bg-white outline-none focus:ring-1 focus:ring-blue-500 resize-none"
-                value={prescriptionNotes}
-                onChange={e => setPrescriptionNotes(e.target.value)}
-              />
-            </div>
+            {/* Prescribed Medicines — hidden in session mode */}
+            {!onAddTreatment && (
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Prescribed Medicines</label>
+                <textarea
+                  rows={3}
+                  placeholder="Drugs, dosage, and frequency..."
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs bg-gray-50 focus:bg-white outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+                  value={prescriptionNotes}
+                  onChange={e => setPrescriptionNotes(e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-2.5 pt-2">
@@ -220,30 +302,30 @@ export default function TreatmentTab({
               disabled={isSubmitting}
               className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold disabled:opacity-50 transition"
             >
-              {isSubmitting ? 'Saving...' : 'Save Record'}
+              {isSubmitting ? 'Saving...' : onAddTreatment ? 'Add to Invoice' : 'Save Record'}
             </button>
           </div>
         </form>
       )}
 
-      {/* Treatments list matching treatment.png */}
+      {/* Treatments list — hidden in session mode (history viewed elsewhere) */}
+      {!onAddTreatment && (
       <div className="space-y-4">
-        {treatments.length === 0 ? (
+        {displayTreatments.length === 0 ? (
           <div className="bg-white p-10 text-center rounded-xl border border-gray-150 shadow-xs">
             <BookOpen className="w-8 h-8 text-gray-300 mx-auto mb-2.5" />
             <p className="text-xs text-gray-400">No treatment records found for this patient.</p>
           </div>
         ) : (
-          treatments.map((treat, idx) => {
+          displayTreatments.map((treat, idx) => {
             const isExpanded = expandedCardId === treat.id
             const parsedNotes = parseNotesObj(treat.notes)
             const dentistObj = Array.isArray(treat.dentists) ? treat.dentists[0] : treat.dentists
             const toothLabel = toothNumberToLabel(treat.tooth_number)
 
             // TR code (mock code, e.g. TR-001, TR-002, etc.)
-            const trCode = `TR-${(treatments.length - idx).toString().padStart(3, '0')}`
+            const trCode = treat.isStaged ? 'TR-STAGED' : `TR-${(displayTreatments.length - idx).toString().padStart(3, '0')}`
 
-            // Date formatting
             const dateStr = formatDate(treat.performed_at)
 
             return (
@@ -270,10 +352,6 @@ export default function TreatmentTab({
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-teal-50 text-teal-700 font-bold uppercase tracking-wider flex items-center gap-1 border border-teal-150">
-                      <Calendar className="w-2.5 h-2.5" />
-                      Follow-up
-                    </span>
                     {isExpanded ? <ChevronUp className="w-4.5 h-4.5 text-gray-400" /> : <ChevronDown className="w-4.5 h-4.5 text-gray-400" />}
                   </div>
                 </div>
@@ -322,6 +400,7 @@ export default function TreatmentTab({
           })
         )}
       </div>
+      )}
     </div>
   )
 }

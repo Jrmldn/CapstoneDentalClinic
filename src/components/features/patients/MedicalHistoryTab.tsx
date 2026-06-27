@@ -11,9 +11,18 @@ interface MedicalHistoryTabProps {
   viewerRole: 'dentist' | 'staff'
   lastVisitDate: string
   medHistory: MedicalHistoryEditState
+  readOnly?: boolean
+  showSaveButton?: boolean
 }
 
-export default function MedicalHistoryTab({ localRecord, viewerRole, lastVisitDate, medHistory }: MedicalHistoryTabProps) {
+export default function MedicalHistoryTab({
+  localRecord,
+  viewerRole,
+  lastVisitDate,
+  medHistory,
+  readOnly = false,
+  showSaveButton = true,
+}: MedicalHistoryTabProps) {
   const now = Date.now()
   const {
     editBloodType, setEditBloodType,
@@ -26,6 +35,8 @@ export default function MedicalHistoryTab({ localRecord, viewerRole, lastVisitDa
     editIsSmoker, setEditIsSmoker,
     isSavingMedHistory, onSave,
   } = medHistory
+
+  const isReadOnly = readOnly || viewerRole === 'staff'
 
   return (
     <div className="space-y-6">
@@ -121,7 +132,7 @@ export default function MedicalHistoryTab({ localRecord, viewerRole, lastVisitDa
             <div className="space-y-4">
               <div>
                 <span className="text-[10px] text-gray-400 block font-semibold">BLOOD TYPE</span>
-                {viewerRole === 'staff' ? (
+                {isReadOnly ? (
                   <span className="text-sm font-semibold text-slate-800 mt-0.5 block">
                     {localRecord.medicalHistory.blood_type || 'Unknown'}
                   </span>
@@ -141,7 +152,7 @@ export default function MedicalHistoryTab({ localRecord, viewerRole, lastVisitDa
 
               <div>
                 <span className="text-[10px] text-gray-400 block font-semibold">BLOOD PRESSURE</span>
-                {viewerRole === 'staff' ? (
+                {isReadOnly ? (
                   <span className="text-sm font-semibold text-slate-800 mt-0.5 block">
                     {localRecord.medicalHistory.blood_pressure || '—'}
                   </span>
@@ -159,7 +170,7 @@ export default function MedicalHistoryTab({ localRecord, viewerRole, lastVisitDa
               {localRecord.patient.gender === 'female' && (
                 <div>
                   <span className="text-[10px] text-gray-400 block font-semibold">PREGNANCY STATUS</span>
-                  {viewerRole === 'staff' ? (
+                  {isReadOnly ? (
                     <span className="text-sm font-semibold text-slate-800 mt-0.5 block">
                       {localRecord.medicalHistory.is_pregnant ? 'Pregnant' : 'Not Pregnant'}
                     </span>
@@ -179,7 +190,7 @@ export default function MedicalHistoryTab({ localRecord, viewerRole, lastVisitDa
 
               <div>
                 <span className="text-[10px] text-gray-400 block font-semibold">SMOKING STATUS</span>
-                {viewerRole === 'staff' ? (
+                {isReadOnly ? (
                   <span className="text-sm font-semibold text-slate-800 mt-0.5 block">
                     {localRecord.medicalHistory.is_smoker ? 'Smoker' : 'Non-smoker'}
                   </span>
@@ -198,7 +209,7 @@ export default function MedicalHistoryTab({ localRecord, viewerRole, lastVisitDa
 
               <div>
                 <span className="text-[10px] text-gray-400 block font-semibold">ALLERGIES</span>
-                {viewerRole === 'staff' ? (
+                {isReadOnly ? (
                   <span className="text-sm font-semibold text-slate-800 mt-0.5 block">
                     {localRecord.medicalHistory.allergies?.length > 0
                       ? localRecord.medicalHistory.allergies.join(', ')
@@ -219,7 +230,7 @@ export default function MedicalHistoryTab({ localRecord, viewerRole, lastVisitDa
             <div className="space-y-4">
               <div>
                 <span className="text-[10px] text-gray-400 block font-semibold">MEDICAL FLAGS</span>
-                {viewerRole === 'staff' ? (
+                {isReadOnly ? (
                   <span className="text-sm font-bold mt-0.5 block text-slate-800">
                     {localRecord.medicalHistory.medical_flags || 'None'}
                   </span>
@@ -236,7 +247,7 @@ export default function MedicalHistoryTab({ localRecord, viewerRole, lastVisitDa
 
               <div>
                 <span className="text-[10px] text-gray-400 block font-semibold">CURRENT MEDICATIONS</span>
-                {viewerRole === 'staff' ? (
+                {isReadOnly ? (
                   <span className="text-sm font-semibold text-slate-800 mt-0.5 block">
                     {localRecord.medicalHistory.current_medications?.length > 0
                       ? localRecord.medicalHistory.current_medications.join(', ')
@@ -255,7 +266,7 @@ export default function MedicalHistoryTab({ localRecord, viewerRole, lastVisitDa
 
               <div>
                 <span className="text-[10px] text-gray-400 block font-semibold">MEDICAL CONDITIONS</span>
-                {viewerRole === 'staff' ? (
+                {isReadOnly ? (
                   <span className="text-sm font-semibold text-slate-800 mt-0.5 block">
                     {localRecord.medicalHistory.medical_conditions?.length > 0
                       ? localRecord.medicalHistory.medical_conditions.join(', ')
@@ -343,7 +354,7 @@ export default function MedicalHistoryTab({ localRecord, viewerRole, lastVisitDa
               </div>
             )}
 
-            {viewerRole !== 'staff' && (
+            {!isReadOnly && showSaveButton && (
               <div className="col-span-2 flex justify-end pt-2">
                 <button
                   onClick={onSave}

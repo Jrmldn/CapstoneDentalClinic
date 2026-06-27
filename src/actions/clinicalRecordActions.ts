@@ -240,6 +240,57 @@ export async function addPrescription(data: PrescriptionData) {
   }
 }
 
+// ADD MULTIPLE PRESCRIPTIONS (batch, encrypted)
+// Used by the dentist billing handoff to log every prescription at once.
+// No ensureRole here — the caller is already role-gated.
+
+export async function addPrescriptions(rows: PrescriptionData[]) {
+  if (rows.length === 0) return { success: true, prescriptions: [] }
+
+  try {
+    const encryptedRows = await Promise.all(
+      rows.map(async (data) => {
+        const [enc_medication, enc_dosage, enc_frequency, enc_duration, enc_rx_notes] = await Promise.all([
+          encryptMedicalData(data.medication),
+          encryptMedicalData(data.dosage),
+          encryptMedicalData(data.frequency),
+          data.duration ? encryptMedicalData(data.duration) : Promise.resolve(null),
+          data.notes    ? encryptMedicalData(data.notes)    : Promise.resolve(null),
+        ])
+        return {
+          patient_id: data.patient_id,
+          clinic_id: data.clinic_id,
+          dentist_id: data.dentist_id,
+          appointment_id: data.appointment_id ?? null,
+          medication: enc_medication,
+          dosage:     enc_dosage,
+          frequency:  enc_frequency,
+          duration:   enc_duration,
+          notes:      enc_rx_notes,
+          prescribed_at: new Date().toISOString(),
+        }
+      })
+    )
+
+    const { data: prescriptions, error } = await supabaseAdmin
+      .from('prescriptions')
+      .insert(encryptedRows)
+      .select()
+
+    if (error) throw new Error(error.message)
+
+    revalidatePath('/staff-dashboard/patients')
+    revalidatePath('/dentist-dashboard/patients')
+    return { success: true, prescriptions }
+  } catch (error) {
+    console.error('Error in addPrescriptions:', error)
+    return {
+      success: false,
+      error: sanitizeServerError(error),
+    }
+  }
+}
+
 // ADD PERIODONTAL SCREENING
 
 export async function addPeriodontalScreening(data: PeriodontalScreeningData) {

@@ -28,35 +28,18 @@ export async function updateDentalChart(
   if (!auth.success) return { success: false, error: auth.error }
 
   try {
-    let chartId: number
-
-    const { data: existing } = await supabaseAdmin
+    const { data: newChart, error: chartError } = await supabaseAdmin
       .from('dental_charts')
-      .select('id')
-      .eq('patient_id', patientId)
-      .eq('clinic_id', clinicId)
-      .maybeSingle()
+      .insert([{
+        patient_id: patientId,
+        clinic_id: clinicId,
+        dentist_id: dentistId,
+      }])
+      .select()
+      .single()
 
-    if (existing) {
-      chartId = existing.id
-      await supabaseAdmin
-        .from('dental_charts')
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', chartId)
-    } else {
-      const { data: newChart, error: chartError } = await supabaseAdmin
-        .from('dental_charts')
-        .insert([{
-          patient_id: patientId,
-          clinic_id: clinicId,
-          dentist_id: dentistId,
-        }])
-        .select()
-        .single()
-
-      if (chartError) throw new Error(chartError.message)
-      chartId = newChart.id
-    }
+    if (chartError) throw new Error(chartError.message)
+    const chartId = newChart.id
 
     const conditionsData = toothConditions.map(tc => ({
       dental_chart_id: chartId,

@@ -1,7 +1,12 @@
 import { enforceRole } from '@/lib/auth/protection'
 import { getDentistRecordByUserId } from '@/services/dashboardService'
 import { fetchCalendarData } from '@/actions/calendarActions'
+import { fetchServices } from '@/actions/serviceActions'
+import { fetchInventoryForDentist } from '@/actions/inventoryActions'
+import { supabaseAdmin } from '@/lib/supabase/server'
 import CalendarClient from '@/components/features/calendar/CalendarClient'
+import type { Service } from '@/components/features/billing/types'
+import type { InventoryItem } from '@/components/features/inventory/types'
 
 export const metadata = { title: 'Calendar — Dentist Portal' }
 
@@ -31,6 +36,21 @@ export default async function CalendarPage() {
   const initialHolidays = calendarRes.holidays || []
   const initialAppointments = calendarRes.appointments || []
 
+  // Fetch services, dentistName, and branchName
+  const servicesRes = await fetchServices(clinicId)
+  const services = (servicesRes.services ?? []) as Service[]
+
+  const inventoryRes = await fetchInventoryForDentist(clinicId)
+  const inventoryItems = (inventoryRes.items ?? []) as InventoryItem[]
+
+  const { data: clinicData } = await supabaseAdmin
+    .from('clinics')
+    .select('name')
+    .eq('id', clinicId)
+    .maybeSingle()
+  const branchName = clinicData?.name || 'Clinic'
+  const dentistName = `${dentistRecord.first_name} ${dentistRecord.last_name}`
+
   return (
     <div className="p-6 md:p-8">
       <div className="mb-6">
@@ -50,6 +70,10 @@ export default async function CalendarPage() {
         userId={authUser.id}
         role="dentist"
         dentistId={dentistId}
+        services={services}
+        dentistName={dentistName}
+        branchName={branchName}
+        inventoryItems={inventoryItems}
       />
     </div>
   )

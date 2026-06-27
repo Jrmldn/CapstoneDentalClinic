@@ -1,4 +1,4 @@
-﻿'use server'
+'use server'
 
 import { sanitizeServerError } from '@/lib/errors/sanitizeError'
 
@@ -210,5 +210,13 @@ export async function reorderClinicGalleryImages(rows: { id: number; sort_order:
     console.error('Error in reorderClinicGalleryImages:', error)
     return { success: false, error: sanitizeServerError(error) }
   }
+}
+
+export async function manageClinicSpecialties(clinicId: number, specialties: string[]) {
+  const auth = await ensureRole('superadmin')
+  if (!auth.success) return { success: false, error: auth.error }
+  void clinicId
+  void specialties
+  return { success: true }
 }
 

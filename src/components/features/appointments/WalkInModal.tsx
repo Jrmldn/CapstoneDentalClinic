@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { X, AlertCircle, RefreshCw } from 'lucide-react'
 import { registerWalkInPatientAndBook } from '@/actions/patientCoreActions'
 import { useAvailableSlots, MILLISECONDS_PER_MINUTE } from './hooks/useAvailableSlots'
-import { toDateKey } from '@/lib/date'
+import { toDateKey, formatTo12h } from '@/lib/date'
 import type { Service, Dentist } from './AppointmentTypes'
 
 interface WalkInModalProps {
@@ -257,7 +257,7 @@ export default function WalkInModal({
                             : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
                         }`}
                       >
-                        {slot.start}
+                        {formatTo12h(slot.start)}
                       </button>
                     ))}
                   </div>

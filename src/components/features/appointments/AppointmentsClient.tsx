@@ -200,7 +200,6 @@ export default function AppointmentsClient({
         filteredAppointments={filteredAppointments}
         onConfirm={handleConfirm}
         onReschedule={setReschedulingAppt}
-        onOpenBilling={setBillingAppt}
         onNoShow={handleNoShow}
         onCancel={handleCancel}
       />

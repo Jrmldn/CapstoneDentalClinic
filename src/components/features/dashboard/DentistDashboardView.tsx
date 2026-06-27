@@ -17,9 +17,10 @@ import {
   ShieldAlert
 } from 'lucide-react'
 import PatientRecordModal from '../patients/PatientRecordModal'
-import DentistCompleteBillingModal from '../appointments/DentistCompleteBillingModal'
+import DentistChartBillingModal from '../appointments/DentistChartBillingModal'
 import type { PatientRecord } from '../patients/types'
 import type { Service } from '../billing/types'
+import type { InventoryItem } from '../inventory/types'
 import StatCard from './components/StatCard'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
 import { formatDate, formatTime, formatDateLong } from '@/lib/date'
@@ -51,6 +52,7 @@ interface DentistDashboardViewProps {
   dentistId: number
   dentistUserId: string
   dentistName: string
+  branchName: string
   clinicId: number
   todayAppts: Appointment[]
   upcomingAppts: Appointment[]
@@ -61,37 +63,23 @@ interface DentistDashboardViewProps {
     patientsCount: number
   }
   services: Service[]
+  inventoryItems: InventoryItem[]
 }
 
 
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    confirmed:               'bg-emerald-50 text-emerald-700 border border-emerald-200',
-    completed:               'bg-slate-50 text-slate-600 border border-slate-200',
-    pending:                 'bg-amber-50 text-amber-700 border border-amber-200',
-    rescheduled:             'bg-blue-50 text-blue-700 border border-blue-200',
-    cancelled:               'bg-red-50 text-red-700 border border-red-200',
-    no_show:                 'bg-orange-50 text-orange-700 border border-orange-200',
-    in_progress:             'bg-blue-50 text-blue-700 border border-blue-200 font-semibold',
-    follow_up:               'bg-teal-50 text-teal-700 border border-teal-200',
-    pending_patient_confirm: 'bg-purple-50 text-purple-700 border border-purple-200',
-  }
-  return (
-    <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${styles[status] ?? 'bg-gray-100 text-gray-500 border border-gray-200'}`}>
-      {status === 'in_progress' ? 'In Progress' : status.replace(/_/g, ' ')}
-    </span>
-  )
-}
+import { AppointmentStatusBadge } from '../appointments/AppointmentStatusBadge'
 
 export default function DentistDashboardView({
   dentistId,
   dentistUserId,
   dentistName,
+  branchName,
   clinicId,
   todayAppts,
   upcomingAppts,
   stats,
-  services
+  services,
+  inventoryItems,
 }: DentistDashboardViewProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -269,10 +257,8 @@ export default function DentistDashboardView({
                 const lastVisit = notes?.lastVisit ?? 'Loading...'
                 const bloodPressure = notes?.bloodPressure ?? '120/80 mmHg'
 
-                // Determine display status - "Completed" (completed), "In Progress" (confirmed/in progress), "Upcoming" (pending)
-                let displayStatus = appt.status
-                if (appt.status === 'confirmed') displayStatus = 'in_progress'
-                else if (appt.status === 'pending') displayStatus = 'confirmed' // render upcoming as blue badge/confirmed in mockup
+                // Use the actual appointment status directly
+                const displayStatus = appt.status
 
                 return (
                   <div key={appt.id} className="hover:bg-slate-50/30 transition-all duration-150">
@@ -304,7 +290,7 @@ export default function DentistDashboardView({
                       {/* Right: Status, Record button, Chevron */}
                       <div className="flex items-center gap-3.5 flex-shrink-0">
                         <div className="flex items-center gap-2">
-                          <StatusBadge status={displayStatus} />
+                          <AppointmentStatusBadge status={displayStatus} />
                           {patient && (
                             <button
                               onClick={() => handleViewPatientRecord(patient.id)}
@@ -460,13 +446,16 @@ export default function DentistDashboardView({
       )}
 
       {/* Complete & Send to Billing Modal */}
-      <DentistCompleteBillingModal
+      <DentistChartBillingModal
         appointment={completingAppt}
         onClose={() => setCompletingAppt(null)}
         clinicId={clinicId}
         dentistUserId={dentistUserId}
         dentistId={dentistId}
+        dentistName={dentistName}
+        branchName={branchName}
         services={services}
+        inventoryItems={inventoryItems}
         onSuccess={() => {
           setCompletingAppt(null)
           startTransition(() => router.refresh())

@@ -27,3 +27,24 @@ export function toothNumberToLabel(num: number | null): string {
   if (num >= 101 && num <= 120) return String.fromCharCode(num - 36)
   return num.toString()
 }
+
+// Shared single source of truth for services requiring a tooth number.
+export const TOOTH_SPECIFIC_SERVICES = [
+  'Tooth Filling',
+  'Tooth Extraction',
+  'Root Canal Therapy',
+  'RCT',
+  'Crown',
+  'Bridge',
+  'Veneer',
+]
+
+/**
+ * Checks if a service name requires a tooth number (i.e. is tooth-specific).
+ */
+export function serviceRequiresToothNumber(serviceName: string | null | undefined): boolean {
+  if (!serviceName) return false
+  const lowerName = serviceName.toLowerCase()
+  return TOOTH_SPECIFIC_SERVICES.some(s => lowerName.includes(s.toLowerCase()))
+}
+

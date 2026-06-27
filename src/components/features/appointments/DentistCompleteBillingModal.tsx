@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { X, RefreshCw, FileText, Plus, Trash2 } from 'lucide-react'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
 import { createDraftInvoice } from '@/actions/billingActions'
-import { toothInputToNumber } from '@/utils/teeth'
+import { toothInputToNumber, serviceRequiresToothNumber } from '@/utils/teeth'
 import type { Appointment } from '@/components/features/dashboard/DentistDashboardView'
 import type { Service } from '@/components/features/billing/types'
 
@@ -73,7 +73,7 @@ export default function DentistCompleteBillingModal({
 
   const handleServiceChange = (index: number, rawId: string) => {
     if (!rawId) {
-      updateLine(index, { service_id: '', description: '', unit_price: 0 })
+      updateLine(index, { service_id: '', description: '', unit_price: 0, tooth_number: '' })
       return
     }
     const id = Number(rawId)
@@ -82,6 +82,7 @@ export default function DentistCompleteBillingModal({
       service_id: id,
       description: service?.name ?? '',
       unit_price: service?.price ?? service?.price_min ?? 0,
+      tooth_number: serviceRequiresToothNumber(service?.name) ? undefined : '',
     })
   }
 
@@ -133,7 +134,7 @@ export default function DentistCompleteBillingModal({
         description: line.description,
         quantity: 1,
         unit_price: Number(line.unit_price) || 0,
-        tooth_number: toothInputToNumber(line.tooth_number),
+        tooth_number: serviceRequiresToothNumber(line.description) ? toothInputToNumber(line.tooth_number) : null,
         treatment_notes: line.notes || null,
       })),
     })
@@ -188,16 +189,18 @@ export default function DentistCompleteBillingModal({
                       ))}
                     </select>
                   </div>
-                  <div className="w-20 space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase">Tooth</label>
-                    <input
-                      type="text"
-                      placeholder="26 / A"
-                      className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-white outline-none focus:ring-1 focus:ring-blue-500"
-                      value={line.tooth_number}
-                      onChange={(e) => updateLine(index, { tooth_number: e.target.value.toUpperCase() })}
-                    />
-                  </div>
+                  {serviceRequiresToothNumber(line.description) && (
+                    <div className="w-20 space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase">Tooth</label>
+                      <input
+                        type="text"
+                        placeholder="26 / A"
+                        className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-white outline-none focus:ring-1 focus:ring-blue-500"
+                        value={line.tooth_number}
+                        onChange={(e) => updateLine(index, { tooth_number: e.target.value.toUpperCase() })}
+                      />
+                    </div>
+                  )}
                   <div className="w-28 space-y-1">
                     <label className="text-[10px] font-bold text-slate-500 uppercase">Fee (₱)</label>
                     <input

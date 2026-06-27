@@ -5,6 +5,7 @@ import { sendEmail } from '@/lib/email/resend'
 import { patientVerificationEmail } from '@/lib/email/templates'
 import { sanitizeServerError } from '@/lib/errors/sanitizeError'
 import { logNotification } from '@/lib/notifications/logNotification'
+import { headers } from 'next/headers'
 
 export interface SignUpPatientInput {
   email: string
@@ -68,6 +69,23 @@ export async function signUpPatient(input: SignUpPatientInput): Promise<{ succes
       .select('id')
       .eq('user_id', userId)
       .maybeSingle()
+
+    if (patientRow?.id) {
+      const headersList = await headers()
+      const ipAddress = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || headersList.get('x-real-ip') || '127.0.0.1'
+      const { error: consentError } = await supabaseAdmin
+        .from('informed_consent')
+        .insert({
+          patient_id: patientRow.id,
+          accepted_at: new Date().toISOString(),
+          ip_address: ipAddress,
+        })
+      if (consentError) {
+        console.error('Failed to insert informed consent record:', consentError)
+        await rollbackSignup(userId!)
+        return { success: false, error: 'Failed to record informed consent.' }
+      }
+    }
 
     await logNotification({
       patientId: patientRow?.id ?? undefined,

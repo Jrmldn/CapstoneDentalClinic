@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Lock, Trash2 } from 'lucide-react'
 import { addBlockedSlot, deleteBlockedSlot } from '@/actions/dentistScheduleActions'
-import { formatDateLong } from '@/lib/date'
+import { formatDateLong, formatTo12h } from '@/lib/date'
 
 export interface BlockedSlot {
   id: number
@@ -198,7 +198,7 @@ export default function AvailabilityClient({ dentistId, initialBlockedSlots }: A
                         key={ts.id}
                         className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 block truncate"
                       >
-                        {ts.start_time?.substring(0, 5)}
+                        {formatTo12h(ts.start_time)}
                       </span>
                     ))}
                   </div>
@@ -278,7 +278,7 @@ export default function AvailabilityClient({ dentistId, initialBlockedSlots }: A
                             b.reason === 'Blocked' ? 'bg-red-500' : b.reason === 'Leave' ? 'bg-purple-500' : 'bg-amber-500'
                           }`} />
                           <span>
-                            {b.reason} {b.start_time ? `(${b.start_time.substring(0, 5)} - ${b.end_time?.substring(0, 5)})` : ''}
+                            {b.reason} {b.start_time ? `(${formatTo12h(b.start_time)} - ${formatTo12h(b.end_time)})` : ''}
                           </span>
                         </div>
                         <button

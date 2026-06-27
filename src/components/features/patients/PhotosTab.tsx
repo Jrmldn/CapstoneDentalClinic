@@ -10,6 +10,7 @@ import imageCompression from 'browser-image-compression'
 interface PhotosTabProps {
   patientId: number | string
   viewerRole: string
+  readOnly?: boolean
 }
 
 interface MedicalPhoto {
@@ -22,7 +23,7 @@ interface MedicalPhoto {
   branchName: string
 }
 
-export default function PhotosTab({ patientId, viewerRole }: PhotosTabProps) {
+export default function PhotosTab({ patientId, viewerRole, readOnly = false }: PhotosTabProps) {
   const [photos, setPhotos] = useState<MedicalPhoto[]>([])
   const [isListing, setIsListing] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -271,8 +272,8 @@ export default function PhotosTab({ patientId, viewerRole }: PhotosTabProps) {
   }
 
 
-  // Restrict access if role is not dentist or superadmin
-  const canUpload = viewerRole === 'dentist' || viewerRole === 'superadmin'
+  // Restrict access if role is not dentist or superadmin, and not readOnly
+  const canUpload = !readOnly && (viewerRole === 'dentist' || viewerRole === 'superadmin')
 
   return (
     <div className="space-y-6">

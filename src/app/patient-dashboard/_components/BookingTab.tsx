@@ -13,7 +13,7 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { toDateKey } from '@/lib/date'
+import { toDateKey, formatTo12h } from '@/lib/date'
 import { createAppointment, updateAppointmentStatus } from '@/actions/appointmentActions'
 import { getAvailableSlots, TimeSlot } from '@/actions/slotAvailabilityActions'
 import { getBranchData, BranchDentist, BranchService } from '@/actions/bookingActions'
@@ -412,7 +412,7 @@ export function BookingTab({
                                   : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:text-blue-500'
                             )}
                           >
-                            {slot.start}
+                            {formatTo12h(slot.start)}
                           </button>
                         ))}
                       </div>
