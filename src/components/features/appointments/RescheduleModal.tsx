@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { X, RefreshCw } from 'lucide-react'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
 import { useAvailableSlots, MILLISECONDS_PER_MINUTE } from './hooks/useAvailableSlots'
-import { toDateKey, formatDateTime } from '@/lib/date'
+import { toDateKey, formatDateTime, formatTo12h } from '@/lib/date'
 import type { Appointment } from './AppointmentTypes'
 
 interface RescheduleModalProps {
@@ -118,7 +118,7 @@ export default function RescheduleModal({
                           : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
                       }`}
                     >
-                      {slot.start}
+                      {formatTo12h(slot.start)}
                     </button>
                   ))}
                 </div>

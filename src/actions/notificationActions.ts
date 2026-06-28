@@ -27,7 +27,7 @@ export async function retriggerNotification(notificationId: number) {
       throw new Error('Notification not found or not in a failed state')
     }
 
-    revalidatePath('/staff-dashboard/notifications')
+    revalidatePath('/superadmin-dashboard/notifications')
     return { success: true, notification }
   } catch (error) {
     console.error('Error in retriggerNotification:', error)
@@ -38,29 +38,30 @@ export async function retriggerNotification(notificationId: number) {
   }
 }
 
-/** Fetch all notifications for a clinic's appointments, filterable by status */
+/** Fetch notifications across branches (superadmin), optionally scoped to one clinic and filterable by status and trigger type */
 export async function fetchNotifications(
-  clinicId: number,
-  status?: 'pending' | 'sent' | 'failed'
+  clinicId?: number,
+  status?: 'pending' | 'sent' | 'failed',
+  triggerType?: string
 ) {
   try {
-    const auth = await ensureRole('staff')
+    const auth = await ensureRole('superadmin')
     if (!auth.success) return { success: false, error: auth.error, notifications: [] }
 
-    // Single Query Join Filter (Class G/B/A optimization)
-    const baseQuery = supabaseAdmin
+    let baseQuery = supabaseAdmin
       .from('notifications')
       .select(`
         *,
         patients ( id, first_name, last_name, phone ),
-        appointments!inner ( id, scheduled_at, clinic_id )
+        appointments ( id, scheduled_at, clinic_id, clinics ( name ) )
       `)
-      .eq('appointments.clinic_id', clinicId)
       .order('created_at', { ascending: false })
 
-    const { data: notifications, error } = status
-      ? await baseQuery.eq('status', status)
-      : await baseQuery
+    if (clinicId) baseQuery = baseQuery.not('appointment_id', 'is', null).eq('appointments.clinic_id', clinicId)
+    if (status) baseQuery = baseQuery.eq('status', status)
+    if (triggerType) baseQuery = baseQuery.eq('trigger_type', triggerType as never)
+
+    const { data: notifications, error } = await baseQuery
 
     if (error) throw new Error(error.message)
 

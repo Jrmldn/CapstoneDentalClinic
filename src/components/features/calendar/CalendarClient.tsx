@@ -14,14 +14,35 @@ import { fetchCalendarData, manageClinicHolidays } from '@/actions/calendarActio
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
 import type { Appointment as RescheduleAppt } from '../appointments/AppointmentTypes'
 import RescheduleModal from '../appointments/RescheduleModal'
+import { AppointmentStatusBadge, getAppointmentStatusLabel } from '../appointments/AppointmentStatusBadge'
 import AddHolidayModal from './components/AddHolidayModal'
 import { toDateKey, formatDate, formatTime } from '@/lib/date'
+import DentistChartBillingModal from '../appointments/DentistChartBillingModal'
+import AppointmentBillingModal from '../appointments/AppointmentBillingModal'
+import type { Service } from '../billing/types'
+import type { InventoryItem } from '../inventory/types'
+
+const STATUS_DOT_COLOR: Record<string, string> = {
+  confirmed: 'bg-emerald-500',
+  pending: 'bg-amber-500',
+  completed: 'bg-slate-400',
+  cancelled: 'bg-red-500',
+  rescheduled: 'bg-purple-500',
+  no_show: 'bg-orange-500',
+  in_progress: 'bg-blue-500',
+  follow_up: 'bg-teal-500',
+  pending_patient_confirm: 'bg-purple-500',
+}
+
+function getStatusDotColor(status: string): string {
+  return STATUS_DOT_COLOR[status] ?? 'bg-gray-400'
+}
 
 interface Holiday {
   id: number
   date: string
-  description: string
-  is_special_day: boolean
+  description: string | null
+  is_special_day: boolean | null
 }
 
 interface Appointment {
@@ -29,8 +50,11 @@ interface Appointment {
   scheduled_at: string
   end_at: string
   status: string
+  is_walk_in?: boolean | null
+  downpayment?: number | null
+  payment_status?: string | null
   patients: { id: number; first_name: string; last_name: string; phone?: string } | { id: number; first_name: string; last_name: string; phone?: string }[] | null
-  services: { id: number; name: string; slot_duration_min?: number } | { id: number; name: string; slot_duration_min?: number }[] | null
+  services: { id: number; name: string; price?: number; slot_duration_min?: number } | { id: number; name: string; price?: number; slot_duration_min?: number }[] | null
   dentists?: { id: number; first_name: string; last_name: string } | { id: number; first_name: string; last_name: string }[] | null
   dentist_id?: number | null
 }
@@ -45,6 +69,10 @@ interface CalendarClientProps {
   userId?: string
   role?: string
   dentistId?: number
+  services?: Service[]
+  dentistName?: string
+  branchName?: string
+  inventoryItems?: InventoryItem[]
 }
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -62,7 +90,11 @@ export default function CalendarClient({
   canManageHolidays = true,
   userId,
   role,
-  dentistId
+  dentistId,
+  services = [],
+  dentistName = '',
+  branchName = '',
+  inventoryItems = [],
 }: CalendarClientProps) {
   const [year, setYear] = useState(currentYear)
   const [month, setMonth] = useState(currentMonth)
@@ -74,6 +106,7 @@ export default function CalendarClient({
   // Status updates & rescheduling state
   const [isUpdatingStatus, setIsUpdatingStatus] = useState<number | null>(null)
   const [reschedulingAppointment, setReschedulingAppointment] = useState<RescheduleAppt | null>(null)
+  const [completingAppt, setCompletingAppt] = useState<Appointment | null>(null)
 
   // Holiday Modal State
   const [isHolidayModalOpen, setIsHolidayModalOpen] = useState(false)
@@ -100,6 +133,21 @@ export default function CalendarClient({
       alert(res.error || 'Failed to approve appointment')
     }
   }
+
+  const handleStatusChange = async (apptId: number, nextStatus: 'cancelled' | 'no_show') => {
+    if (!userId || !role) return
+    setIsUpdatingStatus(apptId)
+    const res = await updateAppointmentStatus(apptId, nextStatus, userId, role)
+    setIsUpdatingStatus(null)
+    if (res.success) {
+      loadMonthData(year, month)
+    } else {
+      alert(res.error || `Failed to update status to ${nextStatus}`)
+    }
+  }
+
+  const canCancel = (status: string) =>
+    status === 'pending' || status === 'confirmed' || status === 'rescheduled' || status === 'pending_patient_confirm'
 
   const handlePrevMonth = () => {
     let newMonth = month - 1
@@ -178,13 +226,18 @@ export default function CalendarClient({
       <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-600 bg-white border border-gray-100 rounded-xl px-4 py-2.5 shadow-sm">
         <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Legend:</span>
         {[
-          { label: 'Appointments', bg: 'bg-blue-100', text: 'text-blue-700' },
           { label: 'Special Event', bg: 'bg-amber-100', text: 'text-amber-800' },
           { label: 'Clinic Closed', bg: 'bg-red-100', text: 'text-red-800' },
         ].map(l => (
           <span key={l.label} className="flex items-center gap-1.5">
             <span className={`w-2.5 h-2.5 rounded-sm ${l.bg}`} />
             <span className={l.text}>{l.label}</span>
+          </span>
+        ))}
+        {['pending', 'confirmed', 'rescheduled', 'completed', 'cancelled', 'no_show'].map(status => (
+          <span key={status} className="flex items-center gap-1.5">
+            <span className={`w-2 h-2 rounded-full ${getStatusDotColor(status)}`} />
+            <span className="capitalize">{getAppointmentStatusLabel(status)}</span>
           </span>
         ))}
       </div>
@@ -279,9 +332,20 @@ export default function CalendarClient({
                       </span>
                     )}
                     {appts.length > 0 && (
-                      <span className="text-[9px] font-bold bg-blue-100 text-blue-700 block truncate px-1 rounded uppercase">
-                        {appts.length} {appts.length === 1 ? 'Appt' : 'Appts'}
-                      </span>
+                      <>
+                        <span className="text-[9px] font-bold bg-blue-100 text-blue-700 block truncate px-1 rounded uppercase">
+                          {appts.length} {appts.length === 1 ? 'Appt' : 'Appts'}
+                        </span>
+                        <div className="flex flex-wrap gap-0.5">
+                          {[...new Set(appts.map(a => a.status))].map(status => (
+                            <span
+                              key={status}
+                              title={status}
+                              className={`w-1.5 h-1.5 rounded-full ${getStatusDotColor(status)}`}
+                            />
+                          ))}
+                        </div>
+                      </>
                     )}
                   </div>
                 </button>
@@ -357,7 +421,12 @@ export default function CalendarClient({
                         dentists: dentistObj
                       } as RescheduleAppt
 
-                      const showActions = userId && role && (appt.status === 'pending' || appt.status === 'confirmed' || appt.status === 'rescheduled')
+                      const showActions = userId && role && (
+                        appt.status === 'pending' ||
+                        appt.status === 'confirmed' ||
+                        appt.status === 'rescheduled' ||
+                        appt.status === 'pending_patient_confirm'
+                      )
 
                       return (
                         <div key={appt.id} className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-1.5">
@@ -365,9 +434,7 @@ export default function CalendarClient({
                             <span className="font-semibold text-slate-800 text-sm">
                               {patientObj ? `${patientObj.first_name} ${patientObj.last_name}` : 'Unknown'}
                             </span>
-                            <span className="text-[10px] font-bold bg-blue-50 text-blue-700 px-2 py-0.5 rounded capitalize">
-                              {appt.status}
-                            </span>
+                            <AppointmentStatusBadge status={appt.status} className="text-[10px] px-2 py-0.5" />
                           </div>
                           <div className="flex items-center gap-4 text-xs text-gray-500">
                             <span className="flex items-center gap-1">
@@ -377,8 +444,8 @@ export default function CalendarClient({
                             <span className="font-semibold text-slate-700">{serviceObj?.name ?? '—'}</span>
                           </div>
                           {showActions && (
-                            <div className="flex gap-2 pt-2 border-t border-gray-200/60 mt-1.5">
-                              {(appt.status === 'pending' || appt.status === 'rescheduled') && (
+                            <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200/60 mt-1.5">
+                              {appt.status === 'pending' && (
                                 <button
                                   onClick={() => handleApprove(appt.id)}
                                   disabled={isUpdatingStatus === appt.id}
@@ -387,10 +454,41 @@ export default function CalendarClient({
                                   Approve
                                 </button>
                               )}
+                              
+                              {appt.status === 'confirmed' && (
+                                <button
+                                  onClick={() => setCompletingAppt(normAppt)}
+                                  disabled={isUpdatingStatus === appt.id}
+                                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-bold shadow-2xs transition disabled:opacity-50"
+                                >
+                                  {role === 'dentist' ? 'Complete & Send to Billing' : 'Complete & Collect Payment'}
+                                </button>
+                              )}
+
+                              {(appt.status === 'pending' || appt.status === 'confirmed') && (
+                                <button
+                                  onClick={() => handleStatusChange(appt.id, 'no_show')}
+                                  disabled={isUpdatingStatus === appt.id}
+                                  className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-[11px] font-bold transition disabled:opacity-50 border border-gray-200"
+                                >
+                                  No Show
+                                </button>
+                              )}
+
+                              {canCancel(appt.status) && (
+                                <button
+                                  onClick={() => handleStatusChange(appt.id, 'cancelled')}
+                                  disabled={isUpdatingStatus === appt.id}
+                                  className="px-2.5 py-1 bg-red-50 hover:bg-red-150 text-red-700 rounded text-[11px] font-bold transition disabled:opacity-50 border border-red-200"
+                                >
+                                  Cancel
+                                </button>
+                              )}
+
                               <button
                                 onClick={() => setReschedulingAppointment(normAppt)}
                                 disabled={isUpdatingStatus === appt.id}
-                                className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded text-[11px] font-bold transition disabled:opacity-50"
+                                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-bold transition disabled:opacity-50 border border-slate-200"
                               >
                                 Reschedule
                               </button>
@@ -426,6 +524,96 @@ export default function CalendarClient({
             }}
           />
         )}
+
+        {completingAppt && role === 'dentist' && (
+          <DentistChartBillingModal
+            appointment={{
+              id: completingAppt.id,
+              scheduled_at: completingAppt.scheduled_at,
+              status: completingAppt.status,
+              payment_status: completingAppt.payment_status || 'unpaid',
+              is_walk_in: !!completingAppt.is_walk_in,
+              downpayment: completingAppt.downpayment || 0,
+              patients: (() => {
+                const p = Array.isArray(completingAppt.patients) ? completingAppt.patients[0] || null : completingAppt.patients
+                return p ? {
+                  id: p.id,
+                  first_name: p.first_name,
+                  last_name: p.last_name,
+                  phone: p.phone || '',
+                } : null
+              })(),
+              services: (() => {
+                const s = Array.isArray(completingAppt.services) ? completingAppt.services[0] || null : completingAppt.services
+                return s ? {
+                  id: s.id,
+                  name: s.name,
+                  price: s.price || 0,
+                } : null
+              })(),
+            }}
+            onClose={() => setCompletingAppt(null)}
+            clinicId={clinicId}
+            dentistUserId={userId || ''}
+            dentistId={dentistId || 0}
+            dentistName={dentistName}
+            branchName={branchName}
+            services={services}
+            inventoryItems={inventoryItems}
+            onSuccess={() => {
+              setCompletingAppt(null)
+              loadMonthData(year, month)
+            }}
+          />
+        )}
+
+        {completingAppt && role === 'staff' && (
+          <AppointmentBillingModal
+            appointment={{
+              id: completingAppt.id,
+              scheduled_at: completingAppt.scheduled_at,
+              end_at: completingAppt.end_at,
+              status: completingAppt.status,
+              is_walk_in: completingAppt.is_walk_in ?? null,
+              downpayment: completingAppt.downpayment ?? null,
+              payment_status: completingAppt.payment_status ?? null,
+              patients: (() => {
+                const p = Array.isArray(completingAppt.patients) ? completingAppt.patients[0] || null : completingAppt.patients
+                return p ? {
+                  id: p.id,
+                  first_name: p.first_name,
+                  last_name: p.last_name,
+                  phone: p.phone || '',
+                } : null
+              })(),
+              services: (() => {
+                const s = Array.isArray(completingAppt.services) ? completingAppt.services[0] || null : completingAppt.services
+                return s ? {
+                  id: s.id,
+                  name: s.name,
+                  price: s.price || 0,
+                  slot_duration_min: s.slot_duration_min || 0,
+                } : null
+              })(),
+              dentists: (() => {
+                const d = Array.isArray(completingAppt.dentists) ? completingAppt.dentists[0] || null : completingAppt.dentists
+                return d ? {
+                  id: d.id,
+                  first_name: d.first_name,
+                  last_name: d.last_name,
+                } : null
+              })(),
+            }}
+            onClose={() => setCompletingAppt(null)}
+            userId={userId || ''}
+            clinicId={clinicId}
+            onSuccess={() => {
+              setCompletingAppt(null)
+              loadMonthData(year, month)
+            }}
+          />
+        )}
+
       </div>
     </div>
   )

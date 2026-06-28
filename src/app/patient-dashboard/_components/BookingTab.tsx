@@ -8,13 +8,12 @@ import {
   AlertCircle,
   ShieldAlert,
   MapPin,
-  ChevronRight,
   Loader2,
 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { toDateKey } from '@/lib/date'
+import { toDateKey, formatTo12h } from '@/lib/date'
 import { createAppointment, updateAppointmentStatus } from '@/actions/appointmentActions'
 import { getAvailableSlots, TimeSlot } from '@/actions/slotAvailabilityActions'
 import { getBranchData, BranchDentist, BranchService } from '@/actions/bookingActions'
@@ -77,12 +76,13 @@ export function BookingTab({
     description: string
   } | null>(null)
 
-  // Load branch data when a branch is selected
-  const handleBranchSelect = async (branchId: number) => {
+  // Load branch data when a branch is selected.
+  // Pass prefill values to avoid a race condition where setBookingDentist/setBookingService
+  // calls from a useEffect get wiped by the reset inside this function after the await.
+  const handleBranchSelect = async (branchId: number, prefillDentistId = '', prefillServiceId = '', prefillDate = '') => {
     setBranchLoading(true)
     setBranchError(null)
     setSelectedBranchId(branchId)
-    // Reset form fields when branch changes
     setBookingDentist('')
     setBookingService('')
     setBookingDate(urlDate)
@@ -99,33 +99,49 @@ export function BookingTab({
     setServices(result.services)
     setDefaultDownpaymentAmount(result.settings.default_downpayment_amount)
 
-    // Auto-select consultation service if only one exists
-    const consultations = result.services.filter(s =>
-      s.name.toLowerCase().includes('consultation')
-    )
-    if (consultations.length > 0) {
-      setBookingService(String(consultations[0].id))
+    if (prefillDentistId) setBookingDentist(prefillDentistId)
+    if (prefillDate) setBookingDate(prefillDate)
+
+    if (prefillServiceId) {
+      setBookingService(prefillServiceId)
+    } else {
+      // Auto-select consultation service if only one exists and no prefill
+      const consultations = result.services.filter(s =>
+        s.name.toLowerCase().includes('consultation')
+      )
+      if (consultations.length > 0) {
+        setBookingService(String(consultations[0].id))
+      }
     }
 
     setBranchLoading(false)
-  }
 
-  // Pre-fill from reschedule mode (use the existing appointment's clinic)
-  useEffect(() => {
-    if (rescheduleMode && existingAppt) {
-      const clinicId = (existingAppt as any).clinic_id
-      if (clinicId) handleBranchSelect(clinicId)
-
-      const dId = String(existingAppt.dentists?.id || '')
-      const sId = String(existingAppt.services?.id || '')
-      setBookingDentist(dId)
-      setBookingService(sId)
-      if (existingAppt.scheduled_at) {
-        const datePart = toDateKey(existingAppt.scheduled_at)
-        setBookingDate(datePart)
+    // Auto-fetch slots when all three values are provided (reschedule pre-fill)
+    if (prefillDentistId && prefillServiceId && prefillDate) {
+      setSlotsLoading(true)
+      setSelectedTimeSlot(null)
+      try {
+        const res = await getAvailableSlots(branchId, parseInt(prefillDentistId, 10), parseInt(prefillServiceId, 10), prefillDate)
+        setAvailableTimeSlots(res.success && res.slots ? res.slots : [])
+      } catch (e) {
+        console.error(e)
+      } finally {
+        setSlotsLoading(false)
       }
     }
-  }, [rescheduleMode])
+  }
+
+  // Pre-fill from reschedule mode. Pass all prefill values into handleBranchSelect so they
+  // are applied after branch data loads — avoids the state reset race condition.
+  useEffect(() => {
+    if (rescheduleMode && existingAppt?.clinic_id) {
+      const dId = String(existingAppt.dentists?.id || '')
+      const sId = String(existingAppt.services?.id || '')
+      const dateStr = existingAppt.scheduled_at ? toDateKey(existingAppt.scheduled_at) : ''
+      handleBranchSelect(existingAppt.clinic_id, dId, sId, dateStr)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rescheduleMode, existingAppt])
 
   // Fetch slots when dentist/service/date/branch all set
   const fetchSlots = async (dateVal: string, dentistVal: string, serviceVal: string) => {
@@ -195,7 +211,7 @@ export function BookingTab({
         downpayment: finalDownpayment,
       })
 
-      if (res.success) {
+      if (res.success && res.appointment) {
         setPendingPayment({
           appointmentId: res.appointment.id,
           amount: finalDownpayment,
@@ -347,7 +363,7 @@ export function BookingTab({
                       <option value="">-- Choose Dentist --</option>
                       {dentists.map(d => (
                         <option key={d.id} value={d.id}>
-                          Dr. {d.first_name} {d.last_name}{d.specialty ? ` (${d.specialty})` : ''}
+                          Dr. {d.first_name} {d.last_name}
                         </option>
                       ))}
                     </select>
@@ -361,6 +377,7 @@ export function BookingTab({
                     type="date"
                     value={bookingDate}
                     min={toDateKey()}
+                    max={(() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); return toDateKey(d) })()}
                     onChange={(e) => {
                       setBookingDate(e.target.value)
                       fetchSlots(e.target.value, bookingDentist, bookingService)
@@ -395,7 +412,7 @@ export function BookingTab({
                                   : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:text-blue-500'
                             )}
                           >
-                            {slot.start}
+                            {formatTo12h(slot.start)}
                           </button>
                         ))}
                       </div>
@@ -421,7 +438,11 @@ export function BookingTab({
                       </label>
                       <div className="p-4 rounded-xl border border-blue-600 bg-blue-50/50 shadow-sm ring-1 ring-blue-500 flex flex-col gap-1">
                         <span className="text-xl font-black text-slate-900">₱{downpaymentAmount.toLocaleString()}</span>
-                        <span className="text-xs text-slate-500 font-medium">Pay partial amount to reserve your slot</span>
+                        <span className="text-xs text-slate-500 font-medium">
+                          {downpaymentAmount >= activeService.price
+                            ? 'Pay full amount to confirm your booking'
+                            : 'Pay partial amount to reserve your slot'}
+                        </span>
                       </div>
                     </div>
                   )

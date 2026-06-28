@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Camera, Upload, Trash, Eye, FileImage, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase/client'
 import { formatDateTime } from '@/lib/date'
 import imageCompression from 'browser-image-compression'
@@ -11,6 +10,7 @@ import imageCompression from 'browser-image-compression'
 interface PhotosTabProps {
   patientId: number | string
   viewerRole: string
+  readOnly?: boolean
 }
 
 interface MedicalPhoto {
@@ -23,7 +23,7 @@ interface MedicalPhoto {
   branchName: string
 }
 
-export default function PhotosTab({ patientId, viewerRole }: PhotosTabProps) {
+export default function PhotosTab({ patientId, viewerRole, readOnly = false }: PhotosTabProps) {
   const [photos, setPhotos] = useState<MedicalPhoto[]>([])
   const [isListing, setIsListing] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -58,7 +58,7 @@ export default function PhotosTab({ patientId, viewerRole }: PhotosTabProps) {
             .single()
           if (dentist) {
             name = `Dr. ${dentist.first_name} ${dentist.last_name}`
-            branch = (dentist.clinics as any)?.name || 'Unknown Branch'
+            branch = (dentist.clinics as { name?: string } | null)?.name || 'Unknown Branch'
           }
         } else if (profile.role === 'staff') {
           const { data: staff } = await supabase
@@ -68,7 +68,7 @@ export default function PhotosTab({ patientId, viewerRole }: PhotosTabProps) {
             .single()
           if (staff) {
             name = `${staff.first_name} ${staff.last_name}`
-            branch = (staff.clinics as any)?.name || 'Unknown Branch'
+            branch = (staff.clinics as { name?: string } | null)?.name || 'Unknown Branch'
           }
         } else if (profile.role === 'superadmin') {
           name = 'Superadmin'
@@ -117,7 +117,7 @@ export default function PhotosTab({ patientId, viewerRole }: PhotosTabProps) {
       }
 
       // 3. Map to our state structure
-      const mappedPhotos: MedicalPhoto[] = files.map((file, index) => {
+      const mappedPhotos: MedicalPhoto[] = files.map((file) => {
         const signedUrlObj = signedUrls?.find(url => url.path === `${patientIdStr}/${file.name}`)
         
         // Parse metadata from filename
@@ -156,7 +156,7 @@ export default function PhotosTab({ patientId, viewerRole }: PhotosTabProps) {
       })
 
       setPhotos(mappedPhotos.filter(p => p.url !== ''))
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error loading medical photos:', err)
       setError('Failed to load medical photos from private storage.')
     } finally {
@@ -222,9 +222,9 @@ export default function PhotosTab({ patientId, viewerRole }: PhotosTabProps) {
 
       setSuccess('Photo uploaded successfully.')
       loadPhotos()
-    } catch (err: any) {
+    } catch (err) {
       console.error('Upload error:', err)
-      setError(err.message || 'Failed to compress or upload photo.')
+      setError(err instanceof Error ? err.message : 'Failed to compress or upload photo.')
     } finally {
       setIsUploading(false)
       setUploadProgress(null)
@@ -256,7 +256,7 @@ export default function PhotosTab({ patientId, viewerRole }: PhotosTabProps) {
         setPreviewPhoto(null)
       }
       loadPhotos()
-    } catch (err: any) {
+    } catch (err) {
       console.error('Delete error:', err)
       setError('Failed to delete photo from storage.')
     }
@@ -272,8 +272,8 @@ export default function PhotosTab({ patientId, viewerRole }: PhotosTabProps) {
   }
 
 
-  // Restrict access if role is not dentist or superadmin
-  const canUpload = viewerRole === 'dentist' || viewerRole === 'superadmin'
+  // Restrict access if role is not dentist or superadmin, and not readOnly
+  const canUpload = !readOnly && (viewerRole === 'dentist' || viewerRole === 'superadmin')
 
   return (
     <div className="space-y-6">

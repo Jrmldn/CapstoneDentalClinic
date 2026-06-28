@@ -12,15 +12,15 @@ import {
   RefreshCw,
   ArrowRight,
   User,
-  HeartPulse,
   ChevronDown,
   ChevronUp,
   ShieldAlert
 } from 'lucide-react'
 import PatientRecordModal from '../patients/PatientRecordModal'
-import DentistCompleteBillingModal from '../appointments/DentistCompleteBillingModal'
+import DentistChartBillingModal from '../appointments/DentistChartBillingModal'
 import type { PatientRecord } from '../patients/types'
 import type { Service } from '../billing/types'
+import type { InventoryItem } from '../inventory/types'
 import StatCard from './components/StatCard'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
 import { formatDate, formatTime, formatDateLong } from '@/lib/date'
@@ -52,7 +52,7 @@ interface DentistDashboardViewProps {
   dentistId: number
   dentistUserId: string
   dentistName: string
-  specialty: string
+  branchName: string
   clinicId: number
   todayAppts: Appointment[]
   upcomingAppts: Appointment[]
@@ -63,38 +63,23 @@ interface DentistDashboardViewProps {
     patientsCount: number
   }
   services: Service[]
+  inventoryItems: InventoryItem[]
 }
 
 
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    confirmed: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-    completed: 'bg-slate-50 text-slate-600 border border-slate-200',
-    pending: 'bg-amber-50 text-amber-700 border border-amber-200',
-    rescheduled: 'bg-purple-50 text-purple-700 border border-purple-200',
-    cancelled: 'bg-red-50 text-red-650 border border-red-200',
-    no_show: 'bg-gray-100 text-gray-500 border border-gray-200',
-    in_progress: 'bg-blue-50 text-blue-700 border border-blue-200 font-semibold',
-    follow_up: 'bg-teal-50 text-teal-700 border border-teal-200',
-    pending_patient_confirm: 'bg-purple-50 text-purple-700 border border-purple-200',
-  }
-  return (
-    <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${styles[status] ?? 'bg-gray-100 text-gray-500 border border-gray-200'}`}>
-      {status === 'in_progress' ? 'In Progress' : status.replace(/_/g, ' ')}
-    </span>
-  )
-}
+import { AppointmentStatusBadge } from '../appointments/AppointmentStatusBadge'
 
 export default function DentistDashboardView({
   dentistId,
   dentistUserId,
   dentistName,
-  specialty,
+  branchName,
   clinicId,
   todayAppts,
   upcomingAppts,
   stats,
-  services
+  services,
+  inventoryItems,
 }: DentistDashboardViewProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -195,7 +180,7 @@ export default function DentistDashboardView({
           {greeting}, Dr. {dentistName} !
         </h1>
         <p className="text-sm text-gray-500 mt-1">
-          Specialty: {specialty || 'General Dentist'} · {formatDateLong(new Date())}
+          {formatDateLong(new Date())}
         </p>
       </div>
 
@@ -272,10 +257,8 @@ export default function DentistDashboardView({
                 const lastVisit = notes?.lastVisit ?? 'Loading...'
                 const bloodPressure = notes?.bloodPressure ?? '120/80 mmHg'
 
-                // Determine display status - "Completed" (completed), "In Progress" (confirmed/in progress), "Upcoming" (pending)
-                let displayStatus = appt.status
-                if (appt.status === 'confirmed') displayStatus = 'in_progress'
-                else if (appt.status === 'pending') displayStatus = 'confirmed' // render upcoming as blue badge/confirmed in mockup
+                // Use the actual appointment status directly
+                const displayStatus = appt.status
 
                 return (
                   <div key={appt.id} className="hover:bg-slate-50/30 transition-all duration-150">
@@ -307,7 +290,7 @@ export default function DentistDashboardView({
                       {/* Right: Status, Record button, Chevron */}
                       <div className="flex items-center gap-3.5 flex-shrink-0">
                         <div className="flex items-center gap-2">
-                          <StatusBadge status={displayStatus} />
+                          <AppointmentStatusBadge status={displayStatus} />
                           {patient && (
                             <button
                               onClick={() => handleViewPatientRecord(patient.id)}
@@ -353,9 +336,9 @@ export default function DentistDashboardView({
                         </div>
 
                         {/* Status updates action buttons inside expanded panel */}
-                        {(appt.status === 'pending' || appt.status === 'confirmed' || appt.status === 'rescheduled') && (
+                        {(appt.status === 'pending' || appt.status === 'confirmed' || appt.status === 'rescheduled' || appt.status === 'pending_patient_confirm') && (
                           <div className="flex justify-end gap-2.5 pt-3">
-                            {(appt.status === 'pending' || appt.status === 'rescheduled') && (
+                            {appt.status === 'pending' && (
                               <button
                                 onClick={() => handleStatusUpdate(appt.id, 'confirmed')}
                                 disabled={isBusy}
@@ -364,7 +347,7 @@ export default function DentistDashboardView({
                                 Approve
                               </button>
                             )}
-                            {appt.status === 'confirmed' ? (
+                            {appt.status === 'confirmed' && (
                               <button
                                 onClick={() => setCompletingAppt(appt)}
                                 disabled={isBusy}
@@ -372,22 +355,16 @@ export default function DentistDashboardView({
                               >
                                 Complete &amp; Send to Billing
                               </button>
-                            ) : (
+                            )}
+                            {(appt.status === 'pending' || appt.status === 'confirmed') && (
                               <button
-                                onClick={() => handleStatusUpdate(appt.id, 'completed')}
+                                onClick={() => handleStatusUpdate(appt.id, 'no_show')}
                                 disabled={isBusy}
-                                className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-2xs transition disabled:opacity-50"
+                                className="px-4 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-bold transition disabled:opacity-50"
                               >
-                                Complete Appointment
+                                No Show
                               </button>
                             )}
-                            <button
-                              onClick={() => handleStatusUpdate(appt.id, 'no_show')}
-                              disabled={isBusy}
-                              className="px-4 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-bold transition disabled:opacity-50"
-                            >
-                              No Show
-                            </button>
                             <button
                               onClick={() => {
                                 if (confirm('Are you sure you want to cancel this appointment?')) {
@@ -469,13 +446,16 @@ export default function DentistDashboardView({
       )}
 
       {/* Complete & Send to Billing Modal */}
-      <DentistCompleteBillingModal
+      <DentistChartBillingModal
         appointment={completingAppt}
         onClose={() => setCompletingAppt(null)}
         clinicId={clinicId}
         dentistUserId={dentistUserId}
         dentistId={dentistId}
+        dentistName={dentistName}
+        branchName={branchName}
         services={services}
+        inventoryItems={inventoryItems}
         onSuccess={() => {
           setCompletingAppt(null)
           startTransition(() => router.refresh())

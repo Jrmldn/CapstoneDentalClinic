@@ -4,6 +4,7 @@ export interface StaffDashboardStats {
   unpaidTotal: number
   confirmedToday: number
   pendingToday: number
+  awaitingConfirmToday: number
   lowStockItems: Array<{ id: number; name: string; quantity: number; alert_threshold: number }>
 }
 
@@ -26,6 +27,7 @@ export function calculateStaffDashboardStats(
   
   const confirmedToday = todayAppts.filter((appt) => appt.status === 'confirmed').length
   const pendingToday = todayAppts.filter((appt) => appt.status === 'pending').length
+  const awaitingConfirmToday = todayAppts.filter((appt) => appt.status === 'pending_patient_confirm').length
 
   return {
     uniquePatients,
@@ -33,6 +35,7 @@ export function calculateStaffDashboardStats(
     unpaidTotal,
     confirmedToday,
     pendingToday,
+    awaitingConfirmToday,
     lowStockItems
   }
 }

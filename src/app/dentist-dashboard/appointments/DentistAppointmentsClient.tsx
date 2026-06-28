@@ -4,34 +4,36 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, Calendar, ClipboardList } from 'lucide-react'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
-import { formatDate, formatTime } from '@/lib/date'
-import DentistCompleteBillingModal from '@/components/features/appointments/DentistCompleteBillingModal'
+import { formatDate, formatTime, toDateKey } from '@/lib/date'
+import DentistChartBillingModal from '@/components/features/appointments/DentistChartBillingModal'
 import type { Appointment } from '@/components/features/dashboard/DentistDashboardView'
 import type { Service } from '@/components/features/billing/types'
+import type { InventoryItem } from '@/components/features/inventory/types'
 
 interface Props {
   appointments: Appointment[]
   clinicId: number
   dentistUserId: string
   dentistId: number
+  dentistName: string
+  branchName: string
   services: Service[]
+  inventoryItems: InventoryItem[]
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  pending:    'bg-amber-50 text-amber-700 border border-amber-200',
-  confirmed:  'bg-emerald-50 text-emerald-700 border border-emerald-200',
-  completed:  'bg-slate-50 text-slate-600 border border-slate-200',
-  rescheduled:'bg-purple-50 text-purple-700 border border-purple-200',
-  cancelled:  'bg-red-50 text-red-700 border border-red-200',
-  no_show:    'bg-gray-100 text-gray-500 border border-gray-200',
+  pending:                 'bg-amber-50 text-amber-700 border border-amber-200',
+  confirmed:               'bg-emerald-50 text-emerald-700 border border-emerald-200',
+  completed:               'bg-slate-50 text-slate-600 border border-slate-200',
+  rescheduled:             'bg-blue-50 text-blue-700 border border-blue-200',
+  cancelled:               'bg-red-50 text-red-700 border border-red-200',
+  no_show:                 'bg-orange-50 text-orange-700 border border-orange-200',
+  follow_up:               'bg-teal-50 text-teal-700 border border-teal-200',
+  pending_patient_confirm: 'bg-purple-50 text-purple-700 border border-purple-200',
 }
 
 function isPastOrToday(scheduledAt: string): boolean {
-  const d = new Date(scheduledAt)
-  const day = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  return day.getTime() <= today.getTime()
+  return toDateKey(scheduledAt) <= toDateKey()
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -42,7 +44,7 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-export default function DentistAppointmentsClient({ appointments, clinicId, dentistUserId, dentistId, services }: Props) {
+export default function DentistAppointmentsClient({ appointments, clinicId, dentistUserId, dentistId, dentistName, branchName, services, inventoryItems }: Props) {
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [searchTerm, setSearchTerm] = useState('')
@@ -73,8 +75,8 @@ export default function DentistAppointmentsClient({ appointments, clinicId, dent
     }
   }
 
-  const isActive = (status: string) =>
-    status === 'pending' || status === 'confirmed' || status === 'rescheduled'
+  const canCancel = (status: string) =>
+    status === 'pending' || status === 'confirmed' || status === 'rescheduled' || status === 'pending_patient_confirm'
 
   return (
     <div className="space-y-6">
@@ -107,7 +109,9 @@ export default function DentistAppointmentsClient({ appointments, clinicId, dent
           <option value="all">All Statuses</option>
           <option value="pending">Pending</option>
           <option value="confirmed">Confirmed</option>
+          <option value="pending_patient_confirm">Pending Patient Confirm</option>
           <option value="rescheduled">Rescheduled</option>
+          <option value="follow_up">Follow-Up</option>
           <option value="completed">Completed</option>
           <option value="cancelled">Cancelled</option>
           <option value="no_show">No-Show</option>
@@ -149,8 +153,8 @@ export default function DentistAppointmentsClient({ appointments, clinicId, dent
                     <td className="px-6 py-4">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase border w-fit inline-block ${
                         appt.is_walk_in
-                          ? 'bg-teal-50 text-teal-700 border-teal-200'
-                          : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                          ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                          : 'bg-blue-50 text-blue-700 border-blue-200'
                       }`}>
                         {appt.is_walk_in ? 'Walk-in' : 'Online'}
                       </span>
@@ -160,7 +164,7 @@ export default function DentistAppointmentsClient({ appointments, clinicId, dent
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
-                        {appt.status === 'pending' || appt.status === 'rescheduled' ? (
+                        {appt.status === 'pending' && (
                           <button
                             onClick={() => handleStatusUpdate(appt.id, 'confirmed')}
                             disabled={isBusy}
@@ -168,7 +172,7 @@ export default function DentistAppointmentsClient({ appointments, clinicId, dent
                           >
                             Approve
                           </button>
-                        ) : null}
+                        )}
                         {appt.status === 'confirmed' && (
                           isPastOrToday(appt.scheduled_at) ? (
                             <button
@@ -188,23 +192,23 @@ export default function DentistAppointmentsClient({ appointments, clinicId, dent
                             </button>
                           )
                         )}
-                        {isActive(appt.status) && (
-                          <>
-                            <button
-                              onClick={() => handleStatusUpdate(appt.id, 'no_show')}
-                              disabled={isBusy}
-                              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs font-bold transition disabled:opacity-50"
-                            >
-                              No Show
-                            </button>
-                            <button
-                              onClick={() => handleStatusUpdate(appt.id, 'cancelled')}
-                              disabled={isBusy}
-                              className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg text-xs font-bold transition disabled:opacity-50"
-                            >
-                              Cancel
-                            </button>
-                          </>
+                        {(appt.status === 'pending' || appt.status === 'confirmed') && (
+                          <button
+                            onClick={() => handleStatusUpdate(appt.id, 'no_show')}
+                            disabled={isBusy}
+                            className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs font-bold transition disabled:opacity-50"
+                          >
+                            No Show
+                          </button>
+                        )}
+                        {canCancel(appt.status) && (
+                          <button
+                            onClick={() => handleStatusUpdate(appt.id, 'cancelled')}
+                            disabled={isBusy}
+                            className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg text-xs font-bold transition disabled:opacity-50"
+                          >
+                            Cancel
+                          </button>
                         )}
                       </div>
                     </td>
@@ -226,13 +230,16 @@ export default function DentistAppointmentsClient({ appointments, clinicId, dent
         </div>
       </div>
 
-      <DentistCompleteBillingModal
+      <DentistChartBillingModal
         appointment={completingAppt}
         onClose={() => setCompletingAppt(null)}
         clinicId={clinicId}
         dentistUserId={dentistUserId}
         dentistId={dentistId}
+        dentistName={dentistName}
+        branchName={branchName}
         services={services}
+        inventoryItems={inventoryItems}
         onSuccess={() => {
           setCompletingAppt(null)
           startTransition(() => router.refresh())

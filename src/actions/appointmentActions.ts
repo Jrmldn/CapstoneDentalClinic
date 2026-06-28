@@ -13,6 +13,22 @@ import {
   updateAppointmentDetails,
   updateClinicMaxLimit
 } from '@/services/appointmentService'
+import { sendEmail } from '@/lib/email/resend'
+import {
+  bookingConfirmationEmail,
+  rescheduleEmail,
+  followUpEmail,
+} from '@/lib/email/templates'
+import { logNotification } from '@/lib/notifications/logNotification'
+
+interface AppointmentCurrentData {
+  status: string
+  reschedule_count: number | null
+  booked_at: string | null
+  scheduled_at: string
+  end_at: string
+  patient_id: number | null
+}
 
 // TYPES
 
@@ -50,7 +66,7 @@ export async function fetchAppointmentsByDate(clinicId: number, date: string) {
 
   try {
     const dayStart = `${date}T00:00:00+00:00`
-    const dayEnd   = `${date}T23:59:59+00:00`
+    const dayEnd = `${date}T23:59:59+00:00`
 
     const { data: appointments, error } = await getAppointmentsByDateRange(clinicId, dayStart, dayEnd)
 
@@ -91,18 +107,18 @@ export async function createAppointment(data: CreateAppointmentData) {
     const performedByRole = auth.role
 
     const { data: appointment, error } = await insertAppointment({
-      clinic_id:      data.clinic_id,
-      patient_id:     data.patient_id,
-      dentist_id:     data.dentist_id,
-      service_id:     data.service_id,
-      scheduled_at:   data.scheduled_at,
-      end_at:         data.end_at,
-      notes:          data.notes ?? null,
-      is_walk_in:     data.is_walk_in ?? false,
-      downpayment:    data.downpayment ?? 0,
+      clinic_id: data.clinic_id,
+      patient_id: data.patient_id,
+      dentist_id: data.dentist_id,
+      service_id: data.service_id,
+      scheduled_at: data.scheduled_at,
+      end_at: data.end_at,
+      notes: data.notes ?? null,
+      is_walk_in: data.is_walk_in ?? false,
+      downpayment: data.downpayment ?? 0,
       payment_method: data.payment_method ?? null,
       payment_status: 'unpaid',
-      status:         'pending',
+      status: 'pending',
     })
 
     if (error) throw new Error(error.message)
@@ -110,11 +126,11 @@ export async function createAppointment(data: CreateAppointmentData) {
     // Log the creation
     await insertAppointmentLog({
       appointment_id: appointment.id,
-      performed_by:   performedBy,
-      role:           performedByRole,
-      action:         'created',
-      new_status:     'pending',
-      notes:          data.is_walk_in ? 'Walk-in appointment' : 'Online booking',
+      performed_by: performedBy,
+      role: performedByRole,
+      action: 'created',
+      new_status: 'pending',
+      notes: data.is_walk_in ? 'Walk-in appointment' : 'Online booking',
     })
 
     revalidatePath('/staff-dashboard/appointments')
@@ -154,9 +170,10 @@ export async function updateAppointmentStatus(
 
   try {
     // Fetch current status (and reschedule tracking fields) for the log
-    const { data: current, error: fetchError } = await getAppointmentStatus(appointmentId)
+    const { data: rawCurrent, error: fetchError } = await getAppointmentStatus(appointmentId)
 
-    if (fetchError || !current) throw new Error('Appointment not found')
+    if (fetchError || !rawCurrent) throw new Error('Appointment not found')
+    const current = rawCurrent as AppointmentCurrentData
 
     // Patients may only update their own appointments
     if (role === 'patient') {
@@ -166,7 +183,7 @@ export async function updateAppointmentStatus(
         .eq('user_id', performedBy)
         .maybeSingle()
 
-      if (!patientRecord || (current as any).patient_id !== patientRecord.id) {
+      if (!patientRecord || current.patient_id !== patientRecord.id) {
         return { success: false, error: 'Insufficient permissions' }
       }
     }
@@ -174,11 +191,11 @@ export async function updateAppointmentStatus(
     // A2: Enforce reschedule limits for patients
     const isPatientReschedule = role === 'patient' && rescheduledAt
     if (isPatientReschedule) {
-      const rescheduleCount = (current as any).reschedule_count ?? 0
+      const rescheduleCount = current.reschedule_count ?? 0
       if (rescheduleCount >= 3) {
         return { success: false, error: 'Reschedule limit reached. You may only reschedule up to 3 times per appointment.' }
       }
-      const bookedAt = (current as any).booked_at
+      const bookedAt = current.booked_at
       if (bookedAt) {
         const hoursSinceBooking = (Date.now() - new Date(bookedAt).getTime()) / (1000 * 60 * 60)
         if (hoursSinceBooking < 1) {
@@ -189,10 +206,10 @@ export async function updateAppointmentStatus(
 
     const updateData: Record<string, unknown> = { status: newStatus }
     if (rescheduledAt) updateData.scheduled_at = rescheduledAt
-    if (rescheduledEnd)  updateData.end_at      = rescheduledEnd
+    if (rescheduledEnd) updateData.end_at = rescheduledEnd
     // A2: Increment reschedule_count when patient reschedules
     if (isPatientReschedule) {
-      updateData.reschedule_count = ((current as any).reschedule_count ?? 0) + 1
+      updateData.reschedule_count = (current.reschedule_count ?? 0) + 1
     }
 
     // If declining a reschedule (moving from pending_patient_confirm to pending),
@@ -244,24 +261,116 @@ export async function updateAppointmentStatus(
 
     let logNotes = notes ?? null
     if (newStatus === 'pending_patient_confirm') {
-      logNotes = `${notes ?? ''} [Original: ${(current as any).scheduled_at} | ${(current as any).end_at}]`
+      logNotes = `${notes ?? ''} [Original: ${current.scheduled_at} | ${current.end_at}]`
     }
 
     await insertAppointmentLog({
       appointment_id: appointmentId,
-      performed_by:   performedBy,
+      performed_by: performedBy,
       role,
-      action:         logAction,
-      old_status:     current.status,
-      new_status:     newStatus,
-      notes:          logNotes,
+      action: logAction,
+      old_status: current.status,
+      new_status: newStatus,
+      notes: logNotes,
     })
+
+    if (newStatus === 'confirmed' || newStatus === 'rescheduled' || newStatus === 'follow_up' || newStatus === 'pending_patient_confirm') {
+      const { data: apptData } = await supabaseAdmin
+        .from('appointments')
+        .select(`
+          scheduled_at,
+          end_at,
+          patients ( id, first_name, email ),
+          dentists ( first_name, last_name ),
+          clinics ( name )
+        `)
+        .eq('id', appointmentId)
+        .maybeSingle()
+
+      if (apptData) {
+        const patient = Array.isArray(apptData.patients) ? apptData.patients[0] : apptData.patients
+        const dentist = Array.isArray(apptData.dentists) ? apptData.dentists[0] : apptData.dentists
+        const clinic = Array.isArray(apptData.clinics) ? apptData.clinics[0] : apptData.clinics
+
+        if (patient?.email && patient.first_name) {
+          const apptDate = new Date(apptData.scheduled_at).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+          const apptTime = new Date(apptData.scheduled_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+          const dentistName = dentist ? `Dr. ${dentist.first_name} ${dentist.last_name}` : 'Your Dentist'
+          const branchName = clinic?.name ?? 'Your Clinic'
+
+          let template: { subject: string; html: string } | null = null
+          let triggerType = ''
+
+          if (newStatus === 'confirmed') {
+            triggerType = 'confirmation'
+            template = bookingConfirmationEmail({
+              firstName: patient.first_name,
+              appointmentDate: apptDate,
+              appointmentTime: apptTime,
+              branchName,
+              dentistName,
+            })
+          } else if (newStatus === 'rescheduled') {
+            triggerType = 'reschedule'
+            const oldDate = new Date(current.scheduled_at).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+            const oldTime = new Date(current.scheduled_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+            template = rescheduleEmail({
+              firstName: patient.first_name,
+              oldDate,
+              oldTime,
+              newDate: apptDate,
+              newTime: apptTime,
+              branchName,
+              dentistName,
+            })
+          } else if (newStatus === 'pending_patient_confirm') {
+            triggerType = 'reschedule'
+            const oldDate = new Date(current.scheduled_at).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+            const oldTime = new Date(current.scheduled_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+            template = rescheduleEmail({
+              firstName: patient.first_name,
+              oldDate,
+              oldTime,
+              newDate: apptDate,
+              newTime: apptTime,
+              branchName,
+              dentistName,
+            })
+          } else if (rescheduledAt) {
+            // Only send the follow_up email when a new future date was explicitly set.
+            // Without rescheduledAt, scheduled_at is the original (past) appointment time.
+            triggerType = 'follow_up'
+            template = followUpEmail({
+              firstName: patient.first_name,
+              followUpDate: apptDate,
+              followUpTime: apptTime,
+              branchName,
+              dentistName,
+            })
+          }
+
+          if (template) {
+            const sent = await sendEmail({ to: patient.email, ...template })
+            await logNotification({
+              appointmentId,
+              patientId: patient.id,
+              triggerType,
+              channel: 'email',
+              status: sent.success ? 'sent' : 'failed',
+              errorMessage: sent.error,
+            })
+          }
+        }
+      }
+    }
 
     revalidatePath('/staff-dashboard/appointments')
     revalidatePath('/patient-dashboard/appointments')
     revalidatePath('/patient-dashboard/dashboard')
     revalidatePath('/patient-dashboard/calendar')
     revalidatePath('/dentist-dashboard')
+    revalidatePath('/dentist-dashboard/appointments')
+    revalidatePath('/dentist-dashboard/calendar')
     return { success: true }
   } catch (error) {
     console.error('Error in updateAppointmentStatus:', error)

@@ -1,0 +1,7 @@
+Update the Book Appointment and Walk-in Appointment modals:
+1. Remove "Select Service" and "Downpayment" fields from both forms. Service selection and billing (including any downpayment) now happen during the session via the "Current Session & Billing Workspace," not at booking time — these fields are redundant here and create data staff would have to guess.
+2. Add to Walk-in Appointment's "Patient Details" section: Gender, Address, and Birthdate fields, alongside the existing First Name, Last Name, Phone Number. This brings walk-in patient data closer to parity with self-registered patients, since walk-ins create a new clinical profile on the spot.
+3. Confirm Book Appointment form fields after removal: Patient, Assign Dentist, Booking Date, Available Slots, Booking Type, Notes/Comments — no Service or Downpayment.
+4. Confirm Walk-in Appointment form fields after changes: Patient Details (First Name, Last Name, Phone Number, Gender, Address, Birthdate), Assign Dentist, Booking Date, Available Slots, Notes/Comments — no Service or Downpayment.
+Check Supabase schema (appointments and patients tables) to confirm correct column names for gender/address/birthdate before implementing, and update any validation, types, and Server Actions tied to these forms accordingly.
+Verify with npx tsc --noEmit and npm run lint, and visually confirm both modals reflect the updated fields.

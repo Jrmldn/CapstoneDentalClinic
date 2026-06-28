@@ -4,10 +4,10 @@ export interface PatientSummary {
   last_name: string
   phone: string
   email: string | null
-  birthdate: string
-  gender: string
-  is_guest: boolean
-  created_at: string
+  birthdate: string | null
+  gender: string | null
+  is_guest: boolean | null
+  created_at: string | null
 }
 
 export type RecordTab = 'chart' | 'treatments' | 'prescriptions' | 'info' | 'periodontal' | 'followups' | 'photos'
@@ -15,6 +15,10 @@ export type RecordTab = 'chart' | 'treatments' | 'prescriptions' | 'info' | 'per
 export interface FullPatientDetail extends PatientSummary {
   address: string | null
   updated_at?: string
+  previous_dentist?: string | null
+  guardian_name?: string | null
+  guardian_phone?: string | null
+  guardian_address?: string | null
 }
 
 export interface DetailedInfo {
@@ -24,7 +28,6 @@ export interface DetailedInfo {
   updated_by?: string | null
   updated_by_branch?: string | null
   physician_name?: string | null
-  physician_specialty?: string | null
   physician_office_address?: string | null
   physician_office_phone?: string | null
   last_dental_visit?: string | null
@@ -119,8 +122,8 @@ export interface Prescription {
 export interface PatientInfo {
   first_name: string
   last_name: string
-  birthdate?: string
-  gender?: string
+  birthdate?: string | null
+  gender?: string | null
 }
 
 export interface AppointmentRecord {
@@ -132,6 +135,12 @@ export interface AppointmentRecord {
   dentists: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null
   clinics?: { id: number; name: string } | { id: number; name: string }[] | null
   booked_at?: string
+  clinic_id?: number
+  patient_id?: number
+  dentist_id?: number
+  service_id?: number
+  end_at?: string
+  is_walk_in?: boolean
 }
 
 export interface PeriodontalScreening {

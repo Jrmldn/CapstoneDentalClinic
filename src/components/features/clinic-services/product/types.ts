@@ -4,7 +4,7 @@ export interface Product {
   price: number
   price_min?: number | null
   price_max?: number | null
-  is_active: boolean
+  is_active: boolean | null
 }
 
 export interface ProductsTableProps {

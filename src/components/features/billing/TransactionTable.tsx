@@ -91,7 +91,7 @@ export default function TransactionTable({
                   </td>
                   <td className="px-6 py-4 font-medium">₱{Number(tx.subtotal).toLocaleString()}</td>
                   <td className="px-6 py-4 text-xs text-indigo-600 font-medium">
-                    <div>{tx.discount_amount > 0 ? `− ₱${Number(tx.discount_amount).toLocaleString()} (${tx.discount_type})` : '—'}</div>
+                    <div>{(tx.discount_amount ?? 0) > 0 ? `− ₱${Number(tx.discount_amount).toLocaleString()} (${tx.discount_type})` : '—'}</div>
                     {(() => {
                       const appt = normalizeRelation(tx.appointments)
                       const dp = appt?.downpayment
@@ -99,7 +99,7 @@ export default function TransactionTable({
                         <div className="mt-0.5">− ₱{Number(dp).toLocaleString()} downpayment</div>
                       ) : null
                     })()}
-                    {tx.philhealth_coverage > 0 && (
+                    {(tx.philhealth_coverage ?? 0) > 0 && (
                       <div className="mt-0.5">− ₱{Number(tx.philhealth_coverage).toLocaleString()} PhilHealth</div>
                     )}
                   </td>

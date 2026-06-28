@@ -93,13 +93,13 @@ export default function ReceiptModal({ transaction, onClose, clinicName, install
               <span className="text-gray-500">Subtotal</span>
               <span>₱{Number(transaction.subtotal).toLocaleString()}</span>
             </div>
-            {transaction.discount_amount > 0 && (
+            {(transaction.discount_amount ?? 0) > 0 && (
               <div className="flex justify-between text-indigo-600">
                 <span>Discount ({transaction.discount_type})</span>
                 <span>- ₱{Number(transaction.discount_amount).toLocaleString()}</span>
               </div>
             )}
-            {transaction.philhealth_coverage > 0 && (
+            {(transaction.philhealth_coverage ?? 0) > 0 && (
               <div className="flex justify-between text-teal-600">
                 <span>PhilHealth Coverage</span>
                 <span>- ₱{Number(transaction.philhealth_coverage).toLocaleString()}</span>

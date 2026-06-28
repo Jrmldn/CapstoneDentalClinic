@@ -10,7 +10,6 @@ import {
   Receipt,
   Package,
   ShoppingBag,
-  Bell,
   Image as ImageIcon,
   History,
 } from 'lucide-react'
@@ -41,7 +40,6 @@ const menuGroups = [
     label: 'Management',
     items: [
       { label: 'Inventory',     href: '/staff-dashboard/inventory',      icon: Package,       key: 'inventory' },
-      { label: 'Notifications', href: '/staff-dashboard/notifications',  icon: Bell,          key: 'notifications' },
     ],
   },
   {

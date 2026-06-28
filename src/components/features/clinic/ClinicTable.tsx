@@ -1,24 +1,23 @@
 'use client'
 
-import { CheckCircle2, AlertCircle } from 'lucide-react'
-import DataTable, { type ColumnDef } from '@/components/common/DataTable'
-import { deleteClinic, updateClinicStatus } from '@/actions/clinicActions'
-
+import { CheckCircle2, AlertCircle, Pencil, Ban, UserCheck } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import DataTable, { type ColumnDef, type RowAction } from '@/components/common/DataTable'
 import { Clinic } from '@/types/clinic'
-
 
 interface ClinicTableProps {
   clinics: Clinic[]
   onRefresh?: () => void
-  onEdit?: (clinic: Clinic) => void
+  onDisable: (clinic: Clinic) => void
+  onEnable: (clinic: Clinic) => void
   currentPage: number
   totalCount: number
   itemsPerPage: number
   onPageChange: (page: number) => void
 }
 
-const getStatusBadge = (isActive: boolean) => {
-  return isActive ? (
+const getStatusBadge = (isActive: boolean) =>
+  isActive ? (
     <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
       <CheckCircle2 className="w-3 h-3" />
       Active
@@ -29,80 +28,51 @@ const getStatusBadge = (isActive: boolean) => {
       Inactive
     </div>
   )
-}
 
-const getLocationCell = (lat?: number | null, lng?: number | null) => {
-  if (!lat || !lng) {
-    return (
-      <span className="text-xs text-gray-400 italic">Not set</span>
-    )
-  }
-  return (
-    <span className="text-xs text-gray-600 font-mono">
-      {lat.toFixed(4)}, {lng.toFixed(4)}
-    </span>
-  )
-}
+const columns: ColumnDef<Clinic>[] = [
+  { key: 'name', label: 'CLINIC NAME' },
+  {
+    key: 'is_active',
+    label: 'STATUS',
+    render: (isActive) => getStatusBadge(isActive ?? false),
+  },
+  { key: 'email', label: 'EMAIL' },
+  { key: 'phone', label: 'PHONE NUMBER' },
+]
 
 export default function ClinicTable({
   clinics,
   onRefresh,
-  onEdit,
+  onDisable,
+  onEnable,
   currentPage,
   totalCount,
   itemsPerPage,
   onPageChange,
 }: ClinicTableProps) {
-  const handleStatusToggle = async (clinic: Clinic) => {
-    const result = await updateClinicStatus(clinic.id, !clinic.is_active)
-    if (result.success) {
-      onRefresh?.()
-    } else {
-      alert('Error updating clinic status: ' + result.error)
-    }
-  }
+  const router = useRouter()
 
-  const columns: ColumnDef<Clinic>[] = [
-    { key: 'name', label: 'CLINIC NAME' },
+  const rowActions: RowAction<Clinic>[] = [
     {
-      key: 'is_active',
-      label: 'STATUS',
-      render: (isActive, clinic) => (
-        <button
-          onClick={() => handleStatusToggle(clinic)}
-          className="hover:opacity-70 transition"
-        >
-          {getStatusBadge(isActive)}
-        </button>
-      ),
+      icon: <Pencil className="w-4 h-4" />,
+      onClick: (clinic) => router.push(`/superadmin-dashboard/clinic/${clinic.id}/profile`),
+      className: 'p-1.5 text-blue-600 hover:bg-blue-50 rounded transition',
+      title: 'Manage Profile',
     },
     {
-      key: 'id',
-      label: 'PROFILE',
-      render: (_, clinic) => (
-        <a
-          href={`/superadmin-dashboard/clinic/${clinic.id}/profile`}
-          className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline"
-        >
-          Manage Profile
-        </a>
-      ),
-    },
-    { key: 'email', label: 'EMAIL' },
-    { key: 'phone', label: 'PHONE NUMBER' },
-    {
-      key: 'address',
-      label: 'ADDRESS',
-      render: (address) => (
-        <span className="truncate max-w-[200px] block">{address}</span>
-      ),
+      icon: <Ban className="w-4 h-4" />,
+      onClick: onDisable,
+      className: 'p-1.5 text-red-600 hover:bg-red-50 rounded transition',
+      title: 'Disable Clinic',
+      hidden: (c) => !c.is_active,
     },
     {
-      key: 'latitude',
-      label: 'LOCATION',
-      render: (_, clinic) => getLocationCell(clinic.latitude, clinic.longitude),
+      icon: <UserCheck className="w-4 h-4" />,
+      onClick: onEnable,
+      className: 'p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition',
+      title: 'Enable Clinic',
+      hidden: (c) => c.is_active === true,
     },
-    { key: 'max_appointments_per_day', label: 'CAPACITY' },
   ]
 
   return (
@@ -110,15 +80,13 @@ export default function ClinicTable({
       data={clinics}
       columns={columns}
       getRowKey={(clinic) => clinic.id}
-      onEdit={onEdit}
-      onDelete={(clinic) => deleteClinic(clinic.id)}
+      rowActions={rowActions}
       currentPage={currentPage}
       totalCount={totalCount}
       itemsPerPage={itemsPerPage}
       onPageChange={onPageChange}
       onRefresh={onRefresh}
       emptyMessage="No clinics found. Add a new clinic to get started."
-      selectableRows={true}
     />
   )
 }

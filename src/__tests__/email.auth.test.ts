@@ -12,6 +12,11 @@ vi.mock('@/lib/email/templates', () => ({
   staffVerificationEmail: vi.fn((link: string) => ({ subject: 'staff', html: link })),
 }))
 vi.mock('@/lib/errors/sanitizeError', () => ({ sanitizeServerError: () => 'sanitized error' }))
+vi.mock('next/headers', () => ({
+  headers: vi.fn().mockResolvedValue({
+    get: (key: string) => (key === 'x-forwarded-for' ? '127.0.0.1' : null),
+  }),
+}))
 
 vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: {
@@ -53,6 +58,12 @@ beforeEach(() => {
   mockFrom.mockReturnValue({
     update: vi.fn(() => ({ eq: updateEq })),
     delete: vi.fn(() => ({ eq: deleteEq })),
+    select: vi.fn(() => ({
+      eq: vi.fn(() => ({
+        maybeSingle: vi.fn().mockResolvedValue({ data: { id: 123 }, error: null }),
+      })),
+    })),
+    insert: vi.fn(() => Promise.resolve({ data: null, error: null })),
   } as never)
   mockDeleteUser.mockResolvedValue({ data: { user: null }, error: null } as never)
   mockSendEmail.mockResolvedValue({ success: true })

@@ -3,10 +3,12 @@ import { getDentistRecordByUserId } from '@/services/dashboardService'
 import { supabaseAdmin } from '@/lib/supabase/server'
 import { normalizeRelation } from '@/lib/utils'
 import { fetchServices } from '@/actions/serviceActions'
+import { fetchInventoryForDentist } from '@/actions/inventoryActions'
 import { AlertCircle } from 'lucide-react'
 import DentistAppointmentsClient from './DentistAppointmentsClient'
 import type { Appointment } from '@/components/features/dashboard/DentistDashboardView'
 import type { Service } from '@/components/features/billing/types'
+import type { InventoryItem } from '@/components/features/inventory/types'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'My Appointments — AppoinDent' }
@@ -66,6 +68,17 @@ export default async function DentistAppointmentsPage() {
   const servicesRes = await fetchServices(dentistRecord.clinic_id)
   const services = (servicesRes.services ?? []) as Service[]
 
+  const inventoryRes = await fetchInventoryForDentist(dentistRecord.clinic_id)
+  const inventoryItems = (inventoryRes.items ?? []) as InventoryItem[]
+
+  const { data: clinicData } = await supabaseAdmin
+    .from('clinics')
+    .select('name')
+    .eq('id', dentistRecord.clinic_id)
+    .maybeSingle()
+  const branchName = clinicData?.name || 'Clinic'
+  const dentistName = `${dentistRecord.first_name} ${dentistRecord.last_name}`
+
   return (
     <div className="p-6 md:p-8">
       <div className="mb-6">
@@ -79,7 +92,10 @@ export default async function DentistAppointmentsPage() {
         clinicId={dentistRecord.clinic_id}
         dentistUserId={authUser.id}
         dentistId={dentistRecord.id}
+        dentistName={dentistName}
+        branchName={branchName}
         services={services}
+        inventoryItems={inventoryItems}
       />
     </div>
   )

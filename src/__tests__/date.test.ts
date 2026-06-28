@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { toDateKey, formatDate, formatDateTime, formatTime, formatDateLong } from '@/lib/date'
+import { toDateKey, formatDate, formatDateTime, formatTime, formatDateLong, formatTo12h } from '@/lib/date'
 
 describe('date helpers — Asia/Manila (UTC+8)', () => {
   it('toDateKey rolls to the next day for evening-UTC instants', () => {
@@ -37,4 +37,24 @@ describe('date helpers — Asia/Manila (UTC+8)', () => {
     expect(formatDate('')).toBe('—')
     expect(formatDateTime('not-a-date')).toBe('—')
   })
+
+  describe('formatTo12h', () => {
+    it('formats 24-hour time strings to 12-hour AM/PM format', () => {
+      expect(formatTo12h('08:00')).toBe('8:00 AM')
+      expect(formatTo12h('13:30')).toBe('1:30 PM')
+      expect(formatTo12h('12:00')).toBe('12:00 PM')
+      expect(formatTo12h('00:15')).toBe('12:15 AM')
+    })
+
+    it('returns the input if it cannot be parsed', () => {
+      expect(formatTo12h('invalid')).toBe('invalid')
+    })
+
+    it('returns em dash for empty input', () => {
+      expect(formatTo12h(null)).toBe('—')
+      expect(formatTo12h(undefined)).toBe('—')
+      expect(formatTo12h('')).toBe('—')
+    })
+  })
 })
+

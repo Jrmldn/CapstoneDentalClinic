@@ -4,17 +4,16 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import ClinicHeader from '@/components/features/clinic/ClinicHeader'
 import ClinicTable from '@/components/features/clinic/ClinicTable'
 import ClinicFormModal from '@/components/features/clinic/ClinicFormModal'
-
 import ClinicFilterBar from '@/components/features/clinic/ClinicFilterBar'
-import { addClinic, updateClinic, fetchClinics } from '@/actions/clinicActions'
+import DisableClinicModal from '@/components/features/clinic/DisableClinicModal'
+import EnableClinicModal from '@/components/features/clinic/EnableClinicModal'
+import { addClinic, fetchClinics } from '@/actions/clinicActions'
 import { AddClinicData, Clinic } from '@/types/clinic'
-
 
 const ITEMS_PER_PAGE = 10
 
 export default function ClientClinicPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null)
   const [clinics, setClinics] = useState<Clinic[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -24,40 +23,45 @@ export default function ClientClinicPage() {
 
   const [currentPage, setCurrentPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
+  const [activeCount, setActiveCount] = useState(0)
+  const [inactiveCount, setInactiveCount] = useState(0)
+
+  const [disableTarget, setDisableTarget] = useState<Clinic | null>(null)
+  const [enableTarget, setEnableTarget] = useState<Clinic | null>(null)
 
   const isFirstRender = useRef(true)
 
-  const loadClinics = useCallback(async (showLoadingScreen = true) => { // FIX: Wrapped in useCallback
+  const loadClinics = useCallback(async (showLoadingScreen = true) => {
     if (showLoadingScreen) setIsLoading(true)
     try {
       const result = await fetchClinics(searchQuery, statusFilter, currentPage, ITEMS_PER_PAGE)
       if (result.success) {
         setClinics(result.clinics)
         setTotalCount(result.totalCount || 0)
+        setActiveCount(result.activeCount || 0)
+        setInactiveCount(result.inactiveCount || 0)
       } else {
         console.error('Failed to fetch clinics:', result.error)
-        alert('Failed to load clinics: ' + result.error)
       }
     } catch (err) {
       console.error('Unexpected error loading clinics:', err)
     } finally {
       setIsLoading(false)
     }
-  }, [searchQuery, statusFilter, currentPage]) // FIX: Added dependencies
+  }, [searchQuery, statusFilter, currentPage])
 
   useEffect(() => {
-    // FIX: Deferring call to avoid synchronous setState warning in effect body
     const timer = setTimeout(() => {
       loadClinics(false)
       isFirstRender.current = false
     }, 0)
     return () => clearTimeout(timer)
-  }, [loadClinics]) // FIX: Added loadClinics dependency
+  }, [loadClinics])
 
   useEffect(() => {
     if (isFirstRender.current) return
     loadClinics(false)
-  }, [currentPage, loadClinics]) // FIX: Added loadClinics dependency
+  }, [currentPage, loadClinics])
 
   useEffect(() => {
     if (isFirstRender.current) return
@@ -66,44 +70,28 @@ export default function ClientClinicPage() {
       loadClinics(false)
     }, 300)
     return () => clearTimeout(delayDebounceFn)
-  }, [searchQuery, statusFilter, loadClinics]) // FIX: Added loadClinics dependency
+  }, [searchQuery, statusFilter, loadClinics])
 
-  const handleSaveClinic = async (data: AddClinicData) => { // FIX: Replaced any
+  const handleSaveClinic = async (data: AddClinicData) => {
     setIsSaving(true)
     try {
-      const result = selectedClinic
-        ? await updateClinic(selectedClinic.id, data)
-        : await addClinic(data)
+      const result = await addClinic(data)
       if (result.success) {
-        handleCloseModal()
+        setIsModalOpen(false)
         await loadClinics(false)
       } else {
-        alert(`Error ${selectedClinic ? 'updating' : 'adding'} clinic: ` + result.error)
+        console.error('Error adding clinic:', result.error)
       }
     } catch (err) {
       console.error('Error saving clinic:', err)
-      alert('An unexpected error occurred while saving.')
     } finally {
       setIsSaving(false)
     }
   }
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false)
-    setSelectedClinic(null)
-  }
-
-  const handleEdit = (clinic: Clinic) => {
-    setSelectedClinic(clinic)
-    setIsModalOpen(true)
-  }
-
   return (
     <div className="p-8">
-      <ClinicHeader onAddClick={() => {
-        setSelectedClinic(null)
-        setIsModalOpen(true)
-      }} />
+      <ClinicHeader onAddClick={() => setIsModalOpen(true)} />
 
       <ClinicFilterBar
         searchQuery={searchQuery}
@@ -111,6 +99,10 @@ export default function ClientClinicPage() {
         statusFilter={statusFilter}
         onStatusChange={(status) => setStatusFilter(String(status))}
       />
+
+      <p className="text-sm text-gray-500 mb-3">
+        Showing {totalCount} clinics ({activeCount} Active · {inactiveCount} Inactive)
+      </p>
 
       {isLoading ? (
         <div className="bg-white rounded-lg shadow p-8 text-center">
@@ -120,7 +112,8 @@ export default function ClientClinicPage() {
         <ClinicTable
           clinics={clinics}
           onRefresh={() => loadClinics(false)}
-          onEdit={handleEdit}
+          onDisable={(c) => setDisableTarget(c)}
+          onEnable={(c) => setEnableTarget(c)}
           currentPage={currentPage}
           totalCount={totalCount}
           itemsPerPage={ITEMS_PER_PAGE}
@@ -129,12 +122,23 @@ export default function ClientClinicPage() {
       )}
 
       <ClinicFormModal
-        key={selectedClinic?.id || 'new'} // FIX: Reset state by changing key
         isOpen={isModalOpen}
-        onClose={handleCloseModal}
+        onClose={() => setIsModalOpen(false)}
         onSubmit={handleSaveClinic}
         isSaving={isSaving}
-        initialData={selectedClinic}
+        initialData={null}
+      />
+
+      <DisableClinicModal
+        clinic={disableTarget}
+        onClose={() => setDisableTarget(null)}
+        onSuccess={() => loadClinics(false)}
+      />
+
+      <EnableClinicModal
+        clinic={enableTarget}
+        onClose={() => setEnableTarget(null)}
+        onSuccess={() => loadClinics(false)}
       />
     </div>
   )

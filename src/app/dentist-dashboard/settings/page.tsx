@@ -49,7 +49,6 @@ export default async function SettingsPage() {
         dentistEmail={authUser.email || ''}
         initialFirstName={dentistRecord.first_name}
         initialLastName={dentistRecord.last_name}
-        initialSpecialty={dentistRecord.specialty || 'General Dentistry'}
         initialLicenseNo={dentistRecord.license_no || ''}
       />
     </div>

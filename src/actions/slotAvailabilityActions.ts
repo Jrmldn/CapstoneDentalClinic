@@ -12,6 +12,7 @@ import {
   getClinicCapacity,
 } from '@/services/appointmentService'
 import { generateTimeSlots } from '@/utils/appointment-helpers'
+import { toDateKey } from '@/lib/date'
 
 // TYPES
 
@@ -92,13 +93,45 @@ export async function getAvailableSlots(
     if (bookedCount >= maxPerDay) return { success: true, slots: [] }
 
     // 8. Generate slots using helpers
-    const slots = generateTimeSlots(
+    let slots = generateTimeSlots(
       windowStart,
       windowEnd,
       duration,
       existingAppts ?? [],
-      blockedSlots ?? []
+      (blockedSlots ?? []).filter(s => s.start_time != null && s.end_time != null) as { start_time: string; end_time: string }[]
     )
+
+    // 9. Disable past time slots based on Manila timezone
+    const todayKey = toDateKey(new Date())
+    if (date <= todayKey) {
+      const now = new Date()
+      const timeStr = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Manila',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).format(now)
+      const [h, m] = timeStr.split(':').map(Number)
+      const currentTotalMinutes = h * 60 + m
+
+      slots = slots.map(slot => {
+        if (!slot.available) return slot
+
+        if (date < todayKey) {
+          return { ...slot, available: false }
+        }
+
+        if (date === todayKey) {
+          const [sHour, sMin] = slot.start.split(':').map(Number)
+          const slotStartMinutes = sHour * 60 + sMin
+          if (slotStartMinutes <= currentTotalMinutes) {
+            return { ...slot, available: false }
+          }
+        }
+
+        return slot
+      })
+    }
 
     return { success: true, slots }
   } catch (error) {

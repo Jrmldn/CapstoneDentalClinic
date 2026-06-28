@@ -30,6 +30,6 @@ export default async function CalendarPage() {
   }
 
   return (
-    <CalendarTab record={patientDetails.record as unknown as PatientRecord} />
+    <CalendarTab record={patientDetails.record as unknown as PatientRecord} authUserId={authUser.id} />
   )
 }

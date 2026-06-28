@@ -6,32 +6,32 @@ import { FormattedStaff, FormattedDentist } from '@/types/clinic'
 
 import { useEditPersonnel } from '@/components/features/personnel/useEditPersonnel'
 
-
 interface EditPersonnelModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => Promise<void>
   person: FormattedStaff | FormattedDentist | null
-  type: 'staff' | 'dentists'
+  type: 'staff' | 'dentist'
+  clinics?: { id: number; name: string }[]
   fixedClinicId?: number
 }
 
-export default function EditPersonnelModal({ 
-  isOpen, 
-  onClose, 
-  onSuccess, 
-  person, 
+export default function EditPersonnelModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  person,
   type,
+  clinics,
   fixedClinicId
 }: EditPersonnelModalProps) {
   const {
-    clinics,
     formData,
     setFormData,
     isSubmitting,
     error,
     handleSubmit,
-  } = useEditPersonnel({ isOpen, onClose, onSuccess, person, type })
+  } = useEditPersonnel({ onClose, onSuccess, person, type })
 
   if (!isOpen || !person) return null
 
@@ -90,19 +90,8 @@ export default function EditPersonnelModal({
                 value={formData.clinicId} 
                 onChange={e => setFormData({...formData, clinicId: e.target.value})}
               >
-                {clinics.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {(clinics ?? []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
-            </div>
-          )}
-
-          {type === 'dentists' && (
-            <div className="space-y-1.5">
-              <label className="font-medium">Specialty</label>
-              <input 
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg" 
-                value={formData.specialty} 
-                onChange={e => setFormData({...formData, specialty: e.target.value})} 
-              />
             </div>
           )}
 

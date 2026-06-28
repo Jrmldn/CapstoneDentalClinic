@@ -24,10 +24,8 @@ const LeafletMapInner = dynamic(
  * Business logic, state management, and side-effects are delegated to the useClinicFilters hook.
  * The filtering UI is delegated to the FilterSection component.
  */
-export const ClinicMap = ({ clinics, availableSpecialties }: ClinicMapProps) => {
+export const ClinicMap = ({ clinics }: ClinicMapProps) => {
   const {
-    selectedSpecialty,
-    setSelectedSpecialty,
     showOpenOnly,
     setShowOpenOnly,
     minRating,
@@ -35,14 +33,13 @@ export const ClinicMap = ({ clinics, availableSpecialties }: ClinicMapProps) => 
     activeClinicId,
     setActiveClinicId,
     isMapReady,
-    specialtyOptions,
     filteredClinics,
     handleMapReady,
-  } = useClinicFilters({ clinics, availableSpecialties })
+  } = useClinicFilters({ clinics })
 
   // Refs for sidebar scroll-into-view behaviour
   const sidebarRef = useRef<HTMLDivElement>(null)
-  const cardRefs = useRef<{ [id: string]: HTMLDivElement | null }>({})
+  const cardRefs = useRef<{ [id: number]: HTMLDivElement | null }>({})
 
   // When a map marker is clicked the activeClinicId changes — scroll the sidebar to that card
   useEffect(() => {
@@ -55,9 +52,6 @@ export const ClinicMap = ({ clinics, availableSpecialties }: ClinicMapProps) => 
     <div className="space-y-6">
       <style>{`.no-scrollbar::-webkit-scrollbar { display: none; }`}</style>
       <FilterSection
-        selectedSpecialty={selectedSpecialty}
-        setSelectedSpecialty={setSelectedSpecialty}
-        specialtyOptions={specialtyOptions}
         minRating={minRating}
         setMinRating={setMinRating}
         showOpenOnly={showOpenOnly}
@@ -114,7 +108,6 @@ export const ClinicMap = ({ clinics, availableSpecialties }: ClinicMapProps) => 
                 name={clinic.name}
                 address={clinic.address}
                 phone={clinic.phone}
-                specialties={clinic.clinic_specialties}
                 gallery={clinic.clinic_gallery}
                 feedback={clinic.feedback}
                 isOpen={getEffectiveClinicStatus(clinic.manual_status, clinic.clinic_operating_hours) === 'open'}

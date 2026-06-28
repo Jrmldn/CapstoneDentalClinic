@@ -47,12 +47,11 @@ export default async function DentistLayout({ children }: DentistLayoutProps) {
   const logoutAction = handleLogout.bind(null, '/login')
 
   const dentistName = `${dentistRecord.first_name} ${dentistRecord.last_name}`
-  const specialty = dentistRecord.specialty
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
       {/* Sidebar */}
-      <DentistSidebar dentistName={dentistName} specialty={specialty} />
+      <DentistSidebar dentistName={dentistName} />
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">

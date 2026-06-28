@@ -35,9 +35,9 @@ export interface InstallmentPayment {
   installment_number: number
   due_date: string
   amount: number
-  status: 'pending' | 'paid' | 'overdue'
+  status: string
   paid_at: string | null
-  created_at: string
+  created_at: string | null
 }
 
 export interface InstallmentPlan {
@@ -48,8 +48,8 @@ export interface InstallmentPlan {
   total_amount: number
   num_installments: number
   notes: string | null
-  status: 'active' | 'completed' | 'cancelled'
-  created_at: string
+  status: string
+  created_at: string | null
   patients?: { id: number; first_name: string; last_name: string } | null
   clinics?: { id: number; name: string } | null
   transactions?: { id: number; created_at: string } | null
@@ -63,14 +63,14 @@ export interface Transaction {
   clinic_id: number
   billing_status: string
   subtotal: number
-  discount_type: string
-  discount_amount: number
-  hmo_coverage: number
-  philhealth_coverage: number
+  discount_type: string | null
+  discount_amount: number | null
+  hmo_coverage: number | null
+  philhealth_coverage: number | null
   total_amount: number
-  payment_method: string
-  payment_status: string
-  created_at: string
+  payment_method: string | null
+  payment_status: string | null
+  created_at: string | null
   patients: { first_name: string; last_name: string } | null
   transaction_items?: {
     id: number

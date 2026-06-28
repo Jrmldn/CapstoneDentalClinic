@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 
@@ -171,7 +171,9 @@ function UpdatePasswordForm() {
 export default function UpdatePasswordPage() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <UpdatePasswordForm />
+      <Suspense fallback={<div className="text-center p-8 text-gray-500 text-sm">Loading...</div>}>
+        <UpdatePasswordForm />
+      </Suspense>
     </div>
   )
 }

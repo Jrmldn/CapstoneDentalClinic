@@ -9,6 +9,8 @@ import { createClient } from '@/lib/supabase/serverSSR'
 import { ensureRole } from '@/lib/auth/ensureRole'
 import { validatePatientAccess } from '@/lib/auth/validatePatientAccess'
 import { encryptMedicalData } from '@/lib/encryption/medicalEncryption'
+import { insertAppointment, insertAppointmentLog } from '@/services/appointmentService'
+import type { PaymentMethod } from '@/actions/appointmentActions'
 
 interface ClinicName { name: string }
 
@@ -92,23 +94,6 @@ export interface RegisterPatientData {
   // Junction mapping fields
   clinic_id?: number
   enrolled_by?: string
-}
-
-type PatientSummary = {
-  id: number
-  first_name: string
-  last_name: string
-  phone: string
-  email: string | null
-  birthdate: string
-  gender: string
-  is_guest: boolean
-  created_at: string
-}
-
-type ClinicPatientRow = {
-  is_active: boolean
-  patients: PatientSummary | PatientSummary[] | null
 }
 
 // REGISTER PATIENT (walk-in / guest / full user)
@@ -233,7 +218,7 @@ export async function fetchPatientsByClinic(
 
     if (error) throw new Error(error.message)
 
-    const patients = (patientsData || []).map((p: any) => ({
+    const patients = (patientsData || []).map((p) => ({
       id: p.id,
       first_name: p.first_name,
       last_name: p.last_name,
@@ -245,7 +230,7 @@ export async function fetchPatientsByClinic(
       created_at: p.created_at
     }))
 
-    patients.sort((a: PatientSummary, b: PatientSummary) => {
+    patients.sort((a, b) => {
       const lastA = (a.last_name || '').toLowerCase()
       const lastB = (b.last_name || '').toLowerCase()
       if (lastA !== lastB) return lastA.localeCompare(lastB)
@@ -319,7 +304,7 @@ export async function updatePatientProfile(
         .maybeSingle()
 
       const detailedInfo = {
-        ...(existingHist?.detailed_info || {}),
+        ...(existingHist?.detailed_info as Record<string, unknown> || {}),
         profile_updated_by: updatedBy,
         profile_updated_by_branch: branchName,
         profile_updated_at: new Date().toISOString()
@@ -347,6 +332,83 @@ export async function updatePatientProfile(
       success: false,
       error: sanitizeServerError(error),
     }
+  }
+}
+
+// WALK-IN: register patient + book appointment in one action
+
+export interface WalkInBookingData {
+  first_name: string
+  last_name: string
+  phone: string
+  clinic_id: number
+  dentist_id: number
+  service_id: number
+  scheduled_at: string
+  end_at: string
+  notes?: string
+  downpayment?: number
+  payment_method?: PaymentMethod
+}
+
+export async function registerWalkInPatientAndBook(data: WalkInBookingData) {
+  const auth = await ensureRole('staff')
+  if (!auth.success) return { success: false, error: auth.error }
+
+  try {
+    const { data: patient, error: patientError } = await supabaseAdmin
+      .from('patients')
+      .insert([{
+        first_name: data.first_name,
+        last_name: data.last_name,
+        phone: data.phone,
+        is_guest: true,
+        user_id: null,
+      }])
+      .select()
+      .single()
+
+    if (patientError) throw new Error(patientError.message)
+
+    const { error: junctionError } = await supabaseAdmin
+      .from('clinic_patients')
+      .upsert(
+        [{ clinic_id: data.clinic_id, patient_id: patient.id, is_active: true }],
+        { onConflict: 'clinic_id,patient_id' }
+      )
+    if (junctionError) throw new Error(junctionError.message)
+
+    const { data: appointment, error: apptError } = await insertAppointment({
+      clinic_id: data.clinic_id,
+      patient_id: patient.id,
+      dentist_id: data.dentist_id,
+      service_id: data.service_id,
+      scheduled_at: data.scheduled_at,
+      end_at: data.end_at,
+      notes: data.notes ?? null,
+      is_walk_in: true,
+      downpayment: data.downpayment ?? 0,
+      payment_method: data.payment_method ?? 'cash',
+      payment_status: (data.downpayment ?? 0) > 0 ? 'partial' : 'unpaid',
+      status: 'pending',
+    })
+    if (apptError) throw new Error(apptError.message)
+
+    await insertAppointmentLog({
+      appointment_id: appointment.id,
+      performed_by: auth.userId,
+      role: 'staff',
+      action: 'created',
+      new_status: 'pending',
+      notes: 'Walk-in appointment created by staff',
+    })
+
+    revalidatePath('/staff-dashboard/appointments')
+    revalidatePath('/staff-dashboard/patients')
+    return { success: true, appointment }
+  } catch (error) {
+    console.error('Error in registerWalkInPatientAndBook:', error)
+    return { success: false, error: sanitizeServerError(error) }
   }
 }
 

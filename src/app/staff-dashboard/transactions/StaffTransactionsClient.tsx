@@ -33,7 +33,7 @@ export default function StaffTransactionsClient({ transactions, installmentPlans
     const patientName = `${tx.patients?.first_name || ''} ${tx.patients?.last_name || ''}`.toLowerCase()
     const matchesSearch = patientName.includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || tx.payment_status === statusFilter
-    const txDate = tx.created_at.slice(0, 10)
+    const txDate = (tx.created_at ?? '').slice(0, 10)
     const matchesDate = (!dateFrom || txDate >= dateFrom) && (!dateTo || txDate <= dateTo)
     return matchesSearch && matchesStatus && matchesDate
   }), [transactions, searchTerm, statusFilter, dateFrom, dateTo])

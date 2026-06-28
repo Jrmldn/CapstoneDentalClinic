@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, RefreshCw, AlertTriangle } from 'lucide-react'
+import { X, RefreshCw, AlertTriangle, CheckCircle2, CalendarPlus } from 'lucide-react'
 import { registerPatient } from '@/actions/patientCoreActions'
 import type { PatientSummary } from './types'
 
@@ -10,6 +10,7 @@ interface RegisterPatientModalProps {
   onClose: () => void
   clinicId: number
   onSuccess: (newPatient: PatientSummary) => void
+  onBookNow?: (patient: PatientSummary) => void
 }
 
 const EMPTY_FORM = {
@@ -28,14 +29,16 @@ const EMPTY_FORM = {
   isSmoker: false
 }
 
-export default function RegisterPatientModal({ isOpen, onClose, clinicId, onSuccess }: RegisterPatientModalProps) {
+export default function RegisterPatientModal({ isOpen, onClose, clinicId, onSuccess, onBookNow }: RegisterPatientModalProps) {
   const [formData, setFormData] = useState(EMPTY_FORM)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
+  const [successPatient, setSuccessPatient] = useState<PatientSummary | null>(null)
 
   const handleClose = () => {
     setFormData(EMPTY_FORM)
     setFormError('')
+    setSuccessPatient(null)
     onClose()
   }
 
@@ -69,7 +72,6 @@ export default function RegisterPatientModal({ isOpen, onClose, clinicId, onSucc
     setIsSubmitting(false)
 
     if (result.success && result.patient) {
-      alert('Patient registered successfully!')
       const newPatient: PatientSummary = {
         id: result.patient.id,
         first_name: result.patient.first_name,
@@ -83,7 +85,7 @@ export default function RegisterPatientModal({ isOpen, onClose, clinicId, onSucc
       }
       onSuccess(newPatient)
       setFormData(EMPTY_FORM)
-      onClose()
+      setSuccessPatient(newPatient)
     } else {
       setFormError(result.error || 'Failed to register patient')
     }
@@ -263,22 +265,53 @@ export default function RegisterPatientModal({ isOpen, onClose, clinicId, onSucc
             </div>
           </div>
 
-          <div className="border-t border-gray-100 pt-4 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold hover:bg-gray-50 transition"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition font-semibold text-sm disabled:opacity-50 flex items-center gap-2"
-            >
-              {isSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Register Patient'}
-            </button>
-          </div>
+          {successPatient ? (
+            <div className="border-t border-gray-100 pt-4">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex flex-col gap-3">
+                <div className="flex items-center gap-2 text-emerald-700">
+                  <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-sm font-semibold">
+                    {successPatient.first_name} {successPatient.last_name} registered successfully.
+                  </span>
+                </div>
+                <p className="text-sm text-emerald-700">Book an appointment for this patient?</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { onBookNow?.(successPatient); handleClose() }}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition"
+                  >
+                    <CalendarPlus className="w-4 h-4" />
+                    Book Now
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    className="px-4 py-2 border border-emerald-300 text-emerald-700 rounded-lg text-sm font-semibold hover:bg-emerald-100 transition"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="border-t border-gray-100 pt-4 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={handleClose}
+                className="px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition font-semibold text-sm disabled:opacity-50 flex items-center gap-2"
+              >
+                {isSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Register Patient'}
+              </button>
+            </div>
+          )}
         </form>
       </div>
     </div>

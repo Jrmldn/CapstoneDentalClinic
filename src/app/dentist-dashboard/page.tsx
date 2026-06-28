@@ -1,9 +1,12 @@
 import { enforceRole } from '@/lib/auth/protection'
 import { getDentistRecordByUserId, getDentistDashboardData } from '@/services/dashboardService'
 import { fetchServices } from '@/actions/serviceActions'
+import { fetchInventoryForDentist } from '@/actions/inventoryActions'
+import { supabaseAdmin } from '@/lib/supabase/server'
 import DentistDashboardView, { Appointment } from '@/components/features/dashboard/DentistDashboardView'
 import { DentistRawAppointment } from '@/components/features/dashboard/types'
 import type { Service } from '@/components/features/billing/types'
+import type { InventoryItem } from '@/components/features/inventory/types'
 import { normalizeRelation } from '@/lib/utils'
 import { toDateKey } from '@/lib/date'
 import { AlertCircle } from 'lucide-react'
@@ -58,6 +61,7 @@ export default async function DentistDashboardPage() {
     }))
     .filter(a => a.payment_status !== 'unpaid' || a.is_walk_in)
 
+  const ACTIVE_STATUSES = ['pending', 'confirmed', 'rescheduled', 'follow_up', 'pending_patient_confirm']
   const upcomingAppts: Appointment[] = upcomingApptsRaw
     .map(appt => ({
       id: appt.id,
@@ -69,7 +73,7 @@ export default async function DentistDashboardPage() {
       patients: normalizeRelation(appt.patients),
       services: normalizeRelation(appt.services),
     }))
-    .filter(a => a.payment_status !== 'unpaid' || a.is_walk_in)
+    .filter(a => ACTIVE_STATUSES.includes(a.status) && (a.payment_status !== 'unpaid' || a.is_walk_in))
 
   // Calculate statistics
   const completedToday = todayAppts.filter(a => a.status === 'completed').length
@@ -88,22 +92,32 @@ export default async function DentistDashboardPage() {
   }
 
   const dentistName = `${dentistRecord.first_name} ${dentistRecord.last_name}`
-  const specialty = dentistRecord.specialty
+
+  const { data: clinicData } = await supabaseAdmin
+    .from('clinics')
+    .select('name')
+    .eq('id', clinicId)
+    .maybeSingle()
+  const branchName = clinicData?.name || 'Clinic'
 
   const servicesRes = await fetchServices(clinicId)
   const services = (servicesRes.services ?? []) as Service[]
+
+  const inventoryRes = await fetchInventoryForDentist(clinicId)
+  const inventoryItems = (inventoryRes.items ?? []) as InventoryItem[]
 
   return (
     <DentistDashboardView
       dentistId={dentistId}
       dentistUserId={authUser.id}
       dentistName={dentistName}
-      specialty={specialty}
+      branchName={branchName}
       clinicId={clinicId}
       todayAppts={todayAppts}
       upcomingAppts={upcomingAppts}
       stats={stats}
       services={services}
+      inventoryItems={inventoryItems}
     />
   )
 }

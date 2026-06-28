@@ -2,10 +2,22 @@
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, X, ClipboardCheck, Pill, Printer } from 'lucide-react'
+import { Plus, X, Pill, Printer } from 'lucide-react'
 import { addPrescription } from '@/actions/clinicalRecordActions'
 import { formatDate } from '@/lib/date'
 import type { Prescription, PatientInfo } from './types'
+
+export interface StagedPrescriptionData {
+  patient_id: number
+  clinic_id: number
+  dentist_id: number
+  medication: string
+  dosage: string
+  frequency: string
+  duration: string | null
+  notes: string | null
+  prescribed_at: string
+}
 
 interface PrescriptionsTabProps {
   patientId: number
@@ -14,6 +26,9 @@ interface PrescriptionsTabProps {
   prescriptions: Prescription[]
   onRefresh: () => Promise<void>
   patient?: PatientInfo
+  readOnly?: boolean
+  stagedPrescriptions?: StagedPrescriptionData[]
+  onAddPrescription?: (p: StagedPrescriptionData) => void
 }
 
 export default function PrescriptionsTab({
@@ -23,6 +38,9 @@ export default function PrescriptionsTab({
   prescriptions,
   onRefresh,
   patient,
+  readOnly = false,
+  stagedPrescriptions = [],
+  onAddPrescription,
 }: PrescriptionsTabProps) {
   const [showForm, setShowForm] = useState(false)
   const [medication, setMedication] = useState('')
@@ -43,6 +61,28 @@ export default function PrescriptionsTab({
     }
 
     setIsSubmitting(true)
+    if (onAddPrescription) {
+      onAddPrescription({
+        patient_id: patientId,
+        clinic_id: clinicId,
+        dentist_id: dentistId || 0,
+        medication,
+        dosage,
+        frequency,
+        duration: duration || null,
+        notes: notes || null,
+        prescribed_at: new Date().toISOString(),
+      })
+      setIsSubmitting(false)
+      setMedication('')
+      setDosage('')
+      setFrequency('')
+      setDuration('')
+      setNotes('')
+      setShowForm(false)
+      return
+    }
+
     const res = await addPrescription({
       patient_id: patientId,
       clinic_id: clinicId,
@@ -70,6 +110,23 @@ export default function PrescriptionsTab({
 
   const today = formatDate(new Date())
   const patientName = patient ? `${patient.first_name} ${patient.last_name}` : 'Patient'
+
+  // Combine staged and saved prescriptions
+  const displayPrescriptions: (Prescription & { isStaged?: boolean })[] = [
+    ...stagedPrescriptions.map((sp, index) => ({
+      id: -1 - index,
+      isStaged: true,
+      medication: sp.medication,
+      dosage: sp.dosage,
+      frequency: sp.frequency,
+      duration: sp.duration,
+      notes: sp.notes,
+      prescribed_at: sp.prescribed_at,
+      dentists: dentistId ? { id: dentistId, first_name: 'Staged', last_name: 'Prescription' } : null,
+      clinics: null
+    })),
+    ...prescriptions
+  ]
 
   const printContent = (
     <div
@@ -107,7 +164,7 @@ export default function PrescriptionsTab({
           </div>
         </div>
         <div style={{ background: '#1d4ed8', color: '#fff', borderRadius: '20px', padding: '4px 14px', fontSize: '11px', fontWeight: 700 }}>
-          {prescriptions.length} Prescription{prescriptions.length !== 1 ? 's' : ''}
+          {displayPrescriptions.length} Prescription{displayPrescriptions.length !== 1 ? 's' : ''}
         </div>
       </div>
 
@@ -117,7 +174,7 @@ export default function PrescriptionsTab({
       </div>
 
       {/* Rx cards */}
-      {prescriptions.map((pres, i) => {
+      {displayPrescriptions.map((pres, i) => {
         const dentist = Array.isArray(pres.dentists) ? pres.dentists[0] : pres.dentists
         const date = formatDate(pres.prescribed_at)
         return (
@@ -169,10 +226,12 @@ export default function PrescriptionsTab({
       <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-150 shadow-xs">
         <div>
           <h4 className="font-bold text-slate-800 text-sm">Prescriptions</h4>
-          <p className="text-xs text-gray-500 mt-0.5">Manage medications and dosage schedules for this patient.</p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {onAddPrescription ? 'Write a prescription for this session.' : 'Manage medications and dosage schedules for this patient.'}
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          {prescriptions.length > 0 && (
+          {!onAddPrescription && displayPrescriptions.length > 0 && (
             <button
               onClick={() => window.print()}
               className="px-5 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition font-semibold text-sm shadow-sm flex items-center gap-2"
@@ -181,13 +240,13 @@ export default function PrescriptionsTab({
               Print / Save PDF
             </button>
           )}
-          {dentistId && (
+          {!readOnly && dentistId && (
             <button
               onClick={() => setShowForm(!showForm)}
               className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition"
             >
               {showForm ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-              {showForm ? 'Cancel' : 'New Prescription'}
+              {showForm ? 'Close Form' : 'New Prescription'}
             </button>
           )}
         </div>
@@ -273,21 +332,22 @@ export default function PrescriptionsTab({
               disabled={isSubmitting}
               className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold disabled:opacity-50 transition"
             >
-              {isSubmitting ? 'Saving...' : 'Save Prescription'}
+              {isSubmitting ? 'Saving...' : onAddPrescription ? 'Add to Session' : 'Save Prescription'}
             </button>
           </div>
         </form>
       )}
 
-      {/* Prescription List */}
+      {/* Prescription List — hidden in session mode (history viewed elsewhere) */}
+      {!onAddPrescription && (
       <div className="space-y-3">
-        {prescriptions.length === 0 ? (
+        {displayPrescriptions.length === 0 ? (
           <div className="bg-white p-10 text-center rounded-xl border border-gray-150 shadow-xs">
             <Pill className="w-8 h-8 text-gray-300 mx-auto mb-2.5" />
             <p className="text-xs text-gray-400">No prescriptions recorded for this patient.</p>
           </div>
         ) : (
-          prescriptions.map((pres) => {
+          displayPrescriptions.map((pres) => {
             const dentistObj = Array.isArray(pres.dentists) ? pres.dentists[0] : pres.dentists
             const prescribedDate = formatDate(pres.prescribed_at)
 
@@ -350,6 +410,7 @@ export default function PrescriptionsTab({
           })
         )}
       </div>
+      )}
     </div>
   )
 }

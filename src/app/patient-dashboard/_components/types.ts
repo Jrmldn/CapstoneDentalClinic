@@ -2,7 +2,6 @@ export interface Dentist {
   id: number
   first_name: string
   last_name: string
-  specialty: string | null
 }
 
 export interface Service {
@@ -10,6 +9,36 @@ export interface Service {
   name: string
   price: number
   slot_duration_min: number
+}
+
+export interface PatientAppointment {
+  id: number
+  scheduled_at: string
+  status: string
+  booked_at?: string
+  clinic_id?: number
+  notes?: string | null
+  services?: { id?: number; name: string } | null
+  dentists?: { id?: number; first_name: string; last_name: string } | null
+  clinics?: { id: number; name: string } | null
+}
+
+export interface PatientTreatment {
+  id: number
+  performed_at?: string | null
+  treatment?: string
+  notes?: string | null
+  services?: { name: string; price?: number } | null
+  dentists?: { first_name: string; last_name: string } | null
+}
+
+export interface PatientPrescription {
+  id: number
+  prescribed_at?: string | null
+  medication_name?: string
+  dosage?: string | null
+  instructions?: string | null
+  dentists?: { first_name: string; last_name: string } | null
 }
 
 export interface PatientRecord {
@@ -23,6 +52,10 @@ export interface PatientRecord {
     address: string
     email: string | null
     updated_at?: string
+    previous_dentist?: string | null
+    guardian_name?: string | null
+    guardian_phone?: string | null
+    guardian_address?: string | null
   }
   medicalHistory: {
     blood_type: string | null
@@ -38,7 +71,6 @@ export interface PatientRecord {
     detailed_info: {
       last_dental_visit?: string
       physician_name?: string
-      physician_specialty?: string
       physician_office_address?: string
       physician_office_phone?: string
       good_condition?: 'yes' | 'no' | ''
@@ -64,9 +96,9 @@ export interface PatientRecord {
       updated_by_branch?: string
     } | null
   } | null
-  dentalCharts: any[]
-  treatmentHistory: any[]
-  assessments: any[]
-  prescriptions: any[]
-  appointments: any[]
+  dentalCharts: unknown[]
+  treatmentHistory: PatientTreatment[]
+  assessments: unknown[]
+  prescriptions: PatientPrescription[]
+  appointments: PatientAppointment[]
 }

@@ -1,19 +1,23 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { useAddPersonnel } from '@/components/features/personnel/useAddPersonnel'
-
 
 interface AddPersonnelModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
-  type: 'staff' | 'dentists'
   fixedClinicId?: number
 }
 
-export default function AddPersonnelModal({ isOpen, onClose, onSuccess, type, fixedClinicId }: AddPersonnelModalProps) {
+export default function AddPersonnelModal({ isOpen, onClose, onSuccess, fixedClinicId }: AddPersonnelModalProps) {
+  const [role, setRole] = useState<'staff' | 'dentist'>('staff')
+
+  useEffect(() => {
+    if (!isOpen) setRole('staff')
+  }, [isOpen])
+
   const {
     clinics,
     firstName,
@@ -26,12 +30,10 @@ export default function AddPersonnelModal({ isOpen, onClose, onSuccess, type, fi
     setPassword,
     clinicId,
     setClinicId,
-    specialty,
-    setSpecialty,
     isSubmitting,
     error,
     handleSubmit,
-  } = useAddPersonnel({ isOpen, onClose, onSuccess, type, fixedClinicId })
+  } = useAddPersonnel({ isOpen, onClose, onSuccess, type: role, fixedClinicId })
 
   if (!isOpen) return null
 
@@ -39,15 +41,39 @@ export default function AddPersonnelModal({ isOpen, onClose, onSuccess, type, fi
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white w-full max-w-md rounded-xl shadow-xl overflow-hidden">
         <div className="flex justify-between items-center p-6 border-b border-gray-100">
-          <h2 className="text-xl font-bold text-slate-900">
-            Add New {type === 'staff' ? 'Staff Member' : 'Dentist'}
-          </h2>
+          <h2 className="text-xl font-bold text-slate-900">Add New Personnel</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-slate-900 transition">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 text-slate-900 text-sm">
+          {/* Role toggle */}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setRole('staff')}
+              className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${
+                role === 'staff'
+                  ? 'bg-slate-900 text-white'
+                  : 'text-gray-600 border border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              Staff
+            </button>
+            <button
+              type="button"
+              onClick={() => setRole('dentist')}
+              className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${
+                role === 'dentist'
+                  ? 'bg-slate-900 text-white'
+                  : 'text-gray-600 border border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              Dentist
+            </button>
+          </div>
+
           {error && (
             <div className="p-3 bg-red-50 text-red-600 rounded-lg border border-red-100">
               {error}
@@ -117,19 +143,6 @@ export default function AddPersonnelModal({ isOpen, onClose, onSuccess, type, fi
                   </option>
                 ))}
               </select>
-            </div>
-          )}
-
-          {type === 'dentists' && (
-            <div className="space-y-1.5">
-              <label className="font-medium">Specialty</label>
-              <input
-                type="text"
-                value={specialty}
-                onChange={(e) => setSpecialty(e.target.value)}
-                placeholder="e.g. Orthodontist, General Dentistry"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:border-slate-900 outline-none transition"
-              />
             </div>
           )}
 

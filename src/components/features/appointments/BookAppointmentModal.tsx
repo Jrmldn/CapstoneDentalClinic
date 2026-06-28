@@ -5,10 +5,9 @@ import { createPortal } from 'react-dom'
 import { X, AlertCircle, RefreshCw } from 'lucide-react'
 import { createAppointment, PaymentMethod } from '@/actions/appointmentActions'
 import { useAvailableSlots, MILLISECONDS_PER_MINUTE } from './hooks/useAvailableSlots'
-import { registerPatient } from '@/actions/patientCoreActions'
 import type { Patient, Service, Dentist } from './AppointmentTypes'
 import { formatPhone } from '@/utils/phone-helpers'
-import { toDateKey } from '@/lib/date'
+import { toDateKey, formatTo12h } from '@/lib/date'
 
 interface BookAppointmentModalProps {
   isOpen: boolean
@@ -18,6 +17,7 @@ interface BookAppointmentModalProps {
   dentists: Dentist[]
   clinicId: number
   onSuccess: () => void
+  initialPatientId?: number
 }
 
 export default function BookAppointmentModal({
@@ -27,18 +27,12 @@ export default function BookAppointmentModal({
   services,
   dentists,
   clinicId,
-  onSuccess
+  onSuccess,
+  initialPatientId,
 }: BookAppointmentModalProps) {
-  const [isNewPatient, setIsNewPatient] = useState(false)
-  const [selectedPatientId, setSelectedPatientId] = useState<string>('')
-  const [newPatientData, setNewPatientData] = useState({
-    firstName: '',
-    lastName: '',
-    phone: '',
-    birthdate: '',
-    gender: 'male',
-    address: ''
-  })
+  const [selectedPatientId, setSelectedPatientId] = useState<string>(
+    initialPatientId ? String(initialPatientId) : ''
+  )
   const [selectedServiceId, setSelectedServiceId] = useState<string>('')
   const [selectedDentistId, setSelectedDentistId] = useState<string>('')
   const [bookingDate, setBookingDate] = useState('')
@@ -51,16 +45,18 @@ export default function BookAppointmentModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
 
+  useEffect(() => {
+    if (initialPatientId) setSelectedPatientId(String(initialPatientId))
+  }, [initialPatientId])
+
   const resetForm = () => {
-    setSelectedPatientId('')
+    setSelectedPatientId(initialPatientId ? String(initialPatientId) : '')
     setSelectedServiceId('')
     setSelectedDentistId('')
     setBookingDate('')
     setSelectedSlot('')
     setNotes('')
     setDownpayment('0')
-    setIsNewPatient(false)
-    setNewPatientData({ firstName: '', lastName: '', phone: '', birthdate: '', gender: 'male', address: '' })
     clearSlots()
     setFormError('')
   }
@@ -74,52 +70,28 @@ export default function BookAppointmentModal({
     e.preventDefault()
     setFormError('')
 
-    if (!isNewPatient && !selectedPatientId) {
-      setFormError('Please select or register a patient')
+    if (!selectedPatientId) {
+      setFormError('Please select a patient.')
       return
     }
     if (!selectedServiceId) {
-      setFormError('Please select a service')
+      setFormError('Please select a service.')
       return
     }
     if (!selectedDentistId) {
-      setFormError('Please select a dentist')
+      setFormError('Please select a dentist.')
       return
     }
     if (!bookingDate || !selectedSlot) {
-      setFormError('Please choose a slot')
+      setFormError('Please choose a slot.')
       return
     }
 
     setIsSubmitting(true)
 
     try {
-      let patientIdObj = selectedPatientId ? parseInt(selectedPatientId) : null
-
-      if (isNewPatient) {
-        if (!newPatientData.firstName || !newPatientData.lastName || !newPatientData.phone || !newPatientData.birthdate) {
-          throw new Error('Please fill in all required patient fields')
-        }
-        const registrationResult = await registerPatient({
-          first_name: newPatientData.firstName,
-          last_name: newPatientData.lastName,
-          phone: newPatientData.phone,
-          birthdate: newPatientData.birthdate,
-          gender: newPatientData.gender,
-          address: newPatientData.address,
-          is_guest: true,
-          clinic_id: clinicId
-        })
-        if (!registrationResult.success || !registrationResult.patient) {
-          throw new Error(registrationResult.error || 'Failed to register patient')
-        }
-        patientIdObj = registrationResult.patient.id
-      }
-
-      if (!patientIdObj) throw new Error('Please select or register a patient')
-
       const serviceObj = services.find(s => s.id === parseInt(selectedServiceId))
-      if (!serviceObj) throw new Error('Selected service not found')
+      if (!serviceObj) throw new Error('Selected service not found.')
 
       const startIso = `${bookingDate}T${selectedSlot}:00`
       const startDateObj = new Date(startIso)
@@ -127,7 +99,7 @@ export default function BookAppointmentModal({
 
       const bookingResult = await createAppointment({
         clinic_id: clinicId,
-        patient_id: patientIdObj,
+        patient_id: parseInt(selectedPatientId),
         dentist_id: parseInt(selectedDentistId),
         service_id: parseInt(selectedServiceId),
         scheduled_at: startDateObj.toISOString(),
@@ -139,14 +111,14 @@ export default function BookAppointmentModal({
       })
 
       if (!bookingResult.success) {
-        throw new Error(bookingResult.error || 'Failed to book appointment')
+        throw new Error(bookingResult.error || 'Failed to book appointment.')
       }
 
       resetForm()
       onClose()
       onSuccess()
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'An error occurred')
+      setFormError(err instanceof Error ? err.message : 'An error occurred.')
     } finally {
       setIsSubmitting(false)
     }
@@ -174,98 +146,21 @@ export default function BookAppointmentModal({
             </div>
           )}
 
-          {/* Patient Selection Option */}
-          <div className="space-y-3">
-            <div className="flex gap-4 items-center">
-              <label className="text-sm font-semibold text-slate-800">Patient Details</label>
-              <button
-                type="button"
-                onClick={() => setIsNewPatient(!isNewPatient)}
-                className="text-xs text-blue-600 hover:text-blue-700 font-bold transition underline"
-              >
-                {isNewPatient ? 'Select Existing Patient' : 'Register New Walk-in Patient'}
-              </button>
-            </div>
-
-            {!isNewPatient ? (
-              <select
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
-                value={selectedPatientId}
-                onChange={(e) => setSelectedPatientId(e.target.value)}
-              >
-                <option value="">-- Select Patient --</option>
-                {patients.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.last_name}, {p.first_name} ({formatPhone(p.phone)})
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                <div className="space-y-1">
-                  <span className="text-xs font-medium text-slate-600">First Name *</span>
-                  <input
-                    type="text"
-                    required
-                    className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm outline-none"
-                    value={newPatientData.firstName}
-                    onChange={e => setNewPatientData({ ...newPatientData, firstName: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <span className="text-xs font-medium text-slate-600">Last Name *</span>
-                  <input
-                    type="text"
-                    required
-                    className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm outline-none"
-                    value={newPatientData.lastName}
-                    onChange={e => setNewPatientData({ ...newPatientData, lastName: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <span className="text-xs font-medium text-slate-600">Phone Number *</span>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="09XXXXXXXXX"
-                    className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm outline-none"
-                    value={newPatientData.phone}
-                    onChange={e => setNewPatientData({ ...newPatientData, phone: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <span className="text-xs font-medium text-slate-600">Birthdate *</span>
-                  <input
-                    type="date"
-                    required
-                    className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm outline-none"
-                    value={newPatientData.birthdate}
-                    onChange={e => setNewPatientData({ ...newPatientData, birthdate: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <span className="text-xs font-medium text-slate-600">Gender *</span>
-                  <select
-                    className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm outline-none"
-                    value={newPatientData.gender}
-                    onChange={e => setNewPatientData({ ...newPatientData, gender: e.target.value })}
-                  >
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                <div className="space-y-1 col-span-2">
-                  <span className="text-xs font-medium text-slate-600">Address</span>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm outline-none"
-                    value={newPatientData.address}
-                    onChange={e => setNewPatientData({ ...newPatientData, address: e.target.value })}
-                  />
-                </div>
-              </div>
-            )}
+          {/* Patient Selection */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-800">Patient</label>
+            <select
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+              value={selectedPatientId}
+              onChange={(e) => setSelectedPatientId(e.target.value)}
+            >
+              <option value="">-- Select Patient --</option>
+              {patients.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.last_name}, {p.first_name} ({formatPhone(p.phone)})
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Service & Dentist selection */}
@@ -310,7 +205,7 @@ export default function BookAppointmentModal({
                 <option value="">-- Choose Dentist --</option>
                 {dentists.map(d => (
                   <option key={d.id} value={d.id}>
-                    Dr. {d.first_name} {d.last_name} ({d.specialty})
+                    Dr. {d.first_name} {d.last_name}
                   </option>
                 ))}
               </select>
@@ -356,7 +251,7 @@ export default function BookAppointmentModal({
                             : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
                         }`}
                       >
-                        {slot.start}
+                        {formatTo12h(slot.start)}
                       </button>
                     ))}
                   </div>

@@ -5,7 +5,6 @@ import { useSearchParams } from 'next/navigation'
 import { User, ShieldAlert, CheckCircle2, Info } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { updatePatientProfile } from '@/actions/patientCoreActions'
 import { PatientRecord } from './types'
 import { isPlaceholderPhone, formatPhone } from '@/utils/phone-helpers'
@@ -29,12 +28,12 @@ export function ProfileTab({ record }: ProfileTabProps) {
   const [profileBirthdate, setProfileBirthdate] = useState(record.patient.birthdate || '')
   const [profileGender, setProfileGender] = useState(record.patient.gender || 'male')
   const [profileAddress, setProfileAddress] = useState(record.patient.address || '')
-  const [previousDentist, setPreviousDentist] = useState((record.patient as any).previous_dentist || '')
+  const [previousDentist, setPreviousDentist] = useState(record.patient.previous_dentist || '')
 
   // Guardian fields (shown for minors)
-  const [guardianName, setGuardianName] = useState((record.patient as any).guardian_name || '')
-  const [guardianAddress, setGuardianAddress] = useState((record.patient as any).guardian_address || '')
-  const [guardianPhone, setGuardianPhone] = useState((record.patient as any).guardian_phone || '')
+  const [guardianName, setGuardianName] = useState(record.patient.guardian_name || '')
+  const [guardianAddress, setGuardianAddress] = useState(record.patient.guardian_address || '')
+  const [guardianPhone, setGuardianPhone] = useState(record.patient.guardian_phone || '')
 
   const isMinor = profileBirthdate
     ? Math.floor((Date.now() - new Date(profileBirthdate).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) < 18
@@ -64,7 +63,7 @@ export function ProfileTab({ record }: ProfileTabProps) {
       } else {
         setProfileStatus({ error: res.error || 'Failed to update profile.' })
       }
-    } catch (err) {
+    } catch {
       setProfileStatus({ error: 'An unexpected error occurred.' })
     }
   }
@@ -255,10 +254,10 @@ export function ProfileTab({ record }: ProfileTabProps) {
                     setProfileBirthdate(record.patient.birthdate || '')
                     setProfileGender(record.patient.gender || 'male')
                     setProfileAddress(record.patient.address || '')
-                    setPreviousDentist((record.patient as any).previous_dentist || '')
-                    setGuardianName((record.patient as any).guardian_name || '')
-                    setGuardianPhone((record.patient as any).guardian_phone || '')
-                    setGuardianAddress((record.patient as any).guardian_address || '')
+                    setPreviousDentist(record.patient.previous_dentist || '')
+                    setGuardianName(record.patient.guardian_name || '')
+                    setGuardianPhone(record.patient.guardian_phone || '')
+                    setGuardianAddress(record.patient.guardian_address || '')
                   }}
                   className="font-bold text-slate-500 hover:bg-slate-100 cursor-pointer"
                 >

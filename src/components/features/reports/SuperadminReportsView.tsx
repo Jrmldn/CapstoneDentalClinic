@@ -9,6 +9,7 @@ import {
   generateAppointmentSummary,
   generateServiceFrequency
 } from '@/actions/reportActions'
+import type { SalesReport, ApptReport, ServiceFrequencyReport } from './types'
 
 interface ClinicOption {
   id: number
@@ -21,9 +22,9 @@ interface SuperadminReportsViewProps {
 
 export default function SuperadminReportsView({ clinics }: SuperadminReportsViewProps) {
   const [selectedClinicId, setSelectedClinicId] = useState<number | ''>('')
-  const [salesReport, setSalesReport] = useState<any>(null)
-  const [apptReport, setApptReport] = useState<any>(null)
-  const [freqReport, setFreqReport] = useState<any>(null)
+  const [salesReport, setSalesReport] = useState<SalesReport | null>(null)
+  const [apptReport, setApptReport] = useState<ApptReport | null>(null)
+  const [freqReport, setFreqReport] = useState<ServiceFrequencyReport | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
   // Default date ranges (last 30 days)

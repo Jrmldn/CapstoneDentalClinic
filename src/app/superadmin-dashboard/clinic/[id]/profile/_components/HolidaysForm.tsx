@@ -8,8 +8,8 @@ import { formatDate } from '@/lib/date'
 interface ClinicHoliday {
   id: number
   date: string
-  description: string
-  is_special_day: boolean
+  description: string | null
+  is_special_day: boolean | null
 }
 
 interface HolidaysFormProps {
