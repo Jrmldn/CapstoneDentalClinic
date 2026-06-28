@@ -2,9 +2,7 @@ import React from 'react'
 import { enforceRole } from '@/lib/auth/protection'
 import { handleLogout } from '@/actions/handleLogout'
 import { createClient } from '@/lib/supabase/serverSSR'
-import PatientSidebar from './_components/Sidebar'
-import PatientTopBar from './_components/TopBar'
-import MobileTabs from './_components/MobileTabs'
+import PatientLayoutClient from './_components/PatientLayoutClient'
 
 interface PatientLayoutProps {
   children: React.ReactNode
@@ -30,23 +28,12 @@ export default async function PatientLayout({ children }: PatientLayoutProps) {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
-      {/* Sidebar */}
-      <PatientSidebar patientName={patientName} />
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top bar */}
-        <PatientTopBar user={user} clinicName="AppointDent" logoutAction={logoutAction} />
-
-        {/* Page content */}
-        <main className="flex-1 p-6 max-w-5xl w-full mx-auto space-y-6 overflow-y-auto">
-          {/* Mobile responsive navigation link bar */}
-          <MobileTabs />
-
-          {children}
-        </main>
-      </div>
-    </div>
+    <PatientLayoutClient
+      patientName={patientName}
+      user={user}
+      logoutAction={logoutAction}
+    >
+      {children}
+    </PatientLayoutClient>
   )
 }

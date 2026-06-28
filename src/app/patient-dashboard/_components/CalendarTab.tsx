@@ -9,7 +9,9 @@ import {
   ChevronLeft,
   ChevronRight,
   AlertCircle,
+  X,
 } from 'lucide-react'
+import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
 import { PatientRecord } from './types'
 import { toDateKey, formatDate, formatTime } from '@/lib/date'
@@ -30,6 +32,22 @@ export function CalendarTab({
   const [calYear, setCalYear] = useState(now.getFullYear())
   const [calMonth, setCalMonth] = useState(now.getMonth() + 1) // 1-indexed
   const [selectedCalDate, setSelectedCalDate] = useState<string>('')
+  const [mounted, setMounted] = useState(false)
+  const [isMobileModalOpen, setIsMobileModalOpen] = useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  React.useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isMobileModalOpen) {
+        setIsMobileModalOpen(false)
+      }
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [isMobileModalOpen])
 
   const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
   const WEEKDAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
@@ -217,7 +235,17 @@ export function CalendarTab({
               return (
                 <button
                   key={dateStr}
-                  onClick={() => setSelectedCalDate(dateStr)}
+                  onClick={() => {
+                    const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024
+                    if (isMobile) {
+                      if (dayAppts.length > 0) {
+                        setSelectedCalDate(dateStr)
+                        setIsMobileModalOpen(true)
+                      }
+                    } else {
+                      setSelectedCalDate(dateStr)
+                    }
+                  }}
                   className={`aspect-square border rounded-xl p-2 flex flex-col justify-between items-start transition ${cellBg} ${borderStyle} text-left outline-none relative group`}
                 >
                   <span className={`text-sm font-bold ${
@@ -241,8 +269,8 @@ export function CalendarTab({
           </div>
         </div>
 
-        {/* Selected Day Details */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex flex-col justify-between max-h-[600px]">
+        {/* Selected Day Details (Desktop only) */}
+        <div className="hidden lg:flex bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex-col justify-between max-h-[600px]">
           <div>
             <div className="border-b border-gray-100 pb-3 mb-4 flex items-center justify-between">
               <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
@@ -348,6 +376,134 @@ export function CalendarTab({
           </div>
         </div>
       </div>
+
+      {/* Mobile Modal for Day Details */}
+      {mounted && isMobileModalOpen && selectedCalDate && createPortal(
+        <div
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 lg:hidden"
+          onClick={() => {
+            setIsMobileModalOpen(false)
+            setSelectedCalDate('')
+          }}
+        >
+          <div
+            className="bg-white rounded-xl border border-gray-100 shadow-xl p-5 flex flex-col justify-between max-h-[90vh] w-full max-w-md relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => {
+                setIsMobileModalOpen(false)
+                setSelectedCalDate('')
+              }}
+              className="absolute top-4 right-4 p-1.5 hover:bg-gray-100 border border-gray-200 rounded-lg transition"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+
+            <div>
+              <div className="border-b border-gray-100 pb-3 mb-4 flex items-center justify-between">
+                <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-blue-600" />
+                  Day Details
+                </h3>
+                <span className="text-xs text-gray-500 font-semibold mr-8">
+                  {formatDate(selectedCalDate)}
+                </span>
+              </div>
+
+              <div className="space-y-4 overflow-y-auto max-h-[60vh] pr-1">
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                    Appointments ({selectedCalAppts.length})
+                  </h4>
+                  {selectedCalAppts.map((appt) => {
+                    const time = formatTime(appt.scheduled_at)
+                    const colors = getStatusColor(appt.status)
+                    return (
+                      <div key={appt.id} className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-1.5">
+                        {appt.status === 'pending_patient_confirm' && (
+                          <div className="flex flex-col gap-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                            <div className="flex items-start gap-3">
+                              <AlertCircle className="w-4 h-4 text-purple-600 mt-0.5 shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-purple-800">
+                                  The clinic rescheduled your appointment to a new time.
+                                </p>
+                                <p className="text-xs text-purple-600 mt-0.5">
+                                  New time: {formatDate(appt.scheduled_at)} at {time}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex gap-2 justify-end">
+                              <Button
+                                size="sm"
+                                className="bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs"
+                                disabled={loadingId === appt.id}
+                                onClick={() => {
+                                  handleConfirmReschedule(appt.id)
+                                  setIsMobileModalOpen(false)
+                                  setSelectedCalDate('')
+                                }}
+                              >
+                                Confirm
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-red-500 border-red-200 hover:bg-red-50 font-semibold text-xs"
+                                disabled={loadingId === appt.id}
+                                onClick={() => {
+                                  handleDeclineReschedule(appt.id)
+                                  setIsMobileModalOpen(false)
+                                  setSelectedCalDate('')
+                                }}
+                              >
+                                Decline
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center">
+                          <span className="font-semibold text-slate-800 text-sm">
+                            {appt.services?.name || 'Appointment'}
+                          </span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${colors.badge}`}>
+                            {getStatusLabel(appt.status)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5 text-gray-400" />
+                            {time}
+                          </span>
+                          <span className="font-semibold text-slate-700">
+                            Dr. {appt.dentists?.first_name} {appt.dentists?.last_name}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {new Date(selectedCalDate) >= new Date(new Date().toDateString()) && (
+                  <button
+                    onClick={() => {
+                      setIsMobileModalOpen(false)
+                      setSelectedCalDate('')
+                      router.push(`/patient-dashboard/booking?date=${selectedCalDate}`)
+                    }}
+                    className="w-full flex items-center justify-center gap-1.5 px-4 py-2 bg-slate-900 text-white text-xs font-semibold rounded-lg hover:bg-slate-800 transition shadow-sm"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    {selectedCalAppts.length === 0 ? 'Book on this date' : 'Book another on this date'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   )
 }

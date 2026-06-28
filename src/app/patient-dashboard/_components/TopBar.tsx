@@ -1,24 +1,35 @@
 'use client'
 
 import React from 'react'
-import { LogOut, Bell } from 'lucide-react'
+import { LogOut, Bell, Menu } from 'lucide-react'
 
 interface PatientTopBarProps {
   user: { email: string }
   clinicName: string
   logoutAction: () => void
+  onMenuToggle?: () => void
 }
 
-export default function PatientTopBar({ user, clinicName, logoutAction }: PatientTopBarProps) {
+export default function PatientTopBar({ user, clinicName, logoutAction, onMenuToggle }: PatientTopBarProps) {
   return (
-    <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-8 flex-shrink-0 print:hidden">
-      {/* Clinic context */}
+    <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 sm:px-8 flex-shrink-0 print:hidden">
+      {/* Left side (Hamburger & Clinic Context) */}
       <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-500 hidden sm:inline">Clinic:</span>
-        <span className="text-sm font-semibold text-slate-800">{clinicName}</span>
-        <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-          Active
-        </span>
+        <button
+          onClick={onMenuToggle}
+          className="p-2 -ml-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 md:hidden transition"
+          aria-label="Toggle Menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500 hidden sm:inline">Clinic:</span>
+          <span className="text-sm font-semibold text-slate-800">{clinicName}</span>
+          <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            Active
+          </span>
+        </div>
       </div>
 
       {/* Right side */}

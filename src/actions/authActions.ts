@@ -73,17 +73,41 @@ export async function signUpPatient(input: SignUpPatientInput): Promise<{ succes
     if (patientRow?.id) {
       const headersList = await headers()
       const ipAddress = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || headersList.get('x-real-ip') || '127.0.0.1'
-      const { error: consentError } = await supabaseAdmin
+      // Ensure the consent row exists, whether or not the trigger created it
+      const { data: existingConsent } = await supabaseAdmin
         .from('informed_consent')
-        .insert({
-          patient_id: patientRow.id,
-          accepted_at: new Date().toISOString(),
-          ip_address: ipAddress,
-        })
-      if (consentError) {
-        console.error('Failed to insert informed consent record:', consentError)
-        await rollbackSignup(userId!)
-        return { success: false, error: 'Failed to record informed consent.' }
+        .select('id')
+        .eq('patient_id', patientRow.id)
+        .maybeSingle()
+
+      if (existingConsent) {
+        const { error: consentError } = await supabaseAdmin
+          .from('informed_consent')
+          .update({
+            accepted_at: new Date().toISOString(),
+            ip_address: ipAddress,
+          })
+          .eq('id', existingConsent.id)
+          
+        if (consentError) {
+          console.error('Failed to update informed consent record:', consentError)
+          await rollbackSignup(userId!)
+          return { success: false, error: 'Failed to record informed consent.' }
+        }
+      } else {
+        const { error: consentError } = await supabaseAdmin
+          .from('informed_consent')
+          .insert({
+            patient_id: patientRow.id,
+            accepted_at: new Date().toISOString(),
+            ip_address: ipAddress,
+          })
+          
+        if (consentError) {
+          console.error('Failed to insert informed consent record:', consentError)
+          await rollbackSignup(userId!)
+          return { success: false, error: 'Failed to record informed consent.' }
+        }
       }
     }
 

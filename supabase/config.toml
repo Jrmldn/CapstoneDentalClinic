@@ -1,5 +1,5 @@
 [functions.send-appointment-reminders]
-schedule = "0 8 * * *"
+# schedule = "0 8 * * *"
 
 [functions.send-six-month-recalls]
-schedule = "0 9 1 * *"
+# schedule = "0 9 1 * *"
