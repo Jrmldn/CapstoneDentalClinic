@@ -52,13 +52,13 @@ export default function StaffDashboardView({ staffName, todayAppts, stats }: Sta
   const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 18 ? 'Good afternoon' : 'Good evening'
 
   return (
-    <div className="p-6 md:p-8 space-y-8">
+    <div className="p-4 sm:p-6 md:p-8 space-y-6 sm:space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">
-          {greeting}, {staffName} !
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
+          {greeting}, {staffName}!
         </h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <p className="text-xs sm:text-sm text-gray-500 mt-1">
           {formatDateLong(new Date())}
         </p>
       </div>
@@ -103,7 +103,7 @@ export default function StaffDashboardView({ staffName, todayAppts, stats }: Sta
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Today's schedule */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex justify-between items-center">
             <h2 className="text-sm font-semibold text-slate-800">Today&apos;s Schedule</h2>
             <Link
               href="/staff-dashboard/appointments"
@@ -124,7 +124,7 @@ export default function StaffDashboardView({ staffName, todayAppts, stats }: Sta
                 const service = appt.services
                 const time = formatTime(appt.scheduled_at)
                 return (
-                  <div key={appt.id} className="px-6 py-3 flex items-center justify-between hover:bg-gray-50 transition">
+                  <div key={appt.id} className="px-4 sm:px-6 py-3 flex items-center justify-between hover:bg-gray-50 transition">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="flex-shrink-0">
                         <Clock className="w-4 h-4 text-gray-400" />
@@ -149,7 +149,7 @@ export default function StaffDashboardView({ staffName, todayAppts, stats }: Sta
 
         {/* Low stock alerts */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex justify-between items-center">
             <h2 className="text-sm font-semibold text-slate-800">Inventory Alerts</h2>
             <Link
               href="/staff-dashboard/inventory"
@@ -166,7 +166,7 @@ export default function StaffDashboardView({ staffName, todayAppts, stats }: Sta
               </div>
             ) : (
               stats.lowStockItems.slice(0, 6).map((item) => (
-                <div key={item.id} className="px-6 py-3 flex items-center justify-between hover:bg-gray-50 transition">
+                <div key={item.id} className="px-4 sm:px-6 py-3 flex items-center justify-between hover:bg-gray-50 transition">
                   <div className="flex items-center gap-3">
                     <Package className="w-4 h-4 text-amber-400 flex-shrink-0" />
                     <p className="text-sm font-medium text-slate-800">{item.name}</p>

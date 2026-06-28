@@ -38,15 +38,15 @@ export default function ImageSlider({
       
       {images.length > 1 && (
         <>
-          <button 
+           <button 
             onClick={handlePrevImg}
-            className="absolute left-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full bg-white/80 text-slate-800 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white z-10"
+            className="absolute left-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full bg-white/80 text-slate-800 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white z-10"
           >
             <ChevronLeft className={compact ? "w-3.5 h-3.5" : "w-5 h-5"} />
           </button>
           <button 
             onClick={handleNextImg}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full bg-white/80 text-slate-800 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white z-10"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full bg-white/80 text-slate-800 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white z-10"
           >
             <ChevronRight className={compact ? "w-3.5 h-3.5" : "w-5 h-5"} />
           </button>

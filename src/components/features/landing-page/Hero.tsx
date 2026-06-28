@@ -36,24 +36,40 @@ export function Hero({
                 Your Dental Health,
                 <span className="text-blue-600"> Simplified</span>
               </h1>
-              <p className="text-xl text-gray-600 leading-relaxed">
+              <p className="text-lg sm:text-xl text-gray-600 leading-relaxed">
                 Book appointments, manage your dental records, and find the perfect clinic - all in one powerful platform designed for patients.
               </p>
             </div>
 
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 pt-2">
+              <a
+                href="#clinic-map"
+                className="inline-flex items-center justify-center px-6 py-3.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition shadow-lg shadow-blue-200 text-center text-sm sm:text-base"
+              >
+                Find a Clinic
+              </a>
+              <a
+                href="/login"
+                className="inline-flex items-center justify-center px-6 py-3.5 rounded-xl bg-white text-blue-600 border border-blue-200 font-semibold hover:bg-blue-50 transition text-center text-sm sm:text-base"
+              >
+                Book Appointment
+              </a>
+            </div>
+
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-8 pt-8 border-t border-gray-200">
+            <div className="grid grid-cols-3 gap-4 sm:gap-8 pt-8 border-t border-gray-200">
               <div>
-                <div className="text-3xl font-bold text-gray-900">{formatCount(clinicsCount)}</div>
-                <div className="text-sm text-gray-600">Partner Clinics</div>
+                <div className="text-2xl sm:text-3xl font-bold text-gray-900">{formatCount(clinicsCount)}</div>
+                <div className="text-xs sm:text-sm text-gray-600">Partner Clinics</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-gray-900">{formatCount(patientsCount)}</div>
-                <div className="text-sm text-gray-600">Happy Patients</div>
+                <div className="text-2xl sm:text-3xl font-bold text-gray-900">{formatCount(patientsCount)}</div>
+                <div className="text-xs sm:text-sm text-gray-600">Happy Patients</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-gray-900">{averageRating.toFixed(1)}</div>
-                <div className="text-sm text-gray-600">Average Rating</div>
+                <div className="text-2xl sm:text-3xl font-bold text-gray-900">{averageRating.toFixed(1)}</div>
+                <div className="text-xs sm:text-sm text-gray-600">Average Rating</div>
               </div>
             </div>
           </div>

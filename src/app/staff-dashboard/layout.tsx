@@ -1,8 +1,7 @@
 import { enforceRole } from '@/lib/auth/protection'
 import { handleLogout } from '@/actions/handleLogout'
 import { createClient } from '@/lib/supabase/serverSSR'
-import StaffSidebar from './_components/Sidebar'
-import StaffTopBar from './_components/TopBar'
+import StaffLayoutClient from './_components/StaffLayoutClient'
 
 interface StaffLayoutProps {
   children: React.ReactNode
@@ -31,20 +30,12 @@ export default async function StaffLayout({ children }: StaffLayoutProps) {
   const logoutAction = handleLogout.bind(null, '/login')
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
-      {/* Sidebar */}
-      <StaffSidebar />
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top bar */}
-        <StaffTopBar user={user} clinicName={clinicName} logoutAction={logoutAction} />
-
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto">
-          {children}
-        </main>
-      </div>
-    </div>
+    <StaffLayoutClient
+      user={user}
+      clinicName={clinicName}
+      logoutAction={logoutAction}
+    >
+      {children}
+    </StaffLayoutClient>
   )
 }

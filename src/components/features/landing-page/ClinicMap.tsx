@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useRef, useEffect } from 'react'
+import React, { useRef, useEffect, useState } from 'react'
 import { MapPin, Navigation } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from '@/lib/utils'
@@ -25,6 +25,7 @@ const LeafletMapInner = dynamic(
  * The filtering UI is delegated to the FilterSection component.
  */
 export const ClinicMap = ({ clinics }: ClinicMapProps) => {
+  const [mobileView, setMobileView] = useState<'list' | 'map'>('list')
   const {
     showOpenOnly,
     setShowOpenOnly,
@@ -58,9 +59,12 @@ export const ClinicMap = ({ clinics }: ClinicMapProps) => {
         setShowOpenOnly={setShowOpenOnly}
       />
 
-      <div className="grid lg:grid-cols-3 gap-6 h-[650px]">
+      <div className="grid lg:grid-cols-3 gap-6 h-auto lg:h-[650px]">
         {/* Main Map Container */}
-        <div className="lg:col-span-2 rounded-xl overflow-hidden border border-slate-200 shadow-lg bg-slate-50 relative min-h-[400px]">
+        <div className={cn(
+          "lg:col-span-2 rounded-xl overflow-hidden border border-slate-200 shadow-lg bg-slate-50 relative min-h-[350px] sm:min-h-[400px] h-[450px] lg:h-auto",
+          mobileView === 'map' ? 'block' : 'hidden lg:block'
+        )}>
           {/* Manual Loading UI controlled by state, not dynamic loader */}
           {!isMapReady && (
             <div className="absolute inset-0 flex items-center justify-center bg-slate-50 z-20">
@@ -95,7 +99,10 @@ export const ClinicMap = ({ clinics }: ClinicMapProps) => {
         {/* Sidebar Clinic List — scrollable but scrollbar hidden */}
         <div
           ref={sidebarRef}
-          className="flex flex-col gap-4 overflow-y-auto no-scrollbar px-1.5 py-1.5"
+          className={cn(
+            "flex-col gap-4 overflow-y-auto no-scrollbar px-1.5 py-1.5 h-[550px] lg:h-auto w-full",
+            mobileView === 'list' ? 'flex' : 'hidden lg:flex'
+          )}
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {filteredClinics.map((clinic) => (
@@ -114,7 +121,7 @@ export const ClinicMap = ({ clinics }: ClinicMapProps) => {
                 operatingHours={clinic.clinic_operating_hours}
                 onClick={() => setActiveClinicId(clinic.id)}
                 className={cn(
-                  "shrink-0 transition-all duration-150",
+                  "shrink-0 transition-all duration-150 w-full",
                   activeClinicId === clinic.id
                     ? "ring-[2.5px] ring-blue-600 shadow-md"
                     : "hover:ring-2 hover:ring-blue-200 hover:shadow-md"
@@ -123,12 +130,32 @@ export const ClinicMap = ({ clinics }: ClinicMapProps) => {
             </div>
           ))}
           {filteredClinics.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2 bg-white rounded-xl border border-slate-100">
+            <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2 bg-white rounded-xl border border-slate-100 min-h-[200px]">
               <MapPin className="w-8 h-8 opacity-20" />
               <p className="text-sm font-medium">No clinics match your filters</p>
             </div>
           )}
         </div>
+      </div>
+
+      {/* Floating Toggle Button for Mobile */}
+      <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-30">
+        <button
+          onClick={() => setMobileView(v => v === 'list' ? 'map' : 'list')}
+          className="flex items-center gap-2 px-5 py-3 rounded-full bg-slate-900 text-white font-semibold shadow-xl hover:bg-slate-800 transition active:scale-95 text-sm"
+        >
+          {mobileView === 'list' ? (
+            <>
+              <Navigation className="w-4 h-4 text-blue-400" />
+              <span>Show Map</span>
+            </>
+          ) : (
+            <>
+              <MapPin className="w-4 h-4 text-blue-400" />
+              <span>Show List</span>
+            </>
+          )}
+        </button>
       </div>
     </div>
   )

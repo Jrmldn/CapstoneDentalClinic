@@ -212,6 +212,14 @@ export async function reorderClinicGalleryImages(rows: { id: number; sort_order:
   }
 }
 
+export async function manageClinicHMOs(clinicId: number, hmoNames: string[]) {
+  const auth = await ensureRole('superadmin')
+  if (!auth.success) return { success: false, error: auth.error }
+  void clinicId
+  void hmoNames
+  return { success: true }
+}
+
 export async function manageClinicSpecialties(clinicId: number, specialties: string[]) {
   const auth = await ensureRole('superadmin')
   if (!auth.success) return { success: false, error: auth.error }

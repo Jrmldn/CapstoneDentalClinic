@@ -35,6 +35,8 @@ export default async function ClinicProfilePage() {
       .order('sort_order', { ascending: true }),
   ])
 
+  if (!clinicRes.data) redirect('/staff-dashboard')
+
   return (
     <div className="p-6 md:p-8">
       <div className="mb-6">

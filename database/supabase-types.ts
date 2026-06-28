@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -1130,6 +1130,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      clinic_hmo: {
+        Row: {
+          id: number
+          clinic_id: number
+          hmo_name: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: number
+          clinic_id: number
+          hmo_name: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: number
+          clinic_id?: number
+          hmo_name?: string
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      clinic_specialties: {
+        Row: {
+          id: number
+          clinic_id: number
+          specialty_name: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: number
+          clinic_id: number
+          specialty_name: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: number
+          clinic_id?: number
+          specialty_name?: string
+          created_at?: string | null
+        }
+        Relationships: []
       }
       patient_medical_history: {
         Row: {
