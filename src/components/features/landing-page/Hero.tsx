@@ -1,5 +1,4 @@
-import { Button } from "@/components/ui/button";
-import { Calendar, ArrowRight } from "lucide-react";
+import { Calendar } from "lucide-react";
 import Image from "next/image"; // FIX: Imported next/image
 
 export function Hero({
@@ -40,17 +39,6 @@ export function Hero({
               <p className="text-xl text-gray-600 leading-relaxed">
                 Book appointments, manage your dental records, and find the perfect clinic - all in one powerful platform designed for patients.
               </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" className="group">
-                <Calendar className="mr-2 h-5 w-5" />
-                Book Appointment
-                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </Button>
-              <Button size="lg" variant="outline">
-                Learn More
-              </Button>
             </div>
 
             {/* Stats */}

@@ -39,11 +39,12 @@ export function AppointmentsTab({
     .filter(isPastAppointment)
     .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime())
 
-  const PAGE_SIZE = 10
-  const upcomingTotalPages = Math.max(1, Math.ceil(upcomingAppointments.length / PAGE_SIZE))
-  const paginatedUpcoming = upcomingAppointments.slice((upcomingPage - 1) * PAGE_SIZE, upcomingPage * PAGE_SIZE)
-  const pastTotalPages = Math.max(1, Math.ceil(pastAppointments.length / PAGE_SIZE))
-  const paginatedPast = pastAppointments.slice((pastPage - 1) * PAGE_SIZE, pastPage * PAGE_SIZE)
+  const UPCOMING_PAGE_SIZE = 10
+  const PAST_PAGE_SIZE = 5
+  const upcomingTotalPages = Math.max(1, Math.ceil(upcomingAppointments.length / UPCOMING_PAGE_SIZE))
+  const paginatedUpcoming = upcomingAppointments.slice((upcomingPage - 1) * UPCOMING_PAGE_SIZE, upcomingPage * UPCOMING_PAGE_SIZE)
+  const pastTotalPages = Math.max(1, Math.ceil(pastAppointments.length / PAST_PAGE_SIZE))
+  const paginatedPast = pastAppointments.slice((pastPage - 1) * PAST_PAGE_SIZE, pastPage * PAST_PAGE_SIZE)
 
   const handleConfirmReschedule = async (apptId: number) => {
     setLoadingId(apptId)
@@ -307,7 +308,9 @@ export function AppointmentsTab({
           )}
           {pastTotalPages > 1 && (
             <div className="flex items-center justify-between pt-2">
-              <p className="text-xs text-slate-400">Page {pastPage} of {pastTotalPages}</p>
+              <p className="text-xs text-slate-400">
+                Showing {(pastPage - 1) * PAST_PAGE_SIZE + 1}–{Math.min(pastPage * PAST_PAGE_SIZE, pastAppointments.length)} of {pastAppointments.length}
+              </p>
               <div className="flex gap-2">
                 <button
                   onClick={() => setPastPage(p => Math.max(1, p - 1))}
