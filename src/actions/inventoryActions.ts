@@ -57,7 +57,7 @@ export async function updateInventoryStock(
   reason: string
 ) {
   try {
-    const auth = await ensureRole('staff')
+    const auth = await ensureRole('staff', 'dentist')
     if (!auth.success) return { success: false, error: auth.error }
 
     const { data: item, error: fetchError } = await getInventoryItemById(itemId)
@@ -140,6 +140,27 @@ export async function fetchInventory(clinicId: number) {
     return { success: true, items: normalized }
   } catch (error) {
     console.error('Error in fetchInventory:', error)
+    return { success: false, error: sanitizeServerError(error), items: [] }
+  }
+}
+
+export async function fetchInventoryForDentist(clinicId: number) {
+  try {
+    const auth = await ensureRole('dentist', 'staff')
+    if (!auth.success) return { success: false, error: auth.error, items: [] }
+
+    const { data: items, error } = await getInventoryItemsByClinic(clinicId)
+
+    if (error) throw new Error(error.message)
+
+    const normalized = (items as unknown as InventoryItemRaw[]).map(item => ({
+      ...item,
+      inventory_categories: normalizeRelation(item.inventory_categories),
+    })) as InventoryItem[]
+
+    return { success: true, items: normalized }
+  } catch (error) {
+    console.error('Error in fetchInventoryForDentist:', error)
     return { success: false, error: sanitizeServerError(error), items: [] }
   }
 }

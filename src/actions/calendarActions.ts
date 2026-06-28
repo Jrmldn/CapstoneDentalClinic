@@ -120,7 +120,6 @@ export async function fetchCalendarData(
       .eq('clinic_id', clinicId)
       .gte('scheduled_at', queryStart)
       .lte('scheduled_at', queryEnd)
-      .not('status', 'in', '(cancelled,no_show)')
       .order('scheduled_at', { ascending: true })
 
     if (dentistId) {

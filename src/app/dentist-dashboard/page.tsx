@@ -1,9 +1,12 @@
 import { enforceRole } from '@/lib/auth/protection'
 import { getDentistRecordByUserId, getDentistDashboardData } from '@/services/dashboardService'
 import { fetchServices } from '@/actions/serviceActions'
+import { fetchInventoryForDentist } from '@/actions/inventoryActions'
+import { supabaseAdmin } from '@/lib/supabase/server'
 import DentistDashboardView, { Appointment } from '@/components/features/dashboard/DentistDashboardView'
 import { DentistRawAppointment } from '@/components/features/dashboard/types'
 import type { Service } from '@/components/features/billing/types'
+import type { InventoryItem } from '@/components/features/inventory/types'
 import { normalizeRelation } from '@/lib/utils'
 import { toDateKey } from '@/lib/date'
 import { AlertCircle } from 'lucide-react'
@@ -90,19 +93,31 @@ export default async function DentistDashboardPage() {
 
   const dentistName = `${dentistRecord.first_name} ${dentistRecord.last_name}`
 
+  const { data: clinicData } = await supabaseAdmin
+    .from('clinics')
+    .select('name')
+    .eq('id', clinicId)
+    .maybeSingle()
+  const branchName = clinicData?.name || 'Clinic'
+
   const servicesRes = await fetchServices(clinicId)
   const services = (servicesRes.services ?? []) as Service[]
+
+  const inventoryRes = await fetchInventoryForDentist(clinicId)
+  const inventoryItems = (inventoryRes.items ?? []) as InventoryItem[]
 
   return (
     <DentistDashboardView
       dentistId={dentistId}
       dentistUserId={authUser.id}
       dentistName={dentistName}
+      branchName={branchName}
       clinicId={clinicId}
       todayAppts={todayAppts}
       upcomingAppts={upcomingAppts}
       stats={stats}
       services={services}
+      inventoryItems={inventoryItems}
     />
   )
 }

@@ -1,38 +1,23 @@
 'use client'
 
-import { Calendar, Clock, Check, DollarSign } from 'lucide-react'
+import { Calendar, Clock, Check } from 'lucide-react'
 import type { Appointment } from './AppointmentTypes'
 import { formatPhone } from '@/utils/phone-helpers'
 import { formatDate, formatTime } from '@/lib/date'
+import { AppointmentStatusBadge } from './AppointmentStatusBadge'
 
 interface AppointmentTableProps {
   filteredAppointments: Appointment[]
   onConfirm: (id: number) => void
   onReschedule: (appt: Appointment) => void
-  onOpenBilling: (appt: Appointment) => void
   onNoShow: (id: number) => void
   onCancel: (id: number) => void
-}
-
-function getStatusBadgeClass(status: string): string {
-  switch (status) {
-    case 'confirmed': return 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-    case 'pending': return 'bg-amber-50 text-amber-700 border border-amber-200'
-    case 'completed': return 'bg-slate-50 text-slate-600 border border-slate-200'
-    case 'cancelled': return 'bg-red-50 text-red-700 border border-red-200'
-    case 'rescheduled': return 'bg-blue-50 text-blue-700 border border-blue-200'
-    case 'no_show': return 'bg-orange-50 text-orange-700 border border-orange-200'
-    case 'follow_up': return 'bg-teal-50 text-teal-700 border border-teal-200'
-    case 'pending_patient_confirm': return 'bg-purple-50 text-purple-700 border border-purple-200'
-    default: return 'bg-gray-50 text-gray-700 border border-gray-200'
-  }
 }
 
 export default function AppointmentTable({
   filteredAppointments,
   onConfirm,
   onReschedule,
-  onOpenBilling,
   onNoShow,
   onCancel,
 }: AppointmentTableProps) {
@@ -101,9 +86,7 @@ export default function AppointmentTable({
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full capitalize ${getStatusBadgeClass(appt.status)}`}>
-                      {appt.status.replace(/_/g, ' ')}
-                    </span>
+                    <AppointmentStatusBadge status={appt.status} className="text-[11px]" />
                   </td>
                   <td className="px-6 py-4">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
@@ -131,15 +114,6 @@ export default function AppointmentTable({
                           className="px-2 py-1 text-slate-600 bg-slate-50 border border-slate-200 rounded hover:bg-slate-100 text-xs font-semibold"
                         >
                           Reschedule
-                        </button>
-                      )}
-                      {appt.status === 'confirmed' && (
-                        <button
-                          onClick={() => onOpenBilling(appt)}
-                          className="px-2 py-1 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded hover:bg-emerald-100 text-xs font-semibold flex items-center gap-1"
-                        >
-                          <DollarSign className="w-3.5 h-3.5" />
-                          Complete &amp; Bill
                         </button>
                       )}
                       {(appt.status === 'pending' || appt.status === 'confirmed' || appt.status === 'rescheduled' || appt.status === 'pending_patient_confirm') && (

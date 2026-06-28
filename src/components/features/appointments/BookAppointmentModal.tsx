@@ -7,7 +7,7 @@ import { createAppointment, PaymentMethod } from '@/actions/appointmentActions'
 import { useAvailableSlots, MILLISECONDS_PER_MINUTE } from './hooks/useAvailableSlots'
 import type { Patient, Service, Dentist } from './AppointmentTypes'
 import { formatPhone } from '@/utils/phone-helpers'
-import { toDateKey } from '@/lib/date'
+import { toDateKey, formatTo12h } from '@/lib/date'
 
 interface BookAppointmentModalProps {
   isOpen: boolean
@@ -251,7 +251,7 @@ export default function BookAppointmentModal({
                             : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
                         }`}
                       >
-                        {slot.start}
+                        {formatTo12h(slot.start)}
                       </button>
                     ))}
                   </div>

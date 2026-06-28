@@ -135,6 +135,12 @@ export interface AppointmentRecord {
   dentists: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null
   clinics?: { id: number; name: string } | { id: number; name: string }[] | null
   booked_at?: string
+  clinic_id?: number
+  patient_id?: number
+  dentist_id?: number
+  service_id?: number
+  end_at?: string
+  is_walk_in?: boolean
 }
 
 export interface PeriodontalScreening {

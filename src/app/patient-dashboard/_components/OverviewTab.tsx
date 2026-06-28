@@ -13,7 +13,7 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { PatientRecord } from './types'
-import { formatDate, formatTime, getStatusBadge } from './utils'
+import { formatDate, formatTime, getStatusBadge, isUpcomingAppointment } from './utils'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
 
 interface OverviewTabProps {
@@ -27,9 +27,7 @@ export function OverviewTab({
 }: OverviewTabProps) {
   const router = useRouter()
   const [loadingId, setLoadingId] = useState<number | null>(null)
-  const upcomingAppointments = record.appointments.filter(
-    a => ['pending', 'confirmed', 'rescheduled', 'follow_up', 'pending_patient_confirm'].includes(a.status) && new Date(a.scheduled_at) > new Date()
-  )
+  const upcomingAppointments = record.appointments.filter(isUpcomingAppointment)
 
   const handleConfirmReschedule = async (apptId: number) => {
     setLoadingId(apptId)
@@ -133,7 +131,7 @@ export function OverviewTab({
         <CardContent>
           {upcomingAppointments.length > 0 ? (
             (() => {
-              const next = upcomingAppointments.sort(
+              const next = [...upcomingAppointments].sort(
                 (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
               )[0]
               return (

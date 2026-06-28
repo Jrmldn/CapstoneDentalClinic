@@ -29,8 +29,7 @@ export interface StaffData {
   clinicId: number
 }
 
-export interface DentistData extends StaffData {
-}
+export type DentistData = StaffData
 
 export interface FormattedStaff {
   id: number
@@ -43,8 +42,7 @@ export interface FormattedStaff {
   isDisabled: boolean
 }
 
-export interface FormattedDentist extends FormattedStaff {
-}
+export type FormattedDentist = FormattedStaff
 
 export type UnifiedPersonnel =
   | (FormattedStaff & { role: 'staff' })

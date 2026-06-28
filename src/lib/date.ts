@@ -71,3 +71,17 @@ export function formatDateLong(value: Date | string | number | null | undefined)
     day: 'numeric',
   }).format(d)
 }
+
+/**
+ * Format 24h time string (e.g. "13:30" or "13:30:00") to 12h AM/PM format (e.g. "1:30 PM")
+ */
+export function formatTo12h(time: string | null | undefined): string {
+  if (!time) return '—'
+  const [h, m] = time.split(':')
+  const hour = parseInt(h, 10)
+  if (isNaN(hour)) return time
+  const ampm = hour >= 12 ? 'PM' : 'AM'
+  const h12 = hour % 12 || 12
+  return `${h12}:${m} ${ampm}`
+}
+

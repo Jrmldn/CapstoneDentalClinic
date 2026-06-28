@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
 import { submitFeedback } from '@/actions/patientCoreActions'
 import { PatientRecord } from './types'
-import { formatDate, formatTime, getStatusBadge } from './utils'
+import { formatDate, formatTime, getStatusBadge, isUpcomingAppointment, isPastAppointment } from './utils'
 
 interface AppointmentsTabProps {
   record: PatientRecord
@@ -31,18 +31,13 @@ export function AppointmentsTab({
   const [feedbackLoading, setFeedbackLoading] = useState(false)
   const [submittedFeedbackIds, setSubmittedFeedbackIds] = useState<Set<number>>(new Set())
 
-  const upcomingAppointments = record.appointments.filter(
-    a =>
-      ['pending', 'confirmed', 'rescheduled', 'follow_up', 'pending_patient_confirm'].includes(a.status) &&
-      new Date(a.scheduled_at) > new Date()
-  )
+  const upcomingAppointments = record.appointments
+    .filter(isUpcomingAppointment)
+    .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())
 
-  const pastAppointments = record.appointments.filter(
-    a =>
-      ['completed', 'cancelled', 'no_show'].includes(a.status) ||
-      (!['pending', 'confirmed', 'rescheduled', 'follow_up', 'pending_patient_confirm'].includes(a.status) &&
-        new Date(a.scheduled_at) <= new Date())
-  )
+  const pastAppointments = record.appointments
+    .filter(isPastAppointment)
+    .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime())
 
   const PAGE_SIZE = 10
   const upcomingTotalPages = Math.max(1, Math.ceil(upcomingAppointments.length / PAGE_SIZE))

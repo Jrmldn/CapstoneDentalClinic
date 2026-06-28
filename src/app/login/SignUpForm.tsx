@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { signUpPatient } from '@/actions/authActions'
 import { toDateKey } from '@/lib/date'
 import TermsModal from './TermsModal'
+import InformedConsentModal from './InformedConsentModal'
 
 interface SignUpFormData {
   email: string
@@ -24,6 +25,7 @@ interface FormErrors {
   last_name?: string
   birthdate?: string
   terms?: string
+  consent?: string
   general?: string
 }
 
@@ -47,6 +49,8 @@ export default function SignUpForm({ redirectTo, onSwitchToSignIn }: SignUpFormP
   const [signUpSuccess, setSignUpSuccess] = useState(false)
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
+  const [consentAccepted, setConsentAccepted] = useState(false)
+  const [showConsent, setShowConsent] = useState(false)
 
   function validate(): boolean {
     const e: FormErrors = {}
@@ -89,6 +93,7 @@ export default function SignUpForm({ redirectTo, onSwitchToSignIn }: SignUpFormP
     }
 
     if (!termsAccepted) e.terms = 'You must agree to the Terms and Conditions'
+    if (!consentAccepted) e.consent = 'You must agree to the Informed Consent Form'
 
     setErrors(e)
     return Object.keys(e).length === 0
@@ -325,9 +330,34 @@ export default function SignUpForm({ redirectTo, onSwitchToSignIn }: SignUpFormP
           {errors.terms && <p className="mt-1 text-xs text-red-500">{errors.terms}</p>}
         </div>
 
+        <div>
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={consentAccepted}
+              onChange={e => {
+                setConsentAccepted(e.target.checked)
+                if (errors.consent) setErrors(prev => ({ ...prev, consent: undefined }))
+              }}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600"
+            />
+            <span className="text-sm text-gray-600">
+              I agree to the{' '}
+              <button
+                type="button"
+                onClick={() => setShowConsent(true)}
+                className="text-blue-600 hover:text-blue-700 font-medium underline"
+              >
+                Informed Consent Form
+              </button>
+            </span>
+          </label>
+          {errors.consent && <p className="mt-1 text-xs text-red-500">{errors.consent}</p>}
+        </div>
+
         <button
           onClick={handleSignUp}
-          disabled={isLoading}
+          disabled={isLoading || !termsAccepted || !consentAccepted}
           className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400
             text-white text-sm font-normal rounded transition-colors mt-2"
         >
@@ -336,6 +366,7 @@ export default function SignUpForm({ redirectTo, onSwitchToSignIn }: SignUpFormP
       </div>
 
       <TermsModal isOpen={showTerms} onClose={() => setShowTerms(false)} />
+      <InformedConsentModal isOpen={showConsent} onClose={() => setShowConsent(false)} />
 
       <p className="text-center text-sm text-gray-500 mt-4">
         Already have an account?{' '}

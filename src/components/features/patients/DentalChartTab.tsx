@@ -1,10 +1,26 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { Plus, X } from 'lucide-react'
 import type { DentalChart, ToothCondition } from './types'
 import { updateDentalChart, ToothConditionData } from '@/actions/dentalChartActions'
-import { formatDate, formatDateTime } from '@/lib/date'
+import { formatDateTime } from '@/lib/date'
+
+export interface StagedConditionDisplay extends ToothCondition {
+  dentistName: string
+  clinicName: string
+}
+
+export interface SessionGroup {
+  dateKey: string
+  recorded_at: string
+  toothNumbers: number[]
+  conditionSummary: Record<string, number>
+  conditions: StagedConditionDisplay[]
+  dentistName: string
+  clinicName: string
+}
 
 interface DentalChartTabProps {
   patientId: number
@@ -12,7 +28,12 @@ interface DentalChartTabProps {
   dentalCharts: DentalChart[]
   dentistId?: number
   onRefresh: () => Promise<void>
+  readOnly?: boolean
+  historyOnly?: boolean
+  onChartSave?: (conditions: ToothConditionData[]) => void
+  stagedConditions?: ToothConditionData[]
 }
+
 
 // FDI (ISO 3950) tooth numbering
 const upperPermanent = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28]
@@ -80,10 +101,6 @@ const OUTER_SURFACES = [
 
 const ALL_SURFACE_NAMES = ['buccal', 'distal', 'lingual', 'mesial', 'occlusal']
 
-// MODBL display order and abbreviations
-const SURFACE_ORDER = ['mesial', 'occlusal', 'distal', 'buccal', 'lingual']
-const SURFACE_ABBR: Record<string, string> = { mesial: 'M', occlusal: 'O', distal: 'D', buccal: 'B', lingual: 'L' }
-
 const DIVIDER_ANGLES = [45, 135, 225, 315]
 
 function polarToXY(cx: number, cy: number, r: number, angleDeg: number): { x: number; y: number } {
@@ -131,14 +148,15 @@ interface ToothSvgProps {
   selectedSurfaces: Set<string>
   surfaceConditions: Record<string, string>
   onToggleSurface: (num: number, surface: string) => void
+  readOnly?: boolean
 }
 
-function ToothSvg({ num, surfaceMap, selectedSurfaces, surfaceConditions, onToggleSurface }: ToothSvgProps) {
+function ToothSvg({ num, surfaceMap, selectedSurfaces, surfaceConditions, onToggleSurface, readOnly = false }: ToothSvgProps) {
   const overallCond = Object.values(surfaceMap).find(c => c !== 'healthy') ?? 'healthy'
   const ringStroke = RING_COLOR[overallCond] ?? '#cbd5e1'
 
   return (
-    <svg viewBox="0 0 40 40" width="40" height="40" style={{ display: 'block' }}>
+    <svg viewBox="0 0 40 40" className="w-full h-auto block">
       {/* 4 outer surface sectors */}
       {OUTER_SURFACES.map(({ name, a1, a2 }) => {
         const key = `${num}-${name}`
@@ -146,14 +164,14 @@ function ToothSvg({ num, surfaceMap, selectedSurfaces, surfaceConditions, onTogg
         const fill = getLiveFill(key, surfaceMap[name] ?? 'healthy', selectedSurfaces, surfaceConditions)
         const effectiveCond = isSelected ? (surfaceConditions[key] ?? 'selected') : (surfaceMap[name] ?? 'healthy')
         return (
-          <g key={name} onClick={() => onToggleSurface(num, name)} style={{ cursor: 'pointer' }}>
+          <g key={name} onClick={readOnly ? undefined : () => onToggleSurface(num, name)} style={{ cursor: readOnly ? 'default' : 'pointer' }}>
             <title>Tooth #{num} — {cap(name)} ({effectiveCond})</title>
             <path
               d={donutPath(CX, CY, INNER, OUTER, a1, a2)}
               fill={fill}
               stroke={isSelected ? '#3b82f6' : 'none'}
               strokeWidth={isSelected ? '2' : '0'}
-              className="transition-opacity hover:opacity-80"
+              className={readOnly ? "" : "transition-opacity hover:opacity-80"}
             />
           </g>
         )
@@ -166,14 +184,14 @@ function ToothSvg({ num, surfaceMap, selectedSurfaces, surfaceConditions, onTogg
         const fill = getLiveFill(key, surfaceMap['occlusal'] ?? 'healthy', selectedSurfaces, surfaceConditions)
         const effectiveCond = isSelected ? (surfaceConditions[key] ?? 'selected') : (surfaceMap['occlusal'] ?? 'healthy')
         return (
-          <g onClick={() => onToggleSurface(num, 'occlusal')} style={{ cursor: 'pointer' }}>
+          <g onClick={readOnly ? undefined : () => onToggleSurface(num, 'occlusal')} style={{ cursor: readOnly ? 'default' : 'pointer' }}>
             <title>Tooth #{num} — Occlusal ({effectiveCond})</title>
             <circle
               cx={CX} cy={CY} r={INNER}
               fill={fill}
               stroke={isSelected ? '#3b82f6' : 'none'}
               strokeWidth={isSelected ? '2' : '0'}
-              className="transition-opacity hover:opacity-80"
+              className={readOnly ? "" : "transition-opacity hover:opacity-80"}
             />
           </g>
         )
@@ -202,20 +220,24 @@ interface ToothButtonProps {
   surfaceConditions: Record<string, string>
   onToggleSurface: (num: number, surface: string) => void
   onToggleWhole: (num: number) => void
+  readOnly?: boolean
 }
 
-function ToothButton({ num, surfaceMap, selectedSurfaces, surfaceConditions, onToggleSurface, onToggleWhole }: ToothButtonProps) {
+function ToothButton({ num, surfaceMap, selectedSurfaces, surfaceConditions, onToggleSurface, onToggleWhole, readOnly = false }: ToothButtonProps) {
   const hasAllSelected = ALL_SURFACE_NAMES.every(s => selectedSurfaces.has(`${num}-${s}`))
   return (
-    <div className="flex flex-col items-center gap-0.5">
+    <div className="flex flex-col items-center gap-0.5 flex-1 min-w-0 max-w-[40px]">
       <button
         type="button"
-        onClick={() => onToggleWhole(num)}
-        title="Click to select / deselect all surfaces"
+        onClick={readOnly ? undefined : () => onToggleWhole(num)}
+        disabled={readOnly}
+        title={readOnly ? `Tooth #${num}` : "Click to select / deselect all surfaces"}
         className={`text-[10px] font-bold transition underline-offset-2 leading-none ${
-          hasAllSelected
-            ? 'text-blue-700 underline'
-            : 'text-slate-400 hover:text-slate-700 hover:underline'
+          readOnly
+            ? 'text-slate-600 cursor-default'
+            : hasAllSelected
+              ? 'text-blue-700 underline'
+              : 'text-slate-400 hover:text-slate-700 hover:underline'
         }`}
       >
         {num}
@@ -226,22 +248,15 @@ function ToothButton({ num, surfaceMap, selectedSurfaces, surfaceConditions, onT
         selectedSurfaces={selectedSurfaces}
         surfaceConditions={surfaceConditions}
         onToggleSurface={onToggleSurface}
+        readOnly={readOnly}
       />
     </div>
   )
 }
 
-// History grouped by date + tooth number
-interface HistoryGroup {
-  recorded_at: string
-  tooth_number: number
-  // per-surface: surface -> { condition, notes }
-  surfaceCondMap: Record<string, string>
-  surfaceNoteMap: Record<string, string>
-  // whole-tooth entries (null surface)
-  wholeCondition: string | null
-  wholeNotes: string | null
-}
+
+
+const EMPTY_CONDITIONS: ToothConditionData[] = []
 
 export default function DentalChartTab({
   patientId,
@@ -249,6 +264,10 @@ export default function DentalChartTab({
   dentalCharts,
   dentistId,
   onRefresh,
+  readOnly = false,
+  historyOnly = false,
+  onChartSave,
+  stagedConditions = EMPTY_CONDITIONS,
 }: DentalChartTabProps) {
   const [showPrimary, setShowPrimary] = useState(true)
   const [selectedSurfaces, setSelectedSurfaces] = useState<Set<string>>(new Set())
@@ -256,6 +275,35 @@ export default function DentalChartTab({
   const [surfaceNotes, setSurfaceNotes] = useState<Record<string, string>>({})
   const [showConditionForm, setShowConditionForm] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [viewingSession, setViewingSession] = useState<SessionGroup | null>(null)
+
+  // Load staged conditions into local form state
+  useEffect(() => {
+    if (stagedConditions && stagedConditions.length > 0) {
+      const conds: Record<string, string> = {}
+      const nts: Record<string, string> = {}
+      const activeKeys = new Set<string>()
+      stagedConditions.forEach(c => {
+        if (c.surface) {
+          const key = `${c.tooth_number}-${c.surface}`
+          conds[key] = c.condition
+          if (c.notes) nts[key] = c.notes
+          activeKeys.add(key)
+        }
+      })
+      setSurfaceConditions(prev => ({ ...prev, ...conds }))
+      setSurfaceNotes(prev => ({ ...prev, ...nts }))
+      setSelectedSurfaces(prev => {
+        const merged = new Set(prev)
+        activeKeys.forEach(k => merged.add(k))
+        return merged
+      })
+    } else if (stagedConditions && stagedConditions.length === 0) {
+      setSelectedSurfaces(new Set())
+      setSurfaceConditions({})
+      setSurfaceNotes({})
+    }
+  }, [stagedConditions])
 
   // Auto-cleanup: remove state for surfaces that were deselected
   useEffect(() => {
@@ -289,6 +337,16 @@ export default function DentalChartTab({
     })
   })
 
+  // Merge any staged conditions from parent modal
+  ;(stagedConditions ?? []).forEach(cond => {
+    if (cond.surface) {
+      const key = `${cond.tooth_number}-${cond.surface}`
+      surfaceConditionsMap[key] = { condition: cond.condition, recorded_at: new Date().toISOString() }
+    } else {
+      toothWideMap[cond.tooth_number] = cond.condition
+    }
+  })
+
   function buildSurfaceMap(num: number): Record<string, string> {
     return Object.fromEntries(
       ALL_SURFACE_NAMES.map(s => [
@@ -298,11 +356,36 @@ export default function DentalChartTab({
     )
   }
 
+
+
+  const handleConditionChange = (key: string, value: string) => {
+    setSurfaceConditions(prev => ({ ...prev, [key]: value }))
+  }
+
+  const handleNotesChange = (key: string, value: string) => {
+    setSurfaceNotes(prev => ({ ...prev, [key]: value }))
+  }
+
   function toggleSurface(num: number, surface: string) {
     const key = `${num}-${surface}`
+    setShowConditionForm(true)
     setSelectedSurfaces(prev => {
       const next = new Set(prev)
-      if (next.has(key)) { next.delete(key) } else { next.add(key) }
+      if (next.has(key)) {
+        next.delete(key)
+        setSurfaceConditions(curr => {
+          const updated = { ...curr }
+          delete updated[key]
+          return updated
+        })
+      } else {
+        next.add(key)
+        setSurfaceConditions(curr => {
+          const updated = { ...curr }
+          if (!updated[key]) updated[key] = 'decayed'
+          return updated
+        })
+      }
       return next
     })
   }
@@ -310,16 +393,28 @@ export default function DentalChartTab({
   function toggleWholeTooth(num: number) {
     const keys = ALL_SURFACE_NAMES.map(s => `${num}-${s}`)
     const allSelected = keys.every(k => selectedSurfaces.has(k))
+    setShowConditionForm(true)
     setSelectedSurfaces(prev => {
       const next = new Set(prev)
-      if (allSelected) {
-        keys.forEach(k => next.delete(k))
-      } else {
-        keys.forEach(k => next.add(k))
-      }
+      setSurfaceConditions(curr => {
+        const updated = { ...curr }
+        if (allSelected) {
+          keys.forEach(k => {
+            next.delete(k)
+            delete updated[k]
+          })
+        } else {
+          keys.forEach(k => {
+            next.add(k)
+            if (!updated[k]) updated[k] = 'decayed'
+          })
+        }
+        return updated
+      })
       return next
     })
   }
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -339,6 +434,12 @@ export default function DentalChartTab({
       }
     })
 
+    if (onChartSave) {
+      onChartSave(conditionsData)
+      setIsSubmitting(false)
+      return
+    }
+
     const res = await updateDentalChart(patientId, clinicId, dentistId, conditionsData)
     setIsSubmitting(false)
 
@@ -354,37 +455,45 @@ export default function DentalChartTab({
     }
   }
 
-  // Build history groups: group by date + tooth number (descending)
-  const allConds: ToothCondition[] = (dentalCharts ?? []).flatMap(c => c.tooth_conditions ?? [])
-
-  const groupMap = new Map<string, HistoryGroup>()
-  ;[...allConds]
-    .sort((a, b) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime())
-    .forEach(cond => {
-      const dateStr = new Date(cond.recorded_at).toISOString().split('T')[0] ?? ''
-      const groupKey = `${dateStr}-${cond.tooth_number}`
-      const existing = groupMap.get(groupKey)
-      if (existing) {
-        if (cond.surface) {
-          existing.surfaceCondMap[cond.surface] = cond.condition
-          if (cond.notes) existing.surfaceNoteMap[cond.surface] = cond.notes
-        } else {
-          existing.wholeCondition = cond.condition
-          if (cond.notes) existing.wholeNotes = cond.notes
-        }
-      } else {
-        groupMap.set(groupKey, {
-          recorded_at: cond.recorded_at,
-          tooth_number: cond.tooth_number,
-          surfaceCondMap: cond.surface ? { [cond.surface]: cond.condition } : {},
-          surfaceNoteMap: (cond.surface && cond.notes) ? { [cond.surface]: cond.notes } : {},
-          wholeCondition: cond.surface ? null : cond.condition,
-          wholeNotes: (!cond.surface && cond.notes) ? cond.notes : null,
-        })
+  // Map parent chart's dentist/clinic to each condition for displaying in history
+  const allConds = (dentalCharts ?? []).flatMap(c => 
+    (c.tooth_conditions ?? []).map(tc => {
+      const dentistObj = Array.isArray(c.dentists) ? c.dentists[0] : c.dentists
+      const dentistName = dentistObj ? `Dr. ${dentistObj.first_name} ${dentistObj.last_name}` : 'Attending Dentist'
+      return {
+        ...tc,
+        dentistName,
+        clinicName: (Array.isArray(c.clinics) ? c.clinics[0] : c.clinics)?.name || 'Clinic'
       }
     })
+  )
 
-  const historyGroups = Array.from(groupMap.values())
+  const sessionMap = new Map<string, SessionGroup>()
+
+  allConds.forEach(cond => {
+    const timestampKey = cond.recorded_at || new Date().toISOString()
+    let group = sessionMap.get(timestampKey)
+    if (!group) {
+      group = {
+        dateKey: new Date(timestampKey).toISOString().split('T')[0] ?? '',
+        recorded_at: timestampKey,
+        toothNumbers: [],
+        conditionSummary: {},
+        conditions: [],
+        dentistName: cond.dentistName,
+        clinicName: cond.clinicName
+      }
+      sessionMap.set(timestampKey, group)
+    }
+
+    if (!group.toothNumbers.includes(cond.tooth_number)) {
+      group.toothNumbers.push(cond.tooth_number)
+    }
+
+    group.conditionSummary[cond.condition] = (group.conditionSummary[cond.condition] || 0) + 1
+    group.conditions.push(cond)
+  })
+  const historyGroups = Array.from(sessionMap.values())
     .sort((a, b) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime())
 
   const selectedList = Array.from(selectedSurfaces)
@@ -392,159 +501,148 @@ export default function DentalChartTab({
 
   return (
     <div className="space-y-6">
-      {/* Main chart panel */}
-      <div className="bg-white p-6 rounded-xl border border-gray-150 shadow-xs space-y-5">
-        {/* Header */}
-        <div className="flex flex-wrap justify-between items-start gap-3">
-          <div>
-            <h4 className="font-bold text-slate-800 text-sm">Dental Chart (FDI / ISO 3950)</h4>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Click a tooth number to select all its surfaces. Click individual surface zones for granular selection.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              type="button"
-              onClick={() => setShowPrimary(v => !v)}
-              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition border border-gray-200/60"
-            >
-              {showPrimary ? 'Hide Primary Teeth' : 'Show Primary Teeth'}
-            </button>
-            {selectedSurfaces.size > 0 && (
+      {/* Main chart panel (hidden in historyOnly mode) */}
+      {!historyOnly && (
+        <div className="bg-white p-6 rounded-xl border border-gray-150 shadow-xs space-y-5">
+          {/* Header */}
+          <div className="flex flex-wrap justify-between items-start gap-3">
+            <div>
+              <h4 className="font-bold text-slate-800 text-sm">Dental Chart (FDI / ISO 3950)</h4>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Click a tooth number to select all its surfaces. Click individual surface zones for granular selection.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
-                onClick={() => setSelectedSurfaces(new Set())}
-                className="px-3 py-1.5 text-xs font-semibold text-red-500 hover:text-red-700 underline transition"
+                onClick={() => setShowPrimary(v => !v)}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition border border-gray-200/60"
               >
-                Clear ({selectedSurfaces.size})
+                {showPrimary ? 'Hide Primary Teeth' : 'Show Primary Teeth'}
               </button>
-            )}
-          </div>
-        </div>
-
-        {/* Condition key — positioned ABOVE the chart */}
-        <div className="space-y-2.5">
-          <div className="flex flex-wrap gap-3 bg-slate-50 p-3.5 rounded-xl border border-gray-150">
-            {conditionKeys.map(k => (
-              <div key={k.id} className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
-                <span className={`w-3 h-3 rounded-full ${k.dot} flex-shrink-0`} />
-                <span>{k.label}</span>
-              </div>
-            ))}
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-600">
-              <span className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0" />
-              <span>Selected</span>
-            </div>
-          </div>
-
-          {/* MODBL surface legend */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Surface Key:</span>
-            {[
-              { abbr: 'M', label: 'Mesial (Left)' },
-              { abbr: 'O', label: 'Occlusal (Center)' },
-              { abbr: 'D', label: 'Distal (Right)' },
-              { abbr: 'B', label: 'Buccal / Facial (Top)' },
-              { abbr: 'L', label: 'Lingual (Bottom)' },
-            ].map(({ abbr, label }) => (
-              <span key={abbr} className="text-[10px] text-slate-500">
-                <span className="font-bold text-slate-700">{abbr}</span> = {label}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Chart grid */}
-        <div className="overflow-x-auto pb-2">
-          <div className="flex flex-col gap-2.5 min-w-[700px] select-none">
-            <div className="flex justify-center w-full">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">FACIAL / BUCCAL ↑</span>
-            </div>
-
-            {/* Upper permanent — always visible */}
-            <div className="flex justify-center gap-1 w-full">
-              {upperPermanent.map(num => (
-                <ToothButton key={num} num={num} surfaceMap={buildSurfaceMap(num)}
-                  selectedSurfaces={selectedSurfaces} surfaceConditions={surfaceConditions}
-                  onToggleSurface={toggleSurface} onToggleWhole={toggleWholeTooth} />
-              ))}
-            </div>
-
-            {/* Upper temporary */}
-            {showPrimary && (
-              <div className="flex justify-center gap-1 w-full">
-                {upperTemporary.map(num => (
-                  <ToothButton key={num} num={num} surfaceMap={buildSurfaceMap(num)}
-                    selectedSurfaces={selectedSurfaces} surfaceConditions={surfaceConditions}
-                    onToggleSurface={toggleSurface} onToggleWhole={toggleWholeTooth} />
-                ))}
-              </div>
-            )}
-
-            {/* Midline */}
-            <div className="flex items-center w-full relative py-0.5">
-              <div className="flex-1 border-b border-dashed border-gray-300" />
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-3 bg-white">Midline</span>
-              <div className="flex-1 border-b border-dashed border-gray-300" />
-            </div>
-
-            {/* Lower temporary */}
-            {showPrimary && (
-              <div className="flex justify-center gap-1 w-full">
-                {lowerTemporary.map(num => (
-                  <ToothButton key={num} num={num} surfaceMap={buildSurfaceMap(num)}
-                    selectedSurfaces={selectedSurfaces} surfaceConditions={surfaceConditions}
-                    onToggleSurface={toggleSurface} onToggleWhole={toggleWholeTooth} />
-                ))}
-              </div>
-            )}
-
-            {/* Lower permanent — always visible */}
-            <div className="flex justify-center gap-1 w-full">
-              {lowerPermanent.map(num => (
-                <ToothButton key={num} num={num} surfaceMap={buildSurfaceMap(num)}
-                  selectedSurfaces={selectedSurfaces} surfaceConditions={surfaceConditions}
-                  onToggleSurface={toggleSurface} onToggleWhole={toggleWholeTooth} />
-              ))}
-            </div>
-
-            <div className="flex justify-center w-full">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">↓ LINGUAL</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Selection summary */}
-        <div className="bg-slate-50 p-4 rounded-xl border border-gray-150 min-h-[52px]">
-          {selectedSurfaces.size === 0 ? (
-            <p className="text-xs text-slate-400">
-              No surfaces selected. Click tooth numbers for whole-tooth selection, or tap individual surface zones.
-            </p>
-          ) : (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-bold text-slate-700">
-                {selectedSurfaces.size} surface{selectedSurfaces.size !== 1 ? 's' : ''} across {uniqueTeethCount} {uniqueTeethCount !== 1 ? 'teeth' : 'tooth'}:
-              </span>
-              {selectedList.slice(0, 24).map(key => {
-                const dashIdx = key.indexOf('-')
-                const toothNum = key.slice(0, dashIdx)
-                const surface = key.slice(dashIdx + 1)
-                return (
-                  <span key={key} className="text-[10px] px-2 py-0.5 rounded-full font-bold border bg-blue-50 border-blue-300 text-blue-700">
-                    #{toothNum} {cap(surface)}
-                  </span>
-                )
-              })}
-              {selectedList.length > 24 && (
-                <span className="text-[10px] text-slate-400 font-semibold">+{selectedList.length - 24} more</span>
+              {selectedSurfaces.size > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedSurfaces(new Set())
+                    setSurfaceConditions({})
+                    setSurfaceNotes({})
+                    if (onChartSave) onChartSave([])
+                  }}
+                  className="px-3 py-1.5 text-xs font-semibold text-red-500 hover:text-red-700 underline transition"
+                >
+                  Clear ({selectedSurfaces.size})
+                </button>
               )}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
 
-      {/* Record condition form — dentist only */}
-      {dentistId && (
+          {/* Condition key — positioned ABOVE the chart */}
+          <div className="space-y-2.5">
+            <div className="flex flex-wrap gap-3 bg-slate-50 p-3.5 rounded-xl border border-gray-150">
+              {conditionKeys.map(k => (
+                <div key={k.id} className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
+                  <span className={`w-3 h-3 rounded-full ${k.dot} flex-shrink-0`} />
+                  <span>{k.label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Selection indicators */}
+            {selectedSurfaces.size > 0 && (
+              <div className="flex flex-wrap gap-1.5 items-center bg-blue-50/40 p-2.5 rounded-xl border border-blue-100">
+                <span className="text-xs font-bold text-slate-700">
+                  {selectedSurfaces.size} surface{selectedSurfaces.size !== 1 ? 's' : ''} across {uniqueTeethCount} {uniqueTeethCount !== 1 ? 'teeth' : 'tooth'}:
+                </span>
+                {selectedList.slice(0, 24).map(key => {
+                  const dashIdx = key.indexOf('-')
+                  const toothNum = key.slice(0, dashIdx)
+                  const surface = key.slice(dashIdx + 1)
+                  return (
+                    <span key={key} className="text-[10px] px-2 py-0.5 rounded-full font-bold border bg-blue-50 border-blue-300 text-blue-700">
+                      #{toothNum} {cap(surface)}
+                    </span>
+                  )
+                })}
+                {selectedList.length > 24 && (
+                  <span className="text-[10px] text-slate-400 font-semibold">+{selectedList.length - 24} more</span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Chart grid */}
+          <div className="pb-2 w-full">
+            <div className="flex flex-col gap-2.5 w-full select-none">
+              <div className="flex justify-center w-full">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">FACIAL / BUCCAL ↑</span>
+              </div>
+
+              {/* Upper Permanent */}
+              <div className="flex justify-center gap-0.5 sm:gap-1 w-full">
+                {upperPermanent.map(num => (
+                  <ToothButton
+                    key={num} num={num} surfaceMap={buildSurfaceMap(num)}
+                    selectedSurfaces={selectedSurfaces} surfaceConditions={surfaceConditions}
+                    onToggleSurface={toggleSurface} onToggleWhole={toggleWholeTooth} readOnly={readOnly}
+                  />
+                ))}
+              </div>
+
+              {/* Upper Temporary */}
+              {showPrimary && (
+                <div className="flex justify-center gap-0.5 sm:gap-1 w-full">
+                  {upperTemporary.map(num => (
+                    <ToothButton
+                      key={num} num={num} surfaceMap={buildSurfaceMap(num)}
+                      selectedSurfaces={selectedSurfaces} surfaceConditions={surfaceConditions}
+                      onToggleSurface={toggleSurface} onToggleWhole={toggleWholeTooth} readOnly={readOnly}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Midline horizontal divider */}
+              <div className="flex items-center w-full relative py-0.5">
+                <div className="flex-1 border-b border-dashed border-gray-300" />
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-3 bg-white">Midline</span>
+                <div className="flex-1 border-b border-dashed border-gray-300" />
+              </div>
+
+              {/* Lower Temporary */}
+              {showPrimary && (
+                <div className="flex justify-center gap-0.5 sm:gap-1 w-full">
+                  {lowerTemporary.map(num => (
+                    <ToothButton
+                      key={num} num={num} surfaceMap={buildSurfaceMap(num)}
+                      selectedSurfaces={selectedSurfaces} surfaceConditions={surfaceConditions}
+                      onToggleSurface={toggleSurface} onToggleWhole={toggleWholeTooth} readOnly={readOnly}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Lower Permanent */}
+              <div className="flex justify-center gap-0.5 sm:gap-1 w-full">
+                {lowerPermanent.map(num => (
+                  <ToothButton
+                    key={num} num={num} surfaceMap={buildSurfaceMap(num)}
+                    selectedSurfaces={selectedSurfaces} surfaceConditions={surfaceConditions}
+                    onToggleSurface={toggleSurface} onToggleWhole={toggleWholeTooth} readOnly={readOnly}
+                  />
+                ))}
+              </div>
+
+              <div className="flex justify-center w-full">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">↓ LINGUAL</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Record condition form — dentist only (hidden in historyOnly mode) */}
+      {!historyOnly && !readOnly && dentistId && (
         <div className="bg-white p-5 rounded-xl border border-gray-150 shadow-xs">
           <div className="flex justify-between items-center mb-4">
             <h4 className="font-bold text-slate-800 text-sm">Record Tooth Condition</h4>
@@ -591,7 +689,7 @@ export default function DentalChartTab({
                           </span>
                           <select
                             value={surfaceConditions[key] ?? 'healthy'}
-                            onChange={e => setSurfaceConditions(prev => ({ ...prev, [key]: e.target.value }))}
+                            onChange={e => handleConditionChange(key, e.target.value)}
                             className="px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white outline-none"
                           >
                             {conditionKeys.map(k => (
@@ -602,7 +700,7 @@ export default function DentalChartTab({
                             type="text"
                             placeholder="Observation notes…"
                             value={surfaceNotes[key] ?? ''}
-                            onChange={e => setSurfaceNotes(prev => ({ ...prev, [key]: e.target.value }))}
+                            onChange={e => handleNotesChange(key, e.target.value)}
                             className="px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white outline-none"
                           />
                         </div>
@@ -612,28 +710,49 @@ export default function DentalChartTab({
                 </>
               )}
 
-              <div className="flex justify-end gap-2.5 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowConditionForm(false)}
-                  className="px-4 py-1.5 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-lg text-xs font-semibold transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting || selectedSurfaces.size === 0}
-                  className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold disabled:opacity-50 transition"
-                >
-                  {isSubmitting ? 'Saving…' : 'Save Conditions & Notes'}
-                </button>
+              <div className="flex justify-between items-center pt-1">
+                <div />
+                <div className="flex gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowConditionForm(false)}
+                    className="px-4 py-1.5 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-lg text-xs font-semibold transition"
+                  >
+                    Cancel
+                  </button>
+                  {onChartSave ? (
+                    (() => {
+                      const hasNonHealthy = Array.from(selectedSurfaces).some(
+                        key => (surfaceConditions[key] ?? 'healthy') !== 'healthy'
+                      )
+                      return (
+                        <button
+                          type="submit"
+                          disabled={selectedSurfaces.size === 0}
+                          className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold disabled:opacity-50 transition"
+                        >
+                          {hasNonHealthy ? 'Add to Invoice' : 'Add to Session'}
+                        </button>
+                      )
+                    })()
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || selectedSurfaces.size === 0}
+                      className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold disabled:opacity-50 transition"
+                    >
+                      {isSubmitting ? 'Saving…' : 'Save Conditions & Notes'}
+                    </button>
+                  )}
+                </div>
               </div>
             </form>
           )}
         </div>
       )}
 
-      {/* History table */}
+      {/* History table — hidden when rendered inside the session workspace */}
+      {!onChartSave && (
       <div className="bg-white p-5 rounded-xl border border-gray-150 shadow-xs">
         <div className="flex flex-wrap justify-between items-center border-b border-gray-100 pb-1.5 mb-4 gap-2">
           <h4 className="font-bold text-slate-800 text-sm">Dental Chart History</h4>
@@ -658,81 +777,34 @@ export default function DentalChartTab({
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="bg-slate-50 text-slate-500 font-bold border-b border-gray-100">
-                <th className="px-4 py-2.5">Date</th>
-                <th className="px-4 py-2.5">Tooth</th>
-                <th className="px-4 py-2.5">Type</th>
-                <th className="px-4 py-2.5">Affected Surfaces</th>
-                <th className="px-4 py-2.5">Notes</th>
+                <th className="px-4 py-2.5">Date &amp; Time</th>
+                <th className="px-4 py-2.5">Dentist</th>
+                <th className="px-4 py-2.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 text-slate-700">
               {historyGroups.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-12 text-gray-400 italic">
+                  <td colSpan={3} className="text-center py-12 text-gray-400 italic">
                     No diagnostic history recorded for this patient.
                   </td>
                 </tr>
               ) : (
                 historyGroups.map((group, idx) => {
-                  const hasAnySurface = Object.keys(group.surfaceCondMap).length > 0
-                  const isWholeTooth = !hasAnySurface && group.wholeCondition !== null
-
-                  // Compile notes with surface prefixes
-                  const noteParts: string[] = []
-                  SURFACE_ORDER.forEach(s => {
-                    const note = group.surfaceNoteMap[s]
-                    if (note) noteParts.push(`${cap(s)}: ${note}`)
-                  })
-                  if (group.wholeNotes) noteParts.push(group.wholeNotes)
-                  const notesText = noteParts.join('; ') || '—'
 
                   return (
                     <tr key={idx} className="hover:bg-slate-50/50">
-                      <td className="px-4 py-3 font-semibold text-gray-400">{formatDate(group.recorded_at)}</td>
-                      <td className="px-4 py-3 font-bold text-slate-800">#{group.tooth_number}</td>
-                      <td className="px-4 py-3 capitalize">{getToothType(group.tooth_number)}</td>
-                      <td className="px-4 py-3">
-                        {isWholeTooth ? (
-                          // Whole-tooth condition badge spanning full cell
-                          <span
-                            className="inline-block w-full text-center px-2 py-0.5 rounded font-bold uppercase text-[9px] text-white"
-                            style={{ backgroundColor: VIVID_FILL[group.wholeCondition ?? 'missing'] ?? '#94a3b8' }}
-                          >
-                            {(group.wholeCondition ?? '').replace('_', ' ')}
-                          </span>
-                        ) : (
-                          // Per-surface MODBL badges colored by their condition
-                          <div className="flex gap-1 flex-wrap">
-                            {SURFACE_ORDER.map(s => {
-                              const cond = group.surfaceCondMap[s]
-                              if (!cond) {
-                                return (
-                                  <span key={s} className="px-1.5 py-0.5 text-[10px] font-bold rounded text-slate-200 bg-slate-50 border border-slate-100">
-                                    {SURFACE_ABBR[s]}
-                                  </span>
-                                )
-                              }
-                              const bgColor = VIVID_FILL[cond] ?? '#94a3b8'
-                              const isLight = cond === 'healthy'
-                              return (
-                                <span
-                                  key={s}
-                                  title={`${cap(s)}: ${cond.replace('_', ' ')}`}
-                                  className="px-1.5 py-0.5 text-[10px] font-bold rounded"
-                                  style={{
-                                    backgroundColor: bgColor,
-                                    color: isLight ? '#475569' : '#ffffff',
-                                    border: isLight ? '1px solid #cbd5e1' : 'none',
-                                  }}
-                                >
-                                  {SURFACE_ABBR[s]}
-                                </span>
-                              )
-                            })}
-                          </div>
-                        )}
+                      <td className="px-4 py-3 font-semibold text-slate-900">{formatDateTime(group.recorded_at)}</td>
+                      <td className="px-4 py-3 font-semibold text-slate-700">{group.dentistName} ({group.clinicName})</td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setViewingSession(group)}
+                          className="px-2.5 py-1 text-xs font-bold bg-blue-50 text-blue-600 hover:bg-blue-100 rounded border border-blue-200 transition"
+                        >
+                          View Snapshot
+                        </button>
                       </td>
-                      <td className="px-4 py-3 text-gray-500">{notesText}</td>
                     </tr>
                   )
                 })
@@ -741,6 +813,179 @@ export default function DentalChartTab({
           </table>
         </div>
       </div>
+      )}
+
+      {viewingSession && (
+        <ChartSessionViewModal
+          session={viewingSession}
+          allConditions={allConds}
+          onClose={() => setViewingSession(null)}
+        />
+      )}
     </div>
+  )
+}
+
+interface ChartSessionViewModalProps {
+  session: {
+    dateKey: string
+    recorded_at: string
+    dentistName: string
+    clinicName: string
+  }
+  allConditions: ToothCondition[]
+  onClose: () => void
+}
+
+function ChartSessionViewModal({ session, allConditions, onClose }: ChartSessionViewModalProps) {
+  const [showPrimary, setShowPrimary] = useState(true)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+
+  if (!mounted) return null
+
+  // Reconstruct surface map and tooth map as of this session's timestamp
+  const snapshotConditionsMap: Record<string, { condition: string; recorded_at: string }> = {}
+  const toothWideMap: Record<number, string> = {}
+
+  allConditions
+    .filter(cond => {
+      return cond.recorded_at <= session.recorded_at
+    })
+    .sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime())
+    .forEach(cond => {
+      if (cond.surface) {
+        snapshotConditionsMap[`${cond.tooth_number}-${cond.surface}`] = {
+          condition: cond.condition,
+          recorded_at: cond.recorded_at,
+        }
+      } else {
+        toothWideMap[cond.tooth_number] = cond.condition
+      }
+    })
+
+  function buildSnapshotSurfaceMap(num: number): Record<string, string> {
+    return Object.fromEntries(
+      ALL_SURFACE_NAMES.map(s => [
+        s,
+        snapshotConditionsMap[`${num}-${s}`]?.condition ?? toothWideMap[num] ?? 'healthy',
+      ])
+    )
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 bg-black/60 z-55 flex items-center justify-center p-4 backdrop-blur-xs">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-slate-50">
+          <div>
+            <h3 className="font-bold text-slate-900 text-base">
+              Dental Chart Snapshot — {formatDateTime(session.recorded_at)}
+            </h3>
+            <p className="text-xs text-gray-500 mt-0.5">Recorded by {session.dentistName} ({session.clinicName})</p>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-gray-200 rounded-full transition">
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50">
+          <div className="bg-white p-6 rounded-xl border border-gray-150 shadow-xs space-y-5">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-slate-700">FDI Tooth Chart View</span>
+              <button
+                type="button"
+                onClick={() => setShowPrimary(v => !v)}
+                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition border border-gray-200/60"
+              >
+                {showPrimary ? 'Hide Primary Teeth' : 'Show Primary Teeth'}
+              </button>
+            </div>
+
+            {/* Condition key */}
+            <div className="flex flex-wrap gap-3 bg-slate-50 p-3.5 rounded-xl border border-gray-150">
+              {conditionKeys.map(k => (
+                <div key={k.id} className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
+                  <span className={`w-2.5 h-2.5 rounded-full ${k.dot} flex-shrink-0`} />
+                  <span>{k.label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Chart grid */}
+            <div className="overflow-x-auto pb-2">
+              <div className="flex flex-col gap-2.5 min-w-[700px] select-none">
+                <div className="flex justify-center w-full">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">FACIAL / BUCCAL ↑</span>
+                </div>
+
+                <div className="flex justify-center gap-1 w-full">
+                  {upperPermanent.map(num => (
+                    <ToothButton
+                      key={num} num={num} surfaceMap={buildSnapshotSurfaceMap(num)}
+                      selectedSurfaces={new Set()} surfaceConditions={{}}
+                      onToggleSurface={() => {}} onToggleWhole={() => {}} readOnly={true}
+                    />
+                  ))}
+                </div>
+
+                {showPrimary && (
+                  <div className="flex justify-center gap-1 w-full">
+                    {upperTemporary.map(num => (
+                      <ToothButton
+                        key={num} num={num} surfaceMap={buildSnapshotSurfaceMap(num)}
+                        selectedSurfaces={new Set()} surfaceConditions={{}}
+                        onToggleSurface={() => {}} onToggleWhole={() => {}} readOnly={true}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center w-full relative py-0.5">
+                  <div className="flex-1 border-b border-dashed border-gray-300" />
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-3 bg-white">Midline</span>
+                  <div className="flex-1 border-b border-dashed border-gray-300" />
+                </div>
+
+                {showPrimary && (
+                  <div className="flex justify-center gap-1 w-full">
+                    {lowerTemporary.map(num => (
+                      <ToothButton
+                        key={num} num={num} surfaceMap={buildSnapshotSurfaceMap(num)}
+                        selectedSurfaces={new Set()} surfaceConditions={{}}
+                        onToggleSurface={() => {}} onToggleWhole={() => {}} readOnly={true}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex justify-center gap-1 w-full">
+                  {lowerPermanent.map(num => (
+                    <ToothButton
+                      key={num} num={num} surfaceMap={buildSnapshotSurfaceMap(num)}
+                      selectedSurfaces={new Set()} surfaceConditions={{}}
+                      onToggleSurface={() => {}} onToggleWhole={() => {}} readOnly={true}
+                    />
+                  ))}
+                </div>
+
+                <div className="flex justify-center w-full">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">↓ LINGUAL</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-4 bg-slate-50 border-t border-gray-100 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition font-semibold text-xs"
+          >
+            Close Snapshot
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
   )
 }

@@ -10,8 +10,7 @@ interface RawStaffItem {
   clinics: { name: string } | { name: string }[] | null
 }
 
-interface RawDentistItem extends RawStaffItem {
-}
+type RawDentistItem = RawStaffItem
 
 /**
  * Standardizes offset range computation for pagination.

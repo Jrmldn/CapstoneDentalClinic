@@ -106,6 +106,8 @@ export default function PatientRecordModal({ record, onClose, dentistId, clinicI
               viewerRole={viewerRole}
               lastVisitDate={lastVisitDate}
               medHistory={medHistory}
+              readOnly={true}
+              showSaveButton={false}
             />
           )}
           {activeRecordTab === 'chart' && (
@@ -113,8 +115,9 @@ export default function PatientRecordModal({ record, onClose, dentistId, clinicI
               patientId={localRecord.patient.id}
               clinicId={clinicId ?? 0}
               dentalCharts={localRecord.dentalCharts}
-              dentistId={dentistId}
               onRefresh={handleRefreshRecord}
+              readOnly={true}
+              historyOnly={true}
             />
           )}
           {activeRecordTab === 'treatments' && (
@@ -124,6 +127,7 @@ export default function PatientRecordModal({ record, onClose, dentistId, clinicI
               dentistId={dentistId}
               treatments={localRecord.treatmentHistory || []}
               onRefresh={handleRefreshRecord}
+              readOnly={true}
             />
           )}
           {activeRecordTab === 'prescriptions' && (
@@ -139,6 +143,7 @@ export default function PatientRecordModal({ record, onClose, dentistId, clinicI
                 birthdate: localRecord.patient.birthdate,
                 gender: localRecord.patient.gender,
               }}
+              readOnly={true}
             />
           )}
           {activeRecordTab === 'periodontal' && (
@@ -149,6 +154,7 @@ export default function PatientRecordModal({ record, onClose, dentistId, clinicI
               screenings={localRecord.periodontalScreenings || []}
               tmjAssessments={localRecord.tmjAssessments || []}
               onRefresh={handleRefreshRecord}
+              readOnly={true}
             />
           )}
           {activeRecordTab === 'followups' && (
@@ -158,12 +164,14 @@ export default function PatientRecordModal({ record, onClose, dentistId, clinicI
               dentistId={dentistId}
               appointments={localRecord.appointments || []}
               onRefresh={handleRefreshRecord}
+              readOnly={true}
             />
           )}
           {activeRecordTab === 'photos' && (
             <PhotosTab
               patientId={localRecord.patient.id}
               viewerRole={viewerRole}
+              readOnly={true}
             />
           )}
         </div>
