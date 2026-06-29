@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, CheckCircle2, AlertTriangle, Clock, RefreshCw, CalendarDays } from 'lucide-react'
+import { X, CheckCircle2, Clock, RefreshCw, CalendarDays } from 'lucide-react'
 import { markInstallmentPaid } from '@/actions/installmentActions'
-import { toDateKey, formatDate } from '@/lib/date'
+import { formatDate } from '@/lib/date'
 import type { InstallmentPlan, InstallmentPayment } from './types'
 
 interface InstallmentDetailModalProps {
@@ -15,13 +15,8 @@ interface InstallmentDetailModalProps {
   readOnly?: boolean
 }
 
-const TODAY = toDateKey()
-
 function getPaymentStatus(payment: InstallmentPayment) {
   if (payment.status === 'paid') return { label: 'Paid', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' }
-  if (payment.status === 'overdue' || payment.due_date < TODAY) return { label: 'Overdue', color: 'bg-red-50 text-red-700 border-red-100' }
-  const daysLeft = Math.ceil((new Date(payment.due_date).getTime() - Date.now()) / 86400000)
-  if (daysLeft <= 3) return { label: `Due in ${daysLeft}d`, color: 'bg-amber-50 text-amber-700 border-amber-100' }
   return { label: 'Pending', color: 'bg-blue-50 text-blue-700 border-blue-100' }
 }
 
@@ -102,7 +97,6 @@ export default function InstallmentDetailModal({
           {/* Installment payments */}
           <div className="space-y-2">
             {payments.map((payment) => {
-              const isEffectivelyOverdue = payment.status !== 'paid' && payment.due_date < TODAY
               const { label, color } = getPaymentStatus(payment)
               const isLoading = loadingId === payment.id
 
@@ -112,8 +106,6 @@ export default function InstallmentDetailModal({
                     <div className="flex items-center gap-2">
                       {payment.status === 'paid' ? (
                         <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      ) : isEffectivelyOverdue ? (
-                        <AlertTriangle className="w-4 h-4 text-red-500" />
                       ) : (
                         <Clock className="w-4 h-4 text-blue-400" />
                       )}
@@ -126,13 +118,7 @@ export default function InstallmentDetailModal({
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
-                    <div>
-                      <span className="text-slate-400">Due date: </span>
-                      <span className="font-semibold">
-                        {formatDate(payment.due_date)}
-                      </span>
-                    </div>
+                  <div className="text-xs text-slate-600">
                     <div>
                       <span className="text-slate-400">Amount: </span>
                       <span className="font-semibold">₱{Number(payment.amount).toLocaleString()}</span>

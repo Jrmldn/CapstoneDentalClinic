@@ -18,7 +18,6 @@ import {
 
 export interface CreateInstallmentPlanData {
   transaction_id: number
-  first_due_date: string
   notes?: string
 }
 
@@ -65,8 +64,7 @@ export async function createInstallmentPlan(data: CreateInstallmentPlanData) {
     const schedule = deriveInstallmentSchedule(
       tx.total_amount,
       service.downpayment_amount,
-      service.num_installments,
-      data.first_due_date
+      service.num_installments
     )
 
     const { data: plan, error: planError } = await insertInstallmentPlan({
@@ -83,7 +81,6 @@ export async function createInstallmentPlan(data: CreateInstallmentPlanData) {
     const payments = schedule.map(inst => ({
       plan_id: plan.id,
       installment_number: inst.installment_number,
-      due_date: inst.due_date,
       amount: inst.amount,
     }))
 

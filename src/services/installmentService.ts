@@ -13,7 +13,6 @@ export interface InstallmentPlanInsertData {
 export interface InstallmentPaymentInsertData {
   plan_id: number
   installment_number: number
-  due_date: string
   amount: number
 }
 
@@ -28,7 +27,7 @@ export async function insertInstallmentPlan(data: InstallmentPlanInsertData) {
 export async function insertInstallmentPayments(items: InstallmentPaymentInsertData[]) {
   return supabaseAdmin
     .from('installment_payments')
-    .insert(items)
+    .insert(items as never)
     .select()
 }
 
@@ -40,7 +39,7 @@ export const getInstallmentsByPatient = cache(async (patientId: number) => {
       notes, status, created_at,
       transactions ( id, created_at, transaction_items ( description ) ),
       installment_payments (
-        id, plan_id, installment_number, due_date, amount, status, paid_at, created_at
+        id, plan_id, installment_number, amount, status, paid_at, created_at
       )
     `)
     .eq('patient_id', patientId)
@@ -55,7 +54,7 @@ export const getInstallmentsByClinic = cache(async (clinicId: number) => {
       notes, status, created_at,
       patients ( id, first_name, last_name ),
       installment_payments (
-        id, plan_id, installment_number, due_date, amount, status, paid_at, created_at
+        id, plan_id, installment_number, amount, status, paid_at, created_at
       )
     `)
     .eq('clinic_id', clinicId)
@@ -71,7 +70,7 @@ export const getInstallmentsAllClinics = cache(async () => {
       patients ( id, first_name, last_name ),
       clinics ( id, name ),
       installment_payments (
-        id, plan_id, installment_number, due_date, amount, status, paid_at, created_at
+        id, plan_id, installment_number, amount, status, paid_at, created_at
       )
     `)
     .order('created_at', { ascending: false })

@@ -10,7 +10,6 @@ type InstallmentPaymentRow = {
   id: number
   plan_id: number
   installment_number: number
-  due_date: string
   amount: number
   status: string
   paid_at: string | null
@@ -51,7 +50,7 @@ export default async function PatientPaymentsPage() {
       notes, status, created_at,
       transactions ( id, created_at, transaction_items ( description ) ),
       installment_payments (
-        id, plan_id, installment_number, due_date, amount, status, paid_at
+        id, plan_id, installment_number, amount, status, paid_at
       )
     `)
     .eq('patient_id', patient.id)
@@ -64,11 +63,11 @@ export default async function PatientPaymentsPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900">My Payments</h1>
         <p className="text-sm text-gray-500 mt-1">
-          View your installment schedules and pay upcoming dues online.
+          View your installment plans and payment status.
         </p>
       </div>
 
-      <PaymentsClient plans={plans} patientId={patient.id} />
+      <PaymentsClient plans={plans} />
     </div>
   )
 }
