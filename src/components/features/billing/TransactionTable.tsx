@@ -132,7 +132,7 @@ export default function TransactionTable({
                           Finalize &amp; Collect
                         </button>
                       )}
-                      {!isDraft && tx.payment_status !== 'paid' && onCollectPayment && (
+                      {!isDraft && tx.payment_status !== 'paid' && !installmentPlanByTxId[tx.id] && onCollectPayment && (
                         <button
                           onClick={() => onCollectPayment(tx)}
                           className="px-3 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded text-xs font-bold transition flex items-center gap-1"
