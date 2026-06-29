@@ -3,8 +3,7 @@ import { enforceRole } from '@/lib/auth/protection'
 import { handleLogout } from '@/actions/handleLogout'
 import { createClient } from '@/lib/supabase/serverSSR'
 import { getDentistRecordByUserId } from '@/services/dashboardService'
-import DentistSidebar from './_components/Sidebar'
-import DentistTopBar from './_components/TopBar'
+import DentistLayoutClient from './_components/DentistLayoutClient'
 import { AlertCircle } from 'lucide-react'
 
 interface DentistLayoutProps {
@@ -49,20 +48,13 @@ export default async function DentistLayout({ children }: DentistLayoutProps) {
   const dentistName = `${dentistRecord.first_name} ${dentistRecord.last_name}`
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
-      {/* Sidebar */}
-      <DentistSidebar dentistName={dentistName} />
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top bar */}
-        <DentistTopBar user={user} clinicName={clinicName} logoutAction={logoutAction} />
-
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto">
-          {children}
-        </main>
-      </div>
-    </div>
+    <DentistLayoutClient
+      user={user}
+      clinicName={clinicName}
+      logoutAction={logoutAction}
+      dentistName={dentistName}
+    >
+      {children}
+    </DentistLayoutClient>
   )
 }

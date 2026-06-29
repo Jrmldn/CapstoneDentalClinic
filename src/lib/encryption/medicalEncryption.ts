@@ -39,16 +39,22 @@ export async function encryptMedicalData(plaintext: string): Promise<string> {
 export async function decryptMedicalData(value: string): Promise<string> {
   if (!value || !value.startsWith(ENC_PREFIX)) return value
 
-  const key = getKey()
-  const parts = value.slice(ENC_PREFIX.length).split('.')
-  if (parts.length !== 3) throw new Error('Invalid ciphertext format')
+  try {
+    const key = getKey()
+    const parts = value.slice(ENC_PREFIX.length).split('.')
+    if (parts.length !== 3) throw new Error('Invalid ciphertext format')
 
-  const iv = Buffer.from(parts[0], 'base64')
-  const authTag = Buffer.from(parts[1], 'base64')
-  const encrypted = Buffer.from(parts[2], 'base64')
+    const iv = Buffer.from(parts[0], 'base64')
+    const authTag = Buffer.from(parts[1], 'base64')
+    const encrypted = Buffer.from(parts[2], 'base64')
 
-  const decipher = createDecipheriv(ALGORITHM, key, iv, { authTagLength: TAG_LENGTH })
-  decipher.setAuthTag(authTag)
+    const decipher = createDecipheriv(ALGORITHM, key, iv, { authTagLength: TAG_LENGTH })
+    decipher.setAuthTag(authTag)
 
-  return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8')
+    return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8')
+  } catch (error) {
+    // Log decryption failure inside catch block (e.g. on mismatched key)
+    console.error('Failed to decrypt medical data (possibly due to mismatched ENCRYPTION_KEY):', error instanceof Error ? error.message : error)
+    return value
+  }
 }

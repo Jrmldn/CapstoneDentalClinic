@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -9,7 +10,9 @@ import {
   Image as ImageIcon,
   Settings,
   ClipboardList,
+  X,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 const menuGroups = [
   {
@@ -36,9 +39,11 @@ const menuGroups = [
 
 interface DentistSidebarProps {
   dentistName: string
+  isOpen?: boolean
+  onClose?: () => void
 }
 
-export default function DentistSidebar({ dentistName }: DentistSidebarProps) {
+export default function DentistSidebar({ dentistName, isOpen, onClose }: DentistSidebarProps) {
   const pathname = usePathname()
 
   const isActive = (key: string, href: string) => {
@@ -46,8 +51,56 @@ export default function DentistSidebar({ dentistName }: DentistSidebarProps) {
     return pathname.startsWith(href)
   }
 
+  // Close sidebar on Escape key press
+  React.useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen && onClose) {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [isOpen, onClose])
+
+  // Close sidebar on route change
+  const onCloseRef = React.useRef(onClose)
+  const isOpenRef = React.useRef(isOpen)
+  React.useEffect(() => {
+    onCloseRef.current = onClose
+    isOpenRef.current = isOpen
+  }, [onClose, isOpen])
+
+  React.useEffect(() => {
+    if (isOpenRef.current && onCloseRef.current) {
+      onCloseRef.current()
+    }
+  }, [pathname])
+
   return (
-    <aside className="w-60 bg-gradient-to-b from-slate-900 to-slate-800 text-white flex flex-col flex-shrink-0 print:hidden">
+    <>
+      {/* Mobile backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden transition-opacity"
+          onClick={onClose}
+        />
+      )}
+
+      <aside
+        className={cn(
+          "w-60 bg-gradient-to-b from-slate-900 to-slate-800 text-white flex flex-col flex-shrink-0 fixed inset-y-0 left-0 z-50 transform -translate-x-full transition-transform duration-200 md:relative md:translate-x-0 md:flex print:hidden",
+          isOpen && "translate-x-0"
+        )}
+      >
+        {/* Close button for mobile */}
+        {isOpen && onClose && (
+          <button
+            onClick={onClose}
+            className="md:hidden absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/60 transition"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
       {/* Logo */}
       <div className="p-5 border-b border-slate-700">
         <div className="flex items-center gap-3">
@@ -104,5 +157,6 @@ export default function DentistSidebar({ dentistName }: DentistSidebarProps) {
         </div>
       </div>
     </aside>
+    </>
   )
 }

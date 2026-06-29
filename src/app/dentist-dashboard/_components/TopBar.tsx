@@ -1,23 +1,33 @@
 'use client'
 
-import { LogOut, Bell } from 'lucide-react'
+import { LogOut, Bell, Menu } from 'lucide-react'
 
 interface DentistTopBarProps {
   user: { email: string }
   clinicName: string
   logoutAction: (formData: FormData) => Promise<void>
+  onMenuToggle?: () => void
 }
 
-export default function DentistTopBar({ user, clinicName, logoutAction }: DentistTopBarProps) {
+export default function DentistTopBar({ user, clinicName, logoutAction, onMenuToggle }: DentistTopBarProps) {
   return (
-    <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-8 flex-shrink-0 print:hidden">
-      {/* Clinic context */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-500">Clinic:</span>
-        <span className="text-sm font-semibold text-slate-800">{clinicName}</span>
-        <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-          Dentist Portal
-        </span>
+    <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 md:px-8 flex-shrink-0 print:hidden">
+      {/* Left side: hamburger + Clinic context */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onMenuToggle}
+          className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 md:hidden"
+          type="button"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500 hidden xs:inline">Clinic:</span>
+          <span className="text-sm font-semibold text-slate-800 truncate max-w-[120px] sm:max-w-none">{clinicName}</span>
+          <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 hidden xs:inline">
+            Dentist Portal
+          </span>
+        </div>
       </div>
 
       {/* Right side */}

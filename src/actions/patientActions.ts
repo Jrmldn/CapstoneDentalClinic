@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/serverSSR'
 import { revalidatePath } from 'next/cache'
 import { encryptMedicalData } from '@/lib/encryption/medicalEncryption'
+import type { Json } from '../../database/supabase-types'
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
@@ -761,8 +762,8 @@ export interface PeriodontalScreeningData {
   clinic_id: number
   dentist_id: number
   appointment_id?: number | null
-  pocket_depths: any
-  bleeding_points: any
+  pocket_depths: Json
+  bleeding_points: Json
   findings?: string | null
 }
 
