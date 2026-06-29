@@ -38,6 +38,5 @@ export interface AppointmentsClientProps {
   userId: string
   initialAppointments: Appointment[]
   patients: Patient[]
-  services: Service[]
   dentists: Dentist[]
 }

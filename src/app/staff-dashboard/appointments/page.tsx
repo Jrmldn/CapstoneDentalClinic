@@ -82,18 +82,12 @@ export default async function AppointmentsPage() {
     }
   })
 
-  // Fetch active patients, services, and dentists for booking
-  const [patientsRes, servicesRes, dentistsRes] = await Promise.all([
+  // Fetch active patients and dentists for booking
+  const [patientsRes, dentistsRes] = await Promise.all([
     supabaseAdmin
       .from('patients')
       .select('id, first_name, last_name, phone')
       .eq('is_guest', false),
-    supabase
-      .from('services')
-      .select('id, name, price, slot_duration_min')
-      .eq('clinic_id', clinicId)
-      .eq('is_active', true)
-      .order('name', { ascending: true }),
     supabase
       .from('dentists')
       .select('id, first_name, last_name')
@@ -133,7 +127,6 @@ export default async function AppointmentsPage() {
         userId={authUser.id}
         initialAppointments={mappedAppointments}
         patients={activePatients}
-        services={servicesRes.data ?? []}
         dentists={dentistsRes.data ?? []}
       />
     </div>

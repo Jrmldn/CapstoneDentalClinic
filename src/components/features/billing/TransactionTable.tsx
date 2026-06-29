@@ -107,13 +107,15 @@ export default function TransactionTable({
                   <td className="px-6 py-4 capitalize text-gray-500">{tx.payment_method}</td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col gap-1">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase w-fit ${
-                        tx.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                        tx.payment_status === 'partial' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' :
-                        'bg-red-50 text-red-700 border border-red-100'
-                      }`}>
-                        {tx.payment_status}
-                      </span>
+                      {!isDraft && (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase w-fit ${
+                          tx.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                          tx.payment_status === 'partial' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' :
+                          'bg-red-50 text-red-700 border border-red-100'
+                        }`}>
+                          {tx.payment_status}
+                        </span>
+                      )}
                       {isDraft && (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase w-fit bg-amber-50 text-amber-700 border border-amber-100">
                           Pending from Dentist

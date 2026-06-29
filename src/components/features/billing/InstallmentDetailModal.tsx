@@ -15,10 +15,6 @@ interface InstallmentDetailModalProps {
   readOnly?: boolean
 }
 
-function getPaymentStatus(payment: InstallmentPayment) {
-  if (payment.status === 'paid') return { label: 'Paid', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' }
-  return { label: 'Pending', color: 'bg-blue-50 text-blue-700 border-blue-100' }
-}
 
 export default function InstallmentDetailModal({
   isOpen,
@@ -97,24 +93,18 @@ export default function InstallmentDetailModal({
           {/* Installment payments */}
           <div className="space-y-2">
             {payments.map((payment) => {
-              const { label, color } = getPaymentStatus(payment)
               const isLoading = loadingId === payment.id
 
               return (
                 <div key={payment.id} className="border border-gray-100 rounded-xl p-3.5 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {payment.status === 'paid' ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      ) : (
-                        <Clock className="w-4 h-4 text-blue-400" />
-                      )}
-                      <span className="text-sm font-bold text-slate-800">
-                        Installment {payment.installment_number}
-                      </span>
-                    </div>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase ${color}`}>
-                      {label}
+                  <div className="flex items-center gap-2">
+                    {payment.status === 'paid' ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                    ) : (
+                      <Clock className="w-4 h-4 text-blue-400" />
+                    )}
+                    <span className="text-sm font-bold text-slate-800">
+                      Installment {payment.installment_number}
                     </span>
                   </div>
 

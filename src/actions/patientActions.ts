@@ -761,8 +761,8 @@ export interface PeriodontalScreeningData {
   clinic_id: number
   dentist_id: number
   appointment_id?: number | null
-  pocket_depths: any
-  bleeding_points: any
+  pocket_depths: number[][]
+  bleeding_points: boolean[][]
   findings?: string | null
 }
 

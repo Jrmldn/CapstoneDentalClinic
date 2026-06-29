@@ -24,7 +24,7 @@ export async function updateDentalChart(
   dentistId: number,
   toothConditions: ToothConditionData[]
 ) {
-  const auth = await ensureRole('dentist')
+  const auth = await ensureRole('dentist', 'superadmin')
   if (!auth.success) return { success: false, error: auth.error }
 
   try {

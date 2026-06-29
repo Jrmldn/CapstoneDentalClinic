@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Calendar,
@@ -14,10 +14,11 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { toDateKey, formatTo12h } from '@/lib/date'
-import { createAppointment, updateAppointmentStatus } from '@/actions/appointmentActions'
+import { createAppointment } from '@/actions/appointmentActions'
 import { getAvailableSlots, TimeSlot } from '@/actions/slotAvailabilityActions'
 import { getBranchData, BranchDentist, BranchService } from '@/actions/bookingActions'
 import { PatientRecord } from './types'
+import { isUpcomingAppointment } from './utils'
 import PaymentModal from '@/components/features/billing/PaymentModal'
 
 interface Branch {
@@ -29,7 +30,6 @@ interface Branch {
 interface BookingTabProps {
   branches: Branch[]
   record: PatientRecord
-  authUserId: string
   /** @deprecated — will be removed once BookingTab handles branch selection internally */
   clinicId?: number
   dentists?: BranchDentist[]
@@ -40,16 +40,10 @@ interface BookingTabProps {
 export function BookingTab({
   branches,
   record,
-  authUserId,
 }: BookingTabProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const urlDate = searchParams.get('date') || ''
-  const rescheduleMode = searchParams.get('reschedule') === 'true'
-  const rescheduleApptId = searchParams.get('apptId') ? parseInt(searchParams.get('apptId')!, 10) : null
-  const existingAppt = rescheduleMode && rescheduleApptId
-    ? record.appointments.find(a => a.id === rescheduleApptId)
-    : null
 
   // Branch selection step
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null)
@@ -76,10 +70,7 @@ export function BookingTab({
     description: string
   } | null>(null)
 
-  // Load branch data when a branch is selected.
-  // Pass prefill values to avoid a race condition where setBookingDentist/setBookingService
-  // calls from a useEffect get wiped by the reset inside this function after the await.
-  const handleBranchSelect = async (branchId: number, prefillDentistId = '', prefillServiceId = '', prefillDate = '') => {
+  const handleBranchSelect = async (branchId: number) => {
     setBranchLoading(true)
     setBranchError(null)
     setSelectedBranchId(branchId)
@@ -99,49 +90,16 @@ export function BookingTab({
     setServices(result.services)
     setDefaultDownpaymentAmount(result.settings.default_downpayment_amount)
 
-    if (prefillDentistId) setBookingDentist(prefillDentistId)
-    if (prefillDate) setBookingDate(prefillDate)
-
-    if (prefillServiceId) {
-      setBookingService(prefillServiceId)
-    } else {
-      // Auto-select consultation service if only one exists and no prefill
-      const consultations = result.services.filter(s =>
-        s.name.toLowerCase().includes('consultation')
-      )
-      if (consultations.length > 0) {
-        setBookingService(String(consultations[0].id))
-      }
+    // Auto-select consultation service if only one exists
+    const consultations = result.services.filter(s =>
+      s.name.toLowerCase().includes('consultation')
+    )
+    if (consultations.length > 0) {
+      setBookingService(String(consultations[0].id))
     }
 
     setBranchLoading(false)
-
-    // Auto-fetch slots when all three values are provided (reschedule pre-fill)
-    if (prefillDentistId && prefillServiceId && prefillDate) {
-      setSlotsLoading(true)
-      setSelectedTimeSlot(null)
-      try {
-        const res = await getAvailableSlots(branchId, parseInt(prefillDentistId, 10), parseInt(prefillServiceId, 10), prefillDate)
-        setAvailableTimeSlots(res.success && res.slots ? res.slots : [])
-      } catch (e) {
-        console.error(e)
-      } finally {
-        setSlotsLoading(false)
-      }
-    }
   }
-
-  // Pre-fill from reschedule mode. Pass all prefill values into handleBranchSelect so they
-  // are applied after branch data loads — avoids the state reset race condition.
-  useEffect(() => {
-    if (rescheduleMode && existingAppt?.clinic_id) {
-      const dId = String(existingAppt.dentists?.id || '')
-      const sId = String(existingAppt.services?.id || '')
-      const dateStr = existingAppt.scheduled_at ? toDateKey(existingAppt.scheduled_at) : ''
-      handleBranchSelect(existingAppt.clinic_id, dId, sId, dateStr)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rescheduleMode, existingAppt])
 
   // Fetch slots when dentist/service/date/branch all set
   const fetchSlots = async (dateVal: string, dentistVal: string, serviceVal: string) => {
@@ -169,29 +127,6 @@ export function BookingTab({
 
     const scheduledAtStr = `${bookingDate}T${selectedTimeSlot.start}:00`
     const endAtStr = `${bookingDate}T${selectedTimeSlot.end}:00`
-
-    if (rescheduleMode && rescheduleApptId) {
-      try {
-        const res = await updateAppointmentStatus(
-          rescheduleApptId,
-          'rescheduled',
-          authUserId,
-          'patient',
-          'Rescheduled by patient',
-          new Date(scheduledAtStr).toISOString(),
-          new Date(endAtStr).toISOString()
-        )
-        if (res.success) {
-          setBookingStatus({ success: true })
-          setTimeout(() => router.push('/patient-dashboard/appointments'), 1500)
-        } else {
-          setBookingStatus({ error: res.error || 'Failed to reschedule appointment.' })
-        }
-      } catch {
-        setBookingStatus({ error: 'An unexpected error occurred.' })
-      }
-      return
-    }
 
     const selectedServiceObj = services.find(s => s.id === parseInt(bookingService, 10))
     if (!selectedServiceObj) return
@@ -226,24 +161,43 @@ export function BookingTab({
     }
   }
 
-  const consultationServices = services.filter(s =>
-    s.name.toLowerCase().includes('consultation')
-  )
-  const selectedBranch = branches.find(b => b.id === selectedBranchId)
+  const hasOngoingAppointment = record.appointments?.some(isUpcomingAppointment) ?? false
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-xl font-bold flex items-center gap-2">
           <Calendar className="w-5 h-5 text-blue-600" />
-          Schedule Appointment
+          Schedule Consultation Appointment
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
 
+        {hasOngoingAppointment ? (
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex flex-col gap-3">
+            <div className="flex items-start gap-3">
+              <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-amber-800 text-sm">You already have an ongoing appointment</p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  You cannot book a new appointment while you have a pending, confirmed, or rescheduled appointment.
+                  Please wait for it to be completed or cancelled first.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => router.push('/patient-dashboard/appointments')}
+              className="self-start text-xs font-bold text-amber-800 underline underline-offset-2 hover:text-amber-900"
+            >
+              View my appointments
+            </button>
+          </div>
+        ) : (
+          <>
         {/* ── Step 1: Branch selection ───────────────────────── */}
         <div>
-          <p className="text-xs font-bold uppercase text-slate-500 mb-3 tracking-wider">
+          <p className="text-xs font-bold uppercase text-blue-600 mb-3 tracking-wider">
             Step 1 — Choose a Branch
           </p>
           {branches.length === 0 ? (
@@ -289,9 +243,8 @@ export function BookingTab({
         {selectedBranchId && !branchLoading && (
           <>
             <div className="border-t border-slate-100 pt-5">
-              <p className="text-xs font-bold uppercase text-slate-500 mb-4 tracking-wider flex items-center gap-1.5">
-                Step 2 — Book at
-                <span className="text-blue-600 normal-case font-bold">{selectedBranch?.name}</span>
+              <p className="text-xs font-bold uppercase text-blue-600 mb-4 tracking-wider flex items-center gap-1.5">
+                Step 2 — Select Dentist &amp; Date
                 <button
                   type="button"
                   onClick={() => { setSelectedBranchId(null); setDentists([]); setServices([]) }}
@@ -316,38 +269,6 @@ export function BookingTab({
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Service */}
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">Service</label>
-                    {consultationServices.length === 0 ? (
-                      <div className="w-full border border-red-200 text-red-600 rounded-lg p-2.5 bg-red-50 text-sm font-semibold">
-                        No consultation services available at this branch.
-                      </div>
-                    ) : consultationServices.length === 1 ? (
-                      <div className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 font-semibold text-slate-700 flex items-center justify-between">
-                        <span>{consultationServices[0].name}</span>
-                        <span className="text-xs text-blue-600 font-bold">PHP {consultationServices[0].price.toLocaleString()}</span>
-                      </div>
-                    ) : (
-                      <select
-                        value={bookingService}
-                        onChange={(e) => {
-                          setBookingService(e.target.value)
-                          fetchSlots(bookingDate, bookingDentist, e.target.value)
-                        }}
-                        className="w-full border border-slate-200 rounded-lg p-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-slate-700 disabled:opacity-75 disabled:bg-slate-50"
-                        required
-                        disabled={rescheduleMode}
-                      >
-                        {consultationServices.map(s => (
-                          <option key={s.id} value={s.id}>
-                            {s.name} (PHP {s.price.toLocaleString()})
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-
                   {/* Dentist */}
                   <div>
                     <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">Select Dentist</label>
@@ -368,23 +289,23 @@ export function BookingTab({
                       ))}
                     </select>
                   </div>
-                </div>
 
-                {/* Date */}
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">Select Date</label>
-                  <input
-                    type="date"
-                    value={bookingDate}
-                    min={toDateKey()}
-                    max={(() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); return toDateKey(d) })()}
-                    onChange={(e) => {
-                      setBookingDate(e.target.value)
-                      fetchSlots(e.target.value, bookingDentist, bookingService)
-                    }}
-                    className="w-full border border-slate-200 rounded-lg p-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
+                  {/* Date */}
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">Select Date</label>
+                    <input
+                      type="date"
+                      value={bookingDate}
+                      min={toDateKey()}
+                      max={(() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); return toDateKey(d) })()}
+                      onChange={(e) => {
+                        setBookingDate(e.target.value)
+                        fetchSlots(e.target.value, bookingDentist, bookingService)
+                      }}
+                      className="w-full border border-slate-200 rounded-lg p-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
                 </div>
 
                 {/* Time slots */}
@@ -425,8 +346,15 @@ export function BookingTab({
                   </div>
                 )}
 
+                {/* ── Step 3: Confirm & Reserve ── */}
+                <div className="border-t border-slate-100 pt-5">
+                  <p className="text-xs font-bold uppercase text-blue-600 mb-4 tracking-wider">
+                    Step 3 — Confirm &amp; Reserve
+                  </p>
+                </div>
+
                 {/* Downpayment summary */}
-                {!rescheduleMode && bookingService && (() => {
+                {bookingService && (() => {
                   const activeService = services.find(s => s.id === parseInt(bookingService, 10))
                   if (!activeService) return null
                   const downpaymentAmount = Math.min(defaultDownpaymentAmount, activeService.price) || activeService.price
@@ -464,9 +392,7 @@ export function BookingTab({
                   className="w-full bg-blue-600 hover:bg-blue-700 font-bold"
                   disabled={bookingStatus.loading || !selectedTimeSlot}
                 >
-                  {bookingStatus.loading
-                    ? (rescheduleMode ? 'Updating...' : 'Booking...')
-                    : (rescheduleMode ? 'Reschedule Appointment' : 'Book Appointment')}
+                  {bookingStatus.loading ? 'Booking...' : 'Book Appointment'}
                 </Button>
               </form>
             </div>
@@ -483,6 +409,8 @@ export function BookingTab({
             </div>
             <div className="h-10 bg-slate-100 rounded-lg" />
           </div>
+        )}
+          </>
         )}
       </CardContent>
 

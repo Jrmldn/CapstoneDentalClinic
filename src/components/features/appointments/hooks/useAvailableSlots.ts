@@ -14,8 +14,8 @@ export interface Slot {
 export function useAvailableSlots(clinicId: number) {
   const [slots, setSlots] = useState<Slot[]>([])
 
-  const fetchSlots = async (dentistId: number, serviceId: number, date: string) => {
-    if (!dentistId || !serviceId || !date) return
+  const fetchSlots = async (dentistId: number, serviceId: number | null, date: string) => {
+    if (!dentistId || !date) return
     const result = await getAvailableSlots(clinicId, dentistId, serviceId, date)
     if (result.success && result.slots) {
       setSlots(result.slots)

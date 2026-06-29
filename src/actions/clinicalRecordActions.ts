@@ -66,7 +66,7 @@ export interface TmjAssessmentData {
 // ADD CLINICAL ASSESSMENT
 
 export async function addClinicalAssessment(data: ClinicalAssessmentData) {
-  const auth = await ensureRole('dentist')
+  const auth = await ensureRole('dentist', 'superadmin')
   if (!auth.success) return { success: false, error: auth.error }
 
   try {
@@ -108,7 +108,7 @@ export async function addClinicalAssessment(data: ClinicalAssessmentData) {
 // ADD TREATMENT RECORD
 
 export async function addTreatmentRecord(data: TreatmentRecordData) {
-  const auth = await ensureRole('dentist')
+  const auth = await ensureRole('dentist', 'superadmin')
   if (!auth.success) return { success: false, error: auth.error }
 
   try {
@@ -197,7 +197,7 @@ export async function addTreatmentRecords(rows: TreatmentRecordData[]) {
 // ADD PRESCRIPTION
 
 export async function addPrescription(data: PrescriptionData) {
-  const auth = await ensureRole('dentist')
+  const auth = await ensureRole('dentist', 'superadmin')
   if (!auth.success) return { success: false, error: auth.error }
 
   try {
@@ -294,7 +294,7 @@ export async function addPrescriptions(rows: PrescriptionData[]) {
 // ADD PERIODONTAL SCREENING
 
 export async function addPeriodontalScreening(data: PeriodontalScreeningData) {
-  const auth = await ensureRole('dentist')
+  const auth = await ensureRole('dentist', 'superadmin')
   if (!auth.success) return { success: false, error: auth.error }
 
   try {
@@ -332,7 +332,7 @@ export async function addPeriodontalScreening(data: PeriodontalScreeningData) {
 // ADD TMJ ASSESSMENT
 
 export async function addTmjAssessment(data: TmjAssessmentData) {
-  const auth = await ensureRole('dentist')
+  const auth = await ensureRole('dentist', 'superadmin')
   if (!auth.success) return { success: false, error: auth.error }
 
   try {

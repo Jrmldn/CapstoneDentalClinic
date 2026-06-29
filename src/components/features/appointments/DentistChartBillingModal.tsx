@@ -507,7 +507,7 @@ export default function DentistChartBillingModal({
                 </div>
               ) : localRecord ? (
                 <>
-                  {activeTab === 'chart' && (
+                  <div className={activeTab !== 'chart' ? 'hidden' : ''}>
                     <DentalChartTab
                       patientId={localRecord.patient.id}
                       clinicId={clinicId}
@@ -517,8 +517,8 @@ export default function DentistChartBillingModal({
                       readOnly={false}
                       onChartSave={handleChartConditionsAdd}
                     />
-                  )}
-                  {activeTab === 'treatments' && (
+                  </div>
+                  <div className={activeTab !== 'treatments' ? 'hidden' : ''}>
                     <TreatmentTab
                       patientId={localRecord.patient.id}
                       clinicId={clinicId}
@@ -527,8 +527,8 @@ export default function DentistChartBillingModal({
                       onRefresh={handleRefreshRecord}
                       onAddTreatment={handleTreatmentAdd}
                     />
-                  )}
-                  {activeTab === 'prescriptions' && (
+                  </div>
+                  <div className={activeTab !== 'prescriptions' ? 'hidden' : ''}>
                     <PrescriptionsTab
                       patientId={localRecord.patient.id}
                       clinicId={clinicId}
@@ -543,16 +543,16 @@ export default function DentistChartBillingModal({
                       }}
                       onAddPrescription={handlePrescriptionAdd}
                     />
-                  )}
-                  {activeTab === 'info' && (
+                  </div>
+                  <div className={activeTab !== 'info' ? 'hidden' : ''}>
                     <MedicalHistoryTab
                       localRecord={localRecord}
                       viewerRole="dentist"
                       lastVisitDate={lastVisitDate}
                       medHistory={medHistory}
                     />
-                  )}
-                  {activeTab === 'periodontal' && (
+                  </div>
+                  <div className={activeTab !== 'periodontal' ? 'hidden' : ''}>
                     <PeriodontalTab
                       patientId={localRecord.patient.id}
                       clinicId={clinicId}
@@ -562,8 +562,8 @@ export default function DentistChartBillingModal({
                       onRefresh={handleRefreshRecord}
                       onAddPeriodontal={() => {}}
                     />
-                  )}
-                  {activeTab === 'followups' && (
+                  </div>
+                  <div className={activeTab !== 'followups' ? 'hidden' : ''}>
                     <FollowupsTab
                       patientId={localRecord.patient.id}
                       clinicId={clinicId}
@@ -572,7 +572,7 @@ export default function DentistChartBillingModal({
                       onRefresh={handleRefreshRecord}
                       onAddFollowup={() => {}}
                     />
-                  )}
+                  </div>
                 </>
               ) : (
                 <div className="p-8 text-center text-gray-400">Failed to load patient clinical records.</div>

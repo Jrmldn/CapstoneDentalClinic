@@ -27,7 +27,6 @@ interface TreatmentTabProps {
   treatments: TreatmentHistory[]
   onRefresh: () => Promise<void>
   readOnly?: boolean
-  stagedTreatments?: StagedTreatmentData[]
   onAddTreatment?: (treatment: StagedTreatmentData) => void
 }
 
@@ -36,8 +35,6 @@ interface Service {
   name: string
 }
 
-const EMPTY_TREATMENTS: StagedTreatmentData[] = []
-
 export default function TreatmentTab({
   patientId,
   clinicId,
@@ -45,7 +42,6 @@ export default function TreatmentTab({
   treatments,
   onRefresh,
   readOnly = false,
-  stagedTreatments = EMPTY_TREATMENTS,
   onAddTreatment,
 }: TreatmentTabProps) {
   const [showForm, setShowForm] = useState(false)
@@ -162,22 +158,22 @@ export default function TreatmentTab({
     return { clinical_notes: notesStr || '—', prescription_notes: '—' }
   }
 
-  // Combine staged treatments and saved treatments
-  const displayTreatments: (TreatmentHistory & { isStaged?: boolean })[] = [
-    ...stagedTreatments.map((st, index) => ({
-      id: -1 - index, // Unique negative ID for staged items
-      isStaged: true,
-      tooth_number: st.tooth_number,
-      treatment: st.treatment,
-      notes: st.notes,
-      performed_at: st.performed_at,
-      dentists: dentistId ? { id: dentistId, first_name: 'Staged', last_name: 'Record' } : null,
-      clinics: null,
-      service_id: st.service_id ?? null,
-      services: st.services ?? null
-    })),
-    ...treatments
-  ]
+  // Group saved treatments by appointment_id for the read-only history view.
+  // Treatments sharing an appointment_id are collapsed into one session accordion.
+  // null appointment_id = legacy standalone entry, rendered individually.
+  const sessionGroups: { key: number; items: TreatmentHistory[] }[] = []
+  const apptSeen = new Set<number>()
+  for (const t of treatments) {
+    if (t.appointment_id !== null && !apptSeen.has(t.appointment_id)) {
+      apptSeen.add(t.appointment_id)
+      sessionGroups.push({
+        key: t.appointment_id,
+        items: treatments.filter(x => x.appointment_id === t.appointment_id),
+      })
+    } else if (t.appointment_id === null) {
+      sessionGroups.push({ key: t.id, items: [t] })
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -192,10 +188,12 @@ export default function TreatmentTab({
         {!readOnly && dentistId && (
           <button
             onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition"
+            className={showForm
+              ? 'flex items-center gap-1.5 px-4 py-2 border border-gray-200 hover:bg-gray-50 text-slate-600 rounded-lg text-xs font-semibold transition'
+              : 'flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition'}
           >
             {showForm ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-            {showForm ? 'Close Form' : 'Add Record'}
+            {showForm ? 'Cancel' : 'Add Record'}
           </button>
         )}
       </div>
@@ -203,11 +201,8 @@ export default function TreatmentTab({
       {/* New Treatment Form */}
       {showForm && (
         <form onSubmit={handleSave} className="bg-white p-5 rounded-xl border border-gray-250/60 shadow-xs space-y-4 animate-in slide-in-from-top-4 duration-200">
-          <div className="flex justify-between items-center border-b border-gray-100 pb-2">
+          <div className="border-b border-gray-100 pb-2">
             <span className="font-bold text-slate-800 text-xs uppercase tracking-wider">Add Treatment Record</span>
-            <button type="button" onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600">
-              <X className="w-4 h-4" />
-            </button>
           </div>
 
           {/* Service selector + Date — always shown */}
@@ -311,93 +306,114 @@ export default function TreatmentTab({
       {/* Treatments list — hidden in session mode (history viewed elsewhere) */}
       {!onAddTreatment && (
       <div className="space-y-4">
-        {displayTreatments.length === 0 ? (
+        {sessionGroups.length === 0 ? (
           <div className="bg-white p-10 text-center rounded-xl border border-gray-150 shadow-xs">
             <BookOpen className="w-8 h-8 text-gray-300 mx-auto mb-2.5" />
             <p className="text-xs text-gray-400">No treatment records found for this patient.</p>
           </div>
         ) : (
-          displayTreatments.map((treat, idx) => {
-            const isExpanded = expandedCardId === treat.id
-            const parsedNotes = parseNotesObj(treat.notes)
-            const dentistObj = Array.isArray(treat.dentists) ? treat.dentists[0] : treat.dentists
-            const toothLabel = toothNumberToLabel(treat.tooth_number)
+          sessionGroups.map((group, groupIdx) => {
+              const expandKey = group.key
+              const isExpanded = expandedCardId === expandKey
+              const first = group.items[0]
+              const dentistObj = Array.isArray(first.dentists) ? first.dentists[0] : first.dentists
+              const clinicObj = Array.isArray(first.clinics) ? first.clinics[0] : first.clinics
+              const dateStr = formatDate(first.performed_at)
+              const isSession = group.items.length > 1
+              const sessionCode = `S-${(sessionGroups.length - groupIdx).toString().padStart(3, '0')}`
 
-            // TR code (mock code, e.g. TR-001, TR-002, etc.)
-            const trCode = treat.isStaged ? 'TR-STAGED' : `TR-${(displayTreatments.length - idx).toString().padStart(3, '0')}`
-
-            const dateStr = formatDate(treat.performed_at)
-
-            return (
-              <div
-                key={treat.id}
-                className="bg-white rounded-xl border border-gray-150 shadow-xs overflow-hidden hover:shadow-sm transition"
-              >
-                {/* Header Row */}
+              return (
                 <div
-                  onClick={() => toggleExpand(treat.id)}
-                  className="px-5 py-4 flex items-center justify-between cursor-pointer select-none hover:bg-slate-50/50"
+                  key={expandKey}
+                  className="bg-white rounded-xl border border-gray-150 shadow-xs overflow-hidden hover:shadow-sm transition"
                 >
-                  <div className="flex items-center gap-4 min-w-0">
-                    {/* Tooth badge */}
-                    <div className="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
-                      {toothLabel}
-                    </div>
-                    <div className="min-w-0">
-                      <h5 className="font-bold text-slate-800 text-sm truncate">{treat.treatment}</h5>
-                      <span className="text-xs text-gray-400 font-semibold block">
-                        {dateStr} {toothLabel !== '—' ? `· Tooth #${toothLabel}` : ''}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    {isExpanded ? <ChevronUp className="w-4.5 h-4.5 text-gray-400" /> : <ChevronDown className="w-4.5 h-4.5 text-gray-400" />}
-                  </div>
-                </div>
-
-                {/* Expanded content */}
-                {isExpanded && (
-                  <div className="px-5 pb-5 pt-3 border-t border-gray-100 bg-slate-50/30 space-y-4 animate-in fade-in duration-200">
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Clinical Notes</span>
-                      <p className="text-xs text-slate-700 font-medium leading-relaxed bg-white p-3 rounded-lg border border-gray-150">
-                        {parsedNotes.clinical_notes}
-                      </p>
-                    </div>
-
-                    {parsedNotes.prescription_notes && parsedNotes.prescription_notes !== '—' && (
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Prescription</span>
-                        <p className="text-xs text-slate-700 font-medium leading-relaxed bg-white p-3 rounded-lg border border-gray-150">
-                          {parsedNotes.prescription_notes}
-                        </p>
+                  {/* Header Row */}
+                  <div
+                    onClick={() => toggleExpand(expandKey)}
+                    className="px-5 py-4 flex items-center justify-between cursor-pointer select-none hover:bg-slate-50/50"
+                  >
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
+                        {isSession ? group.items.length : toothNumberToLabel(first.tooth_number)}
                       </div>
-                    )}
+                      <div className="min-w-0">
+                        <h5 className="font-bold text-slate-800 text-sm truncate">
+                          {isSession ? `Session · ${group.items.length} procedures` : first.treatment}
+                        </h5>
+                        <span className="text-xs text-gray-400 font-semibold block">
+                          {dateStr}
+                          {!isSession && toothNumberToLabel(first.tooth_number) !== '—' ? ` · Tooth #${toothNumberToLabel(first.tooth_number)}` : ''}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {isExpanded ? <ChevronUp className="w-4.5 h-4.5 text-gray-400" /> : <ChevronDown className="w-4.5 h-4.5 text-gray-400" />}
+                    </div>
+                  </div>
 
-                    <div className="flex flex-col md:flex-row md:justify-between md:items-center pt-2.5 border-t border-gray-100 text-[11px] text-slate-500 font-semibold gap-2">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <div className="flex items-center gap-1">
-                          <User className="w-3.5 h-3.5 text-slate-400" />
-                          <span>Attending: Dr. {dentistObj ? `${dentistObj.first_name} ${dentistObj.last_name}` : 'Cruz'}</span>
+                  {/* Expanded content */}
+                  {isExpanded && (
+                    <div className="px-5 pb-5 pt-3 border-t border-gray-100 bg-slate-50/30 space-y-4 animate-in fade-in duration-200">
+                      {isSession ? (
+                        // Multi-service session: list each procedure as a sub-row
+                        <div className="space-y-2">
+                          {group.items.map((item) => {
+                            const parsedNotes = parseNotesObj(item.notes)
+                            const toothLabel = toothNumberToLabel(item.tooth_number)
+                            return (
+                              <div key={item.id} className="bg-white border border-gray-150 rounded-lg p-3 space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-bold text-slate-800">{item.treatment}</span>
+                                  {toothLabel !== '—' && (
+                                    <span className="text-[10px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full">Tooth #{toothLabel}</span>
+                                  )}
+                                </div>
+                                {parsedNotes.clinical_notes && parsedNotes.clinical_notes !== '—' && (
+                                  <p className="text-[11px] text-slate-500 leading-relaxed">{parsedNotes.clinical_notes}</p>
+                                )}
+                              </div>
+                            )
+                          })}
                         </div>
-                        {(() => {
-                          const clinicObj = Array.isArray(treat.clinics) ? treat.clinics[0] : treat.clinics
-                          if (!clinicObj) return null
-                          return (
+                      ) : (
+                        // Single-service entry: full detail view
+                        <>
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Clinical Notes</span>
+                            <p className="text-xs text-slate-700 font-medium leading-relaxed bg-white p-3 rounded-lg border border-gray-150">
+                              {parseNotesObj(first.notes).clinical_notes}
+                            </p>
+                          </div>
+                          {parseNotesObj(first.notes).prescription_notes && parseNotesObj(first.notes).prescription_notes !== '—' && (
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Prescription</span>
+                              <p className="text-xs text-slate-700 font-medium leading-relaxed bg-white p-3 rounded-lg border border-gray-150">
+                                {parseNotesObj(first.notes).prescription_notes}
+                              </p>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      <div className="flex flex-col md:flex-row md:justify-between md:items-center pt-2.5 border-t border-gray-100 text-[11px] text-slate-500 font-semibold gap-2">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <div className="flex items-center gap-1">
+                            <User className="w-3.5 h-3.5 text-slate-400" />
+                            <span>Attending: Dr. {dentistObj ? `${dentistObj.first_name} ${dentistObj.last_name}` : '—'}</span>
+                          </div>
+                          {clinicObj && (
                             <span className="text-slate-400 font-medium">
-                              · Recorded at {clinicObj.name} on {formatDateTime(treat.performed_at)}
+                              · {clinicObj.name} · {formatDateTime(first.performed_at)}
                             </span>
-                          )
-                        })()}
+                          )}
+                        </div>
+                        <span className="font-mono text-gray-400 text-xs">{sessionCode}</span>
                       </div>
-                      <span className="font-mono text-gray-400 text-xs">{trCode}</span>
                     </div>
-                  </div>
-                )}
-              </div>
-            )
-          })
+                  )}
+                </div>
+              )
+            })
         )}
       </div>
       )}

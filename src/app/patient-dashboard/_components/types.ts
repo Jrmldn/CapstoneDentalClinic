@@ -30,6 +30,7 @@ export interface PatientTreatment {
   notes?: string | null
   services?: { name: string; price?: number } | null
   dentists?: { first_name: string; last_name: string } | null
+  clinics?: { id: number; name: string } | null
 }
 
 export interface PatientPrescription {

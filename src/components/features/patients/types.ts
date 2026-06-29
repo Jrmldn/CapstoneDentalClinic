@@ -87,6 +87,7 @@ export interface DentalChart {
 
 export interface TreatmentHistory {
   id: number
+  appointment_id: number | null
   performed_at: string | null
   treatment: string
   notes: string | null

@@ -3,17 +3,18 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { X, AlertCircle, RefreshCw } from 'lucide-react'
-import { createAppointment, PaymentMethod } from '@/actions/appointmentActions'
+import { createAppointment } from '@/actions/appointmentActions'
 import { useAvailableSlots, MILLISECONDS_PER_MINUTE } from './hooks/useAvailableSlots'
-import type { Patient, Service, Dentist } from './AppointmentTypes'
+import type { Patient, Dentist } from './AppointmentTypes'
 import { formatPhone } from '@/utils/phone-helpers'
 import { toDateKey, formatTo12h } from '@/lib/date'
+
+const DEFAULT_DURATION_MIN = 60
 
 interface BookAppointmentModalProps {
   isOpen: boolean
   onClose: () => void
   patients: Patient[]
-  services: Service[]
   dentists: Dentist[]
   clinicId: number
   onSuccess: () => void
@@ -24,7 +25,6 @@ export default function BookAppointmentModal({
   isOpen,
   onClose,
   patients,
-  services,
   dentists,
   clinicId,
   onSuccess,
@@ -33,14 +33,11 @@ export default function BookAppointmentModal({
   const [selectedPatientId, setSelectedPatientId] = useState<string>(
     initialPatientId ? String(initialPatientId) : ''
   )
-  const [selectedServiceId, setSelectedServiceId] = useState<string>('')
   const [selectedDentistId, setSelectedDentistId] = useState<string>('')
   const [bookingDate, setBookingDate] = useState('')
   const { slots: availableSlots, fetchSlots, clearSlots } = useAvailableSlots(clinicId)
   const [selectedSlot, setSelectedSlot] = useState<string>('')
   const [notes, setNotes] = useState('')
-  const [downpayment, setDownpayment] = useState('0')
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
   const [isWalkIn, setIsWalkIn] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
@@ -51,12 +48,10 @@ export default function BookAppointmentModal({
 
   const resetForm = () => {
     setSelectedPatientId(initialPatientId ? String(initialPatientId) : '')
-    setSelectedServiceId('')
     setSelectedDentistId('')
     setBookingDate('')
     setSelectedSlot('')
     setNotes('')
-    setDownpayment('0')
     clearSlots()
     setFormError('')
   }
@@ -74,10 +69,6 @@ export default function BookAppointmentModal({
       setFormError('Please select a patient.')
       return
     }
-    if (!selectedServiceId) {
-      setFormError('Please select a service.')
-      return
-    }
     if (!selectedDentistId) {
       setFormError('Please select a dentist.')
       return
@@ -90,24 +81,18 @@ export default function BookAppointmentModal({
     setIsSubmitting(true)
 
     try {
-      const serviceObj = services.find(s => s.id === parseInt(selectedServiceId))
-      if (!serviceObj) throw new Error('Selected service not found.')
-
       const startIso = `${bookingDate}T${selectedSlot}:00`
       const startDateObj = new Date(startIso)
-      const endDateObj = new Date(startDateObj.getTime() + serviceObj.slot_duration_min * MILLISECONDS_PER_MINUTE)
+      const endDateObj = new Date(startDateObj.getTime() + DEFAULT_DURATION_MIN * MILLISECONDS_PER_MINUTE)
 
       const bookingResult = await createAppointment({
         clinic_id: clinicId,
         patient_id: parseInt(selectedPatientId),
         dentist_id: parseInt(selectedDentistId),
-        service_id: parseInt(selectedServiceId),
         scheduled_at: startDateObj.toISOString(),
         end_at: endDateObj.toISOString(),
         notes: notes,
         is_walk_in: isWalkIn,
-        downpayment: parseFloat(downpayment) || 0,
-        payment_method: downpayment && parseFloat(downpayment) > 0 ? paymentMethod : undefined
       })
 
       if (!bookingResult.success) {
@@ -163,53 +148,28 @@ export default function BookAppointmentModal({
             </select>
           </div>
 
-          {/* Service & Dentist selection */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-sm font-semibold text-slate-800">Select Service *</label>
-              <select
-                required
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500"
-                value={selectedServiceId}
-                onChange={(e) => {
-                  setSelectedServiceId(e.target.value)
-                  setSelectedSlot('')
-                  if (selectedDentistId && bookingDate) {
-                    fetchSlots(parseInt(selectedDentistId), parseInt(e.target.value), bookingDate)
-                  }
-                }}
-              >
-                <option value="">-- Choose Service --</option>
-                {services.map(s => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} (₱{s.price} · {s.slot_duration_min} min)
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-sm font-semibold text-slate-800">Assign Dentist *</label>
-              <select
-                required
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500"
-                value={selectedDentistId}
-                onChange={(e) => {
-                  setSelectedDentistId(e.target.value)
-                  setSelectedSlot('')
-                  if (selectedServiceId && bookingDate) {
-                    fetchSlots(parseInt(e.target.value), parseInt(selectedServiceId), bookingDate)
-                  }
-                }}
-              >
-                <option value="">-- Choose Dentist --</option>
-                {dentists.map(d => (
-                  <option key={d.id} value={d.id}>
-                    Dr. {d.first_name} {d.last_name}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Dentist selection */}
+          <div className="space-y-1">
+            <label className="text-sm font-semibold text-slate-800">Assign Dentist *</label>
+            <select
+              required
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500"
+              value={selectedDentistId}
+              onChange={(e) => {
+                setSelectedDentistId(e.target.value)
+                setSelectedSlot('')
+                if (bookingDate) {
+                  fetchSlots(parseInt(e.target.value), null, bookingDate)
+                }
+              }}
+            >
+              <option value="">-- Choose Dentist --</option>
+              {dentists.map(d => (
+                <option key={d.id} value={d.id}>
+                  Dr. {d.first_name} {d.last_name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Date & Slots Selection */}
@@ -225,8 +185,8 @@ export default function BookAppointmentModal({
                 onChange={(e) => {
                   setBookingDate(e.target.value)
                   setSelectedSlot('')
-                  if (selectedDentistId && selectedServiceId) {
-                    fetchSlots(parseInt(selectedDentistId), parseInt(selectedServiceId), e.target.value)
+                  if (selectedDentistId) {
+                    fetchSlots(parseInt(selectedDentistId), null, e.target.value)
                   }
                 }}
               />
@@ -234,7 +194,7 @@ export default function BookAppointmentModal({
 
             <div className="space-y-1">
               <label className="text-sm font-semibold text-slate-800">Available Slots *</label>
-              {bookingDate && selectedDentistId && selectedServiceId ? (
+              {bookingDate && selectedDentistId ? (
                 availableSlots.length > 0 ? (
                   <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto border border-gray-100 p-2 rounded-lg bg-gray-50">
                     {availableSlots.map(slot => (
@@ -262,13 +222,13 @@ export default function BookAppointmentModal({
                 )
               ) : (
                 <p className="text-xs text-gray-400 mt-2 bg-gray-50 p-2.5 rounded-lg border border-gray-100 text-center">
-                  Select dentist, service and date to view slots.
+                  Select dentist and date to view slots.
                 </p>
               )}
             </div>
           </div>
 
-          {/* Type, Downpayment and notes */}
+          {/* Booking Type and Notes */}
           <div className="border-t border-gray-100 pt-4 grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <span className="text-sm font-semibold text-slate-800 block">Booking Type</span>
@@ -281,32 +241,6 @@ export default function BookAppointmentModal({
                 />
                 Walk-in Appointment
               </label>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-800 block">Downpayment Details</label>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  placeholder="0.00"
-                  min="0"
-                  className="w-24 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none"
-                  value={downpayment}
-                  onChange={e => setDownpayment(e.target.value)}
-                />
-                {parseFloat(downpayment) > 0 && (
-                  <select
-                    className="px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none"
-                    value={paymentMethod}
-                    onChange={e => setPaymentMethod(e.target.value as PaymentMethod)}
-                  >
-                    <option value="cash">Cash</option>
-                    <option value="gcash">GCash</option>
-                    <option value="paymaya">PayMaya</option>
-                    <option value="credit_card">Card</option>
-                  </select>
-                )}
-              </div>
             </div>
 
             <div className="col-span-2 space-y-1">

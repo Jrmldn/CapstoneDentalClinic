@@ -295,7 +295,7 @@ export async function updatePatientMedicalHistory(
 ) {
   const access = await validatePatientAccess(patientId)
   if (!access.allowed) return { success: false, error: access.reason }
-  if (access.role !== 'patient' && access.role !== 'staff') {
+  if (access.role !== 'dentist' && access.role !== 'superadmin') {
     return { success: false, error: 'Insufficient permissions' }
   }
 

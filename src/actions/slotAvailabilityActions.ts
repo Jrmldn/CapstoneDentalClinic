@@ -24,10 +24,12 @@ export interface TimeSlot {
 
 // GET AVAILABLE SLOTS
 
+const DEFAULT_SLOT_DURATION_MIN = 60
+
 export async function getAvailableSlots(
   clinicId: number,
   dentistId: number,
-  serviceId: number,
+  serviceId: number | null,
   date: string   // "YYYY-MM-DD"
 ): Promise<{ success: boolean; slots?: TimeSlot[]; error?: string }> {
   try {
@@ -49,7 +51,7 @@ export async function getAvailableSlots(
       getClinicOperatingHours(clinicId, dayOfWeek),
       getDentistAvailability(dentistId, dayOfWeek),
       getDentistBlockedSlots(dentistId, date),
-      getServiceById(serviceId),
+      serviceId != null ? getServiceById(serviceId) : Promise.resolve({ data: null, error: null }),
       getActiveAppointmentsForSlots(clinicId, dentistId, dayStart, dayEnd),
       getClinicCapacity(clinicId),
     ])
@@ -80,9 +82,9 @@ export async function getAvailableSlots(
 
     // 4. Dentist blocked slots for that specific date (already fetched)
 
-    // 5. Service duration
-    if (serviceError || !service) throw new Error('Service not found')
-    const duration = service.slot_duration_min
+    // 5. Service duration — fall back to default when no service is selected
+    if (serviceId != null && (serviceError || !service)) throw new Error('Service not found')
+    const duration = service?.slot_duration_min ?? DEFAULT_SLOT_DURATION_MIN
 
     // 6. Existing appointments for that dentist on that date (not cancelled/no-show) (already fetched)
 

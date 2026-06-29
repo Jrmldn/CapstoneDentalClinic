@@ -6,14 +6,15 @@ import { X, AlertCircle, RefreshCw } from 'lucide-react'
 import { registerWalkInPatientAndBook } from '@/actions/patientCoreActions'
 import { useAvailableSlots, MILLISECONDS_PER_MINUTE } from './hooks/useAvailableSlots'
 import { toDateKey, formatTo12h } from '@/lib/date'
-import type { Service, Dentist } from './AppointmentTypes'
+import type { Dentist } from './AppointmentTypes'
+
+const DEFAULT_DURATION_MIN = 60
 
 interface WalkInModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
   clinicId: number
-  services: Service[]
   dentists: Dentist[]
 }
 
@@ -22,17 +23,17 @@ export default function WalkInModal({
   onClose,
   onSuccess,
   clinicId,
-  services,
   dentists,
 }: WalkInModalProps) {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [phone, setPhone] = useState('')
-  const [serviceId, setServiceId] = useState('')
+  const [gender, setGender] = useState('')
+  const [birthdate, setBirthdate] = useState('')
+  const [address, setAddress] = useState('')
   const [dentistId, setDentistId] = useState('')
   const [bookingDate, setBookingDate] = useState('')
   const [selectedSlot, setSelectedSlot] = useState('')
-  const [downpayment, setDownpayment] = useState('0')
   const [notes, setNotes] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
@@ -46,11 +47,12 @@ export default function WalkInModal({
     setFirstName('')
     setLastName('')
     setPhone('')
-    setServiceId('')
+    setGender('')
+    setBirthdate('')
+    setAddress('')
     setDentistId('')
     setBookingDate('')
     setSelectedSlot('')
-    setDownpayment('0')
     setNotes('')
     setFormError('')
     clearSlots()
@@ -69,8 +71,8 @@ export default function WalkInModal({
       setFormError('First name, last name, and phone are required.')
       return
     }
-    if (!serviceId || !dentistId) {
-      setFormError('Please select a service and a dentist.')
+    if (!dentistId) {
+      setFormError('Please select a dentist.')
       return
     }
     if (!bookingDate || !selectedSlot) {
@@ -78,31 +80,25 @@ export default function WalkInModal({
       return
     }
 
-    const serviceObj = services.find(s => s.id === parseInt(serviceId))
-    if (!serviceObj) {
-      setFormError('Selected service not found.')
-      return
-    }
-
     setIsSubmitting(true)
     try {
       const startIso = `${bookingDate}T${selectedSlot}:00`
       const endIso = new Date(
-        new Date(startIso).getTime() + serviceObj.slot_duration_min * MILLISECONDS_PER_MINUTE
+        new Date(startIso).getTime() + DEFAULT_DURATION_MIN * MILLISECONDS_PER_MINUTE
       ).toISOString()
 
       const result = await registerWalkInPatientAndBook({
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         phone: phone.trim(),
+        gender: gender || undefined,
+        birthdate: birthdate || undefined,
+        address: address.trim() || undefined,
         clinic_id: clinicId,
         dentist_id: parseInt(dentistId),
-        service_id: parseInt(serviceId),
         scheduled_at: new Date(startIso).toISOString(),
         end_at: endIso,
         notes: notes.trim() || undefined,
-        downpayment: parseFloat(downpayment) || 0,
-        payment_method: 'cash',
       })
 
       if (!result.success) throw new Error(result.error ?? 'Failed to book walk-in appointment.')
@@ -172,52 +168,60 @@ export default function WalkInModal({
                   onChange={e => setPhone(e.target.value)}
                 />
               </div>
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-slate-600">Gender</span>
+                <select
+                  className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                  value={gender}
+                  onChange={e => setGender(e.target.value)}
+                >
+                  <option value="">-- Select --</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-slate-600">Birthdate</span>
+                <input
+                  type="date"
+                  className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                  value={birthdate}
+                  onChange={e => setBirthdate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1 col-span-2">
+                <span className="text-xs font-medium text-slate-600">Address</span>
+                <input
+                  type="text"
+                  className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                  value={address}
+                  onChange={e => setAddress(e.target.value)}
+                />
+              </div>
             </div>
           </div>
 
-          {/* Service & Dentist */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-sm font-semibold text-slate-800">Select Service *</label>
-              <select
-                required
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500"
-                value={serviceId}
-                onChange={e => {
-                  setServiceId(e.target.value)
-                  setSelectedSlot('')
-                  if (dentistId && bookingDate) fetchSlots(parseInt(dentistId), parseInt(e.target.value), bookingDate)
-                }}
-              >
-                <option value="">-- Choose Service --</option>
-                {services.map(s => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} (₱{s.price} · {s.slot_duration_min} min)
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-sm font-semibold text-slate-800">Assign Dentist *</label>
-              <select
-                required
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500"
-                value={dentistId}
-                onChange={e => {
-                  setDentistId(e.target.value)
-                  setSelectedSlot('')
-                  if (serviceId && bookingDate) fetchSlots(parseInt(e.target.value), parseInt(serviceId), bookingDate)
-                }}
-              >
-                <option value="">-- Choose Dentist --</option>
-                {dentists.map(d => (
-                  <option key={d.id} value={d.id}>
-                    Dr. {d.first_name} {d.last_name}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Dentist */}
+          <div className="space-y-1">
+            <label className="text-sm font-semibold text-slate-800">Assign Dentist *</label>
+            <select
+              required
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500"
+              value={dentistId}
+              onChange={e => {
+                setDentistId(e.target.value)
+                setSelectedSlot('')
+                if (bookingDate) fetchSlots(parseInt(e.target.value), null, bookingDate)
+              }}
+            >
+              <option value="">-- Choose Dentist --</option>
+              {dentists.map(d => (
+                <option key={d.id} value={d.id}>
+                  Dr. {d.first_name} {d.last_name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Date & Slots */}
@@ -233,14 +237,14 @@ export default function WalkInModal({
                 onChange={e => {
                   setBookingDate(e.target.value)
                   setSelectedSlot('')
-                  if (dentistId && serviceId) fetchSlots(parseInt(dentistId), parseInt(serviceId), e.target.value)
+                  if (dentistId) fetchSlots(parseInt(dentistId), null, e.target.value)
                 }}
               />
             </div>
 
             <div className="space-y-1">
               <label className="text-sm font-semibold text-slate-800">Available Slots *</label>
-              {bookingDate && dentistId && serviceId ? (
+              {bookingDate && dentistId ? (
                 availableSlots.length > 0 ? (
                   <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto border border-gray-100 p-2 rounded-lg bg-gray-50">
                     {availableSlots.map(slot => (
@@ -268,35 +272,21 @@ export default function WalkInModal({
                 )
               ) : (
                 <p className="text-xs text-gray-400 mt-2 bg-gray-50 p-2.5 rounded-lg border border-gray-100 text-center">
-                  Select dentist, service and date to view slots.
+                  Select dentist and date to view slots.
                 </p>
               )}
             </div>
           </div>
 
-          {/* Downpayment & Notes */}
-          <div className="border-t border-gray-100 pt-4 grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-800 block">Downpayment (₱)</label>
-              <input
-                type="number"
-                placeholder="0.00"
-                min="0"
-                className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none"
-                value={downpayment}
-                onChange={e => setDownpayment(e.target.value)}
-              />
-            </div>
-
-            <div className="col-span-2 space-y-1">
-              <label className="text-sm font-semibold text-slate-800">Notes / Comments</label>
-              <textarea
-                placeholder="Optional clinic notes or patient concerns..."
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500 h-20 resize-none"
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-              />
-            </div>
+          {/* Notes */}
+          <div className="border-t border-gray-100 pt-4 space-y-1">
+            <label className="text-sm font-semibold text-slate-800">Notes / Comments</label>
+            <textarea
+              placeholder="Optional clinic notes or patient concerns..."
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500 h-20 resize-none"
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+            />
           </div>
 
           <div className="border-t border-gray-100 pt-4 flex justify-end gap-3">
