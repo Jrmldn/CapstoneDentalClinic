@@ -40,7 +40,7 @@ const menuGroups = [
     label: 'Clinical',
     items: [
       { label: 'My Calendar', href: '/patient-dashboard/calendar', icon: CalendarDays, key: 'calendar' },
-      { label: 'Clinical Records', href: '/patient-dashboard/clinicrecord', icon: ClipboardList, key: 'clinicrecord' },
+      { label: 'Treatment History', href: '/patient-dashboard/clinicrecord', icon: ClipboardList, key: 'clinicrecord' },
     ],
   },
   {
