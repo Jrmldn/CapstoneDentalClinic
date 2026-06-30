@@ -47,6 +47,8 @@ export function BookingTab({
   const urlDate = searchParams.get('date') || ''
   const rescheduleMode = searchParams.get('reschedule') === 'true'
   const rescheduleApptId = searchParams.get('apptId') ? parseInt(searchParams.get('apptId')!, 10) : null
+  const rawClinicId = searchParams.get('clinicId')
+  const urlClinicId = rawClinicId ? parseInt(rawClinicId, 10) : null
   const existingAppt = rescheduleMode && rescheduleApptId
     ? record.appointments.find(a => a.id === rescheduleApptId)
     : null
@@ -142,6 +144,14 @@ export function BookingTab({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rescheduleMode, existingAppt])
+
+  // Auto-select clinic when arriving from the dashboard map via ?clinicId=X
+  useEffect(() => {
+    if (urlClinicId && !rescheduleMode) {
+      handleBranchSelect(urlClinicId)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlClinicId])
 
   // Fetch slots when dentist/service/date/branch all set
   const fetchSlots = async (dateVal: string, dentistVal: string, serviceVal: string) => {

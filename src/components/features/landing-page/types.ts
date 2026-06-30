@@ -31,4 +31,5 @@ export interface Clinic {
 
 export interface ClinicMapProps {
   clinics: Clinic[];
+  bookingHref?: string;
 }

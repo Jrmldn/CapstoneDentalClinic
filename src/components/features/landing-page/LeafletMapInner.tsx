@@ -24,9 +24,10 @@ interface LeafletMapInnerProps {
   onMapReady: () => void
   activeClinicId: number | null
   onMarkerClick: (id: number) => void
+  bookingHref?: string
 }
 
-const LeafletMapInner = ({ clinics, onMapReady, activeClinicId, onMarkerClick }: LeafletMapInnerProps) => {
+const LeafletMapInner = ({ clinics, onMapReady, activeClinicId, onMarkerClick, bookingHref }: LeafletMapInnerProps) => {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const markersRef = useRef<{ [key: number]: L.Marker }>({})
@@ -134,7 +135,7 @@ const LeafletMapInner = ({ clinics, onMapReady, activeClinicId, onMarkerClick }:
       const container = L.DomUtil.create('div', 'popup-card-wrapper')
       const root = createRoot(container)
       root.render(
-        <ClinicCard 
+        <ClinicCard
           id={clinic.id}
           name={clinic.name}
           address={clinic.address}
@@ -145,6 +146,7 @@ const LeafletMapInner = ({ clinics, onMapReady, activeClinicId, onMarkerClick }:
           operatingHours={clinic.clinic_operating_hours}
           compact={true}
           className="bg-transparent shadow-none"
+          bookingHref={bookingHref}
         />
       )
       
@@ -175,7 +177,7 @@ const LeafletMapInner = ({ clinics, onMapReady, activeClinicId, onMarkerClick }:
       if (mapRef.current) mapRef.current.invalidateSize()
     }, 100)
 
-  }, [clinics, dentalIcon, onMarkerClick])
+  }, [clinics, dentalIcon, onMarkerClick, bookingHref])
 
   // Sidebar click: fly smoothly to the marker — popup is NOT opened here.
   // Popup only opens when the marker itself is clicked (handled in the click handler above).

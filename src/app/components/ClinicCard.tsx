@@ -20,6 +20,7 @@ export interface ClinicCardProps {
   className?: string
   compact?: boolean
   onClick?: () => void
+  bookingHref?: string
 }
 
 /**
@@ -28,8 +29,8 @@ export interface ClinicCardProps {
  * Delegates slider logic and scheduling calculations to useClinicCard hook.
  */
 export function ClinicCard({
-  name, address, gallery,
-  feedback, isOpen, operatingHours, className, compact, onClick
+  id, name, address, gallery,
+  feedback, isOpen, operatingHours, className, compact, onClick, bookingHref
 }: ClinicCardProps) {
   const {
     images,
@@ -104,7 +105,7 @@ export function ClinicCard({
         </div>
 
         <a
-          href="/login"
+          href={bookingHref ? `${bookingHref}?clinicId=${id}` : '/login'}
           onClick={() => {
             // Let the global listener handle smooth navigation to avoid "no router context" errors in Leaflet popups
           }}

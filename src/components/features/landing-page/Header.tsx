@@ -29,6 +29,12 @@ export function Header() {
               <a href="#how-it-works" className="text-lg text-gray-700 hover:text-blue-600 transition-colors font-medium">
                 How It Works
               </a>
+              <a
+                href="/login"
+                className="ml-4 inline-flex items-center px-5 py-2 rounded-lg bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition"
+              >
+                Sign In
+              </a>
             </nav>
 
             {/* Mobile Menu Button */}
@@ -69,6 +75,13 @@ export function Header() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 How It Works
+              </a>
+              <a
+                href="/login"
+                className="text-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 transition rounded-lg px-4 py-3 text-center"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Sign In
               </a>
             </nav>
           </div>

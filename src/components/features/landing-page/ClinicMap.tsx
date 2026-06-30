@@ -24,7 +24,7 @@ const LeafletMapInner = dynamic(
  * Business logic, state management, and side-effects are delegated to the useClinicFilters hook.
  * The filtering UI is delegated to the FilterSection component.
  */
-export const ClinicMap = ({ clinics }: ClinicMapProps) => {
+export const ClinicMap = ({ clinics, bookingHref }: ClinicMapProps) => {
   const [mobileView, setMobileView] = useState<'list' | 'map'>('list')
   const {
     showOpenOnly,
@@ -93,6 +93,7 @@ export const ClinicMap = ({ clinics }: ClinicMapProps) => {
             onMapReady={handleMapReady}
             activeClinicId={activeClinicId}
             onMarkerClick={setActiveClinicId}
+            bookingHref={bookingHref}
           />
         </div>
 
@@ -120,6 +121,7 @@ export const ClinicMap = ({ clinics }: ClinicMapProps) => {
                 isOpen={getEffectiveClinicStatus(clinic.manual_status, clinic.clinic_operating_hours) === 'open'}
                 operatingHours={clinic.clinic_operating_hours}
                 onClick={() => setActiveClinicId(clinic.id)}
+                bookingHref={bookingHref}
                 className={cn(
                   "shrink-0 transition-all duration-150 w-full",
                   activeClinicId === clinic.id

@@ -9,21 +9,29 @@ import {
   Clock,
   User,
   AlertCircle,
+  CreditCard,
+  MapPin,
 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { PatientRecord } from './types'
 import { formatDate, formatTime, getStatusBadge, isUpcomingAppointment } from './utils'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
+import { ClinicMap } from '@/components/features/landing-page/ClinicMap'
+import { Clinic } from '@/components/features/landing-page/types'
 
 interface OverviewTabProps {
   record: PatientRecord
   authUserId: string
+  clinics: Clinic[]
+  outstandingBalance: number
 }
 
 export function OverviewTab({
   record,
   authUserId,
+  clinics,
+  outstandingBalance,
 }: OverviewTabProps) {
   const router = useRouter()
   const [loadingId, setLoadingId] = useState<number | null>(null)
@@ -82,7 +90,7 @@ export function OverviewTab({
       </div>
 
       {/* Grid of Key Info */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardContent className="pt-6 flex items-center gap-4">
             <div className="p-3 bg-blue-100 text-blue-600 rounded-xl">
@@ -115,6 +123,19 @@ export function OverviewTab({
             <div>
               <p className="text-xs text-slate-500 font-medium">Prescriptions</p>
               <h4 className="text-2xl font-bold text-slate-900">{record.prescriptions.length}</h4>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6 flex items-center gap-4">
+            <div className="p-3 bg-amber-100 text-amber-600 rounded-xl">
+              <CreditCard className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 font-medium">Outstanding Balance</p>
+              <h4 className="text-2xl font-bold text-slate-900">
+                ₱{outstandingBalance.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+              </h4>
             </div>
           </CardContent>
         </Card>
@@ -204,6 +225,19 @@ export function OverviewTab({
               <p className="text-sm font-medium">No upcoming appointments scheduled</p>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Clinic Map */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-bold flex items-center gap-2">
+            <MapPin className="w-5 h-5 text-blue-600" />
+            Find a Clinic Near You
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ClinicMap clinics={clinics} bookingHref="/patient-dashboard/booking" />
         </CardContent>
       </Card>
     </div>
