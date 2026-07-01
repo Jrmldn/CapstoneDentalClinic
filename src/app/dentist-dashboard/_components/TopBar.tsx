@@ -43,7 +43,7 @@ export default function DentistTopBar({ user, clinicName, logoutAction, onMenuTo
         <div className="w-px h-6 bg-gray-200" />
 
         {/* User */}
-        <span className="text-sm text-gray-600">{user.email}</span>
+        <span className="text-sm text-gray-600 hidden sm:inline">{user.email}</span>
 
         {/* Logout */}
         <form action={logoutAction} className="inline">

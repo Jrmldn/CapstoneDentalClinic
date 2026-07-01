@@ -111,7 +111,7 @@ export default function DataTable<T extends object>({
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               {selectableRows && (
-                <th className="px-6 py-3 text-left w-12">
+                <th className="px-3 md:px-6 py-3 text-left w-12">
                   <input
                     type="checkbox"
                     className="rounded cursor-pointer w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
@@ -123,7 +123,7 @@ export default function DataTable<T extends object>({
               {columns.map((col) => (
                 <th
                   key={String(col.key)}
-                  className={`px-6 py-3 text-${col.align || 'left'} text-xs font-semibold text-gray-600 uppercase tracking-wider ${col.width || ''}`}
+                  className={`px-3 md:px-6 py-3 text-${col.align || 'left'} text-xs font-semibold text-gray-600 uppercase tracking-wider ${col.width || ''}`}
                 >
                   {col.label}
                 </th>
@@ -147,7 +147,7 @@ export default function DataTable<T extends object>({
                   className={`transition ${isSelected ? 'bg-blue-50/50' : 'hover:bg-gray-50'} ${customRowClass}`}
                 >
                   {selectableRows && (
-                    <td className="px-6 py-4">
+                    <td className="px-3 md:px-6 py-3 md:py-4">
                       <input
                         type="checkbox"
                         className="rounded cursor-pointer w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
@@ -163,14 +163,14 @@ export default function DataTable<T extends object>({
                     return (
                       <td
                         key={String(col.key)}
-                        className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-${col.align || 'left'}`}
+                        className={`px-3 md:px-6 py-3 md:py-4 text-sm text-gray-900 text-${col.align || 'left'}`}
                       >
                         {rendered}
                       </td>
                     )
                   })}
                   {(onEdit || onDelete || rowActions?.length) && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="px-3 md:px-6 py-3 md:py-4 text-sm">
                       <div className="flex items-center gap-2">
                         {rowActions?.map((action, i) => {
                           if (action.hidden?.(item)) return null
@@ -223,7 +223,7 @@ export default function DataTable<T extends object>({
         </table>
       </div>
 
-      <div className="bg-gray-50 border-t border-gray-200 px-6 py-3 flex items-center justify-between text-sm text-gray-600">
+      <div className="bg-gray-50 border-t border-gray-200 px-3 md:px-6 py-3 flex items-center justify-between text-sm text-gray-600">
         <div className="flex items-center gap-4">
           <span>Showing {data.length} of {totalCount}</span>
           {selectableRows && selectedIds.length > 0 && (
