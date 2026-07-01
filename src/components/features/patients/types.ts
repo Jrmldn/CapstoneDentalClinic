@@ -10,7 +10,7 @@ export interface PatientSummary {
   created_at: string | null
 }
 
-export type RecordTab = 'chart' | 'treatments' | 'prescriptions' | 'info' | 'periodontal' | 'followups' | 'photos'
+export type RecordTab = 'chart' | 'treatments' | 'prescriptions' | 'info' | 'periodontal' | 'followups' | 'records'
 
 export interface FullPatientDetail extends PatientSummary {
   address: string | null
@@ -161,6 +161,18 @@ export interface TmjAssessment {
   dentists: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null
 }
 
+export interface PeriodontalFinding {
+  id: number
+  recorded_at: string | null
+  dental_chart_id: number | null
+  gingivitis: string[]
+  periodontal_condition: string[]
+  occlusion: string[]
+  appliances: string[]
+  dentists: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null
+  clinics: { id: number; name: string } | { id: number; name: string }[] | null
+}
+
 export interface PatientRecord {
   patient: FullPatientDetail
   medicalHistory: MedicalHistory | null
@@ -169,6 +181,7 @@ export interface PatientRecord {
   assessments: Assessment[]
   prescriptions: Prescription[]
   periodontalScreenings: PeriodontalScreening[]
+  periodontalFindings: PeriodontalFinding[]
   tmjAssessments: TmjAssessment[]
   oralSurgeryRecords: unknown[]
   appointments: AppointmentRecord[]

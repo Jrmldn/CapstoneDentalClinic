@@ -124,12 +124,12 @@ export default function DentistAppointmentsClient({ appointments, clinicId, dent
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50/75 border-b border-gray-100 text-slate-500 text-xs font-semibold uppercase tracking-wider">
-                <th className="px-6 py-4">Date &amp; Time</th>
-                <th className="px-6 py-4">Patient</th>
-                <th className="px-6 py-4">Service</th>
-                <th className="px-6 py-4">Type</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <th className="px-3 md:px-6 py-3 md:py-4">Date &amp; Time</th>
+                <th className="px-3 md:px-6 py-3 md:py-4">Patient</th>
+                <th className="px-3 md:px-6 py-3 md:py-4 hidden sm:table-cell">Service</th>
+                <th className="px-3 md:px-6 py-3 md:py-4 hidden md:table-cell">Type</th>
+                <th className="px-3 md:px-6 py-3 md:py-4">Status</th>
+                <th className="px-3 md:px-6 py-3 md:py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm text-slate-700">
@@ -140,17 +140,17 @@ export default function DentistAppointmentsClient({ appointments, clinicId, dent
 
                 return (
                   <tr key={appt.id} className="hover:bg-gray-50/50 transition">
-                    <td className="px-6 py-4">
+                    <td className="px-3 md:px-6 py-3 md:py-4">
                       <span className="font-semibold text-slate-800 block">{dateStr}</span>
                       <span className="text-xs text-gray-400">{timeStr}</span>
                     </td>
-                    <td className="px-6 py-4 font-semibold text-slate-900">
+                    <td className="px-3 md:px-6 py-3 md:py-4 font-semibold text-slate-900">
                       {appt.patients ? `${appt.patients.first_name} ${appt.patients.last_name}` : '—'}
                     </td>
-                    <td className="px-6 py-4 text-gray-600">
+                    <td className="px-3 md:px-6 py-3 md:py-4 text-gray-600 hidden sm:table-cell">
                       {appt.services?.name ?? '—'}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 md:px-6 py-3 md:py-4 hidden md:table-cell">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase border w-fit inline-block ${
                         appt.is_walk_in
                           ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
@@ -159,10 +159,10 @@ export default function DentistAppointmentsClient({ appointments, clinicId, dent
                         {appt.is_walk_in ? 'Walk-in' : 'Online'}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 md:px-6 py-3 md:py-4">
                       <StatusBadge status={appt.status} />
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 md:px-6 py-3 md:py-4">
                       <div className="flex items-center justify-end gap-2">
                         {appt.status === 'pending' && (
                           <button

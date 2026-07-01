@@ -12,6 +12,7 @@
 - `npm run lint` must pass clean before any PR.
 - Flatten nested conditionals into early-return guard clauses (`if (!x) return`), not 3-level nesting. Applies everywhere — server actions, services, query builders, components — not just client components.
 - No leftover `console.log` statements for debugging. `console.error` is permitted only inside `catch` blocks for genuine error logging.
+- Never run `git reset --hard` (or any destructive git command that discards uncommitted work). Prefer a non-destructive alternative (stash, branch, commit). If a hard reset is truly the only option, stop and ask for explicit permission first.
 
 ## TypeScript & Type Safety
 - Strictly no non-null assertions (`!`). Use optional chaining (`?.`) or early-return guard clauses if data might be null/undefined.

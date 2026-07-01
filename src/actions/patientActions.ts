@@ -3,7 +3,6 @@
 import { supabaseAdmin } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/serverSSR'
 import { revalidatePath } from 'next/cache'
-import { encryptMedicalData } from '@/lib/encryption/medicalEncryption'
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
@@ -102,29 +101,15 @@ export async function registerPatient(data: RegisterPatientData) {
       data.is_smoker !== undefined
 
     if (hasMedicalData) {
-      const [
-        enc_blood_type,
-        enc_allergies,
-        enc_medications,
-        enc_conditions,
-        enc_surgeries,
-      ] = await Promise.all([
-        data.blood_type ? encryptMedicalData(data.blood_type) : Promise.resolve(null),
-        encryptMedicalData(JSON.stringify(data.allergies ?? [])),
-        encryptMedicalData(JSON.stringify(data.current_medications ?? [])),
-        encryptMedicalData(JSON.stringify(data.medical_conditions ?? [])),
-        data.previous_surgeries ? encryptMedicalData(data.previous_surgeries) : Promise.resolve(null),
-      ])
-
       const { error: medError } = await supabaseAdmin
         .from('patient_medical_history')
         .insert([{
           patient_id: patient.id,
-          blood_type: enc_blood_type,
-          allergies: enc_allergies,
-          current_medications: enc_medications,
-          medical_conditions: enc_conditions,
-          previous_surgeries: enc_surgeries,
+          blood_type: data.blood_type ?? null,
+          allergies: JSON.stringify(data.allergies ?? []),
+          current_medications: JSON.stringify(data.current_medications ?? []),
+          medical_conditions: JSON.stringify(data.medical_conditions ?? []),
+          previous_surgeries: data.previous_surgeries ?? null,
           is_pregnant: data.is_pregnant ?? false,
           is_smoker: data.is_smoker ?? false,
         }])
@@ -314,10 +299,10 @@ export async function fetchPatientRecord(
 
       includeMedicalHistory
         ? supabaseAdmin
-            .from('patient_medical_history')
-            .select('*')
-            .eq('patient_id', patientId)
-            .maybeSingle()
+          .from('patient_medical_history')
+          .select('*')
+          .eq('patient_id', patientId)
+          .maybeSingle()
         : Promise.resolve({ data: null, error: null }),
 
       includeDentalCharts
@@ -613,36 +598,18 @@ export async function updatePatientMedicalHistory(
   data: PatientMedicalHistoryData
 ) {
   try {
-    const [
-      enc_blood_type,
-      enc_blood_pressure,
-      enc_medical_flags,
-      enc_allergies,
-      enc_medications,
-      enc_conditions,
-      enc_surgeries,
-    ] = await Promise.all([
-      data.blood_type ? encryptMedicalData(data.blood_type) : Promise.resolve(null),
-      data.blood_pressure ? encryptMedicalData(data.blood_pressure) : Promise.resolve(null),
-      data.medical_flags ? encryptMedicalData(data.medical_flags) : Promise.resolve(null),
-      encryptMedicalData(JSON.stringify(data.allergies ?? [])),
-      encryptMedicalData(JSON.stringify(data.current_medications ?? [])),
-      encryptMedicalData(JSON.stringify(data.medical_conditions ?? [])),
-      data.previous_surgeries ? encryptMedicalData(data.previous_surgeries) : Promise.resolve(null),
-    ])
-
     const { data: updated, error } = await supabaseAdmin
       .from('patient_medical_history')
       .upsert(
         {
           patient_id: patientId,
-          blood_type: enc_blood_type,
-          blood_pressure: enc_blood_pressure,
-          medical_flags: enc_medical_flags,
-          allergies: enc_allergies,
-          current_medications: enc_medications,
-          medical_conditions: enc_conditions,
-          previous_surgeries: enc_surgeries,
+          blood_type: data.blood_type ?? null,
+          blood_pressure: data.blood_pressure ?? null,
+          medical_flags: data.medical_flags ?? null,
+          allergies: JSON.stringify(data.allergies ?? []),
+          current_medications: JSON.stringify(data.current_medications ?? []),
+          medical_conditions: JSON.stringify(data.medical_conditions ?? []),
+          previous_surgeries: data.previous_surgeries ?? null,
           is_pregnant: data.is_pregnant ?? false,
           is_smoker: data.is_smoker ?? false,
         },

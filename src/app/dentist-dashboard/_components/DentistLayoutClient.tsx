@@ -1,29 +1,31 @@
 'use client'
 
 import React, { useState } from 'react'
-import PatientSidebar from './Sidebar'
-import PatientTopBar from './TopBar'
+import DentistSidebar from './Sidebar'
+import DentistTopBar from './TopBar'
 
-interface PatientLayoutClientProps {
+interface DentistLayoutClientProps {
   children: React.ReactNode
-  patientName: string
   user: { email: string }
-  logoutAction: () => Promise<void> | void
+  clinicName: string
+  logoutAction: (formData: FormData) => Promise<void>
+  dentistName: string
 }
 
-export default function PatientLayoutClient({
+export default function DentistLayoutClient({
   children,
-  patientName,
   user,
+  clinicName,
   logoutAction,
-}: PatientLayoutClientProps) {
+  dentistName,
+}: DentistLayoutClientProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
       {/* Sidebar */}
-      <PatientSidebar
-        patientName={patientName}
+      <DentistSidebar
+        dentistName={dentistName}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
@@ -31,15 +33,15 @@ export default function PatientLayoutClient({
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top bar */}
-        <PatientTopBar
+        <DentistTopBar
           user={user}
-          clinicName="AppointDent"
+          clinicName={clinicName}
           logoutAction={logoutAction}
           onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         />
 
         {/* Page content */}
-        <main className="flex-1 p-4 sm:p-6 max-w-5xl w-full mx-auto space-y-6 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>

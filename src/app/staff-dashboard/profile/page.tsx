@@ -19,15 +19,13 @@ export default async function ClinicProfilePage() {
   const clinicId = staffRecord.clinic_id
 
   // Fetch all profile data in parallel
-  const [clinicRes, hoursRes, hmoRes, specialtiesRes, galleryRes] = await Promise.all([
+  const [clinicRes, hoursRes, galleryRes] = await Promise.all([
     supabaseAdmin.from('clinics').select('*').eq('id', clinicId).single(),
     supabaseAdmin
       .from('clinic_operating_hours')
       .select('*')
       .eq('clinic_id', clinicId)
       .order('day_of_week', { ascending: true }),
-    supabaseAdmin.from('clinic_hmo').select('*').eq('clinic_id', clinicId),
-    supabaseAdmin.from('clinic_specialties').select('*').eq('clinic_id', clinicId),
     supabaseAdmin
       .from('clinic_gallery')
       .select('*')
@@ -50,8 +48,8 @@ export default async function ClinicProfilePage() {
         clinicId={clinicId}
         clinic={clinicRes.data}
         operatingHours={hoursRes.data ?? []}
-        hmos={hmoRes.data ?? []}
-        specialties={specialtiesRes.data ?? []}
+        hmos={[]}
+        specialties={[]}
         gallery={galleryRes.data ?? []}
       />
     </div>

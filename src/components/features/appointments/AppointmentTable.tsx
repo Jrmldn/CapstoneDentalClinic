@@ -27,14 +27,14 @@ export default function AppointmentTable({
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-50/75 border-b border-gray-100 text-slate-500 text-xs font-semibold uppercase tracking-wider">
-              <th className="px-6 py-4">Patient</th>
-              <th className="px-6 py-4">Dentist</th>
-              <th className="px-6 py-4">Service</th>
-              <th className="px-6 py-4">Scheduled Date &amp; Time</th>
-              <th className="px-6 py-4">Type</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4">Payment</th>
-              <th className="px-6 py-4 text-right">Actions</th>
+              <th className="px-3 md:px-6 py-3 md:py-4">Patient</th>
+              <th className="px-3 md:px-6 py-3 md:py-4 hidden md:table-cell">Dentist</th>
+              <th className="px-3 md:px-6 py-3 md:py-4 hidden sm:table-cell">Service</th>
+              <th className="px-3 md:px-6 py-3 md:py-4">Date &amp; Time</th>
+              <th className="px-3 md:px-6 py-3 md:py-4 hidden lg:table-cell">Type</th>
+              <th className="px-3 md:px-6 py-3 md:py-4">Status</th>
+              <th className="px-3 md:px-6 py-3 md:py-4 hidden lg:table-cell">Payment</th>
+              <th className="px-3 md:px-6 py-3 md:py-4 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 text-sm text-slate-700">
@@ -44,7 +44,7 @@ export default function AppointmentTable({
 
               return (
                 <tr key={appt.id} className="hover:bg-gray-50/50 transition">
-                  <td className="px-6 py-4">
+                  <td className="px-3 md:px-6 py-3 md:py-4">
                     <div>
                       <p className="font-semibold text-slate-900">
                         {appt.patients ? `${appt.patients.first_name} ${appt.patients.last_name}` : 'Unknown'}
@@ -52,14 +52,14 @@ export default function AppointmentTable({
                       <p className="text-xs text-gray-500">{formatPhone(appt.patients?.phone)}</p>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 md:px-6 py-3 md:py-4 hidden md:table-cell">
                     <div>
                       <p className="font-medium">
                         Dr. {appt.dentists ? `${appt.dentists.first_name} ${appt.dentists.last_name}` : 'TBD'}
                       </p>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 md:px-6 py-3 md:py-4 hidden sm:table-cell">
                     <div>
                       <p className="font-medium text-slate-800">{appt.services?.name ?? '—'}</p>
                       <p className="text-xs text-gray-500">
@@ -67,7 +67,7 @@ export default function AppointmentTable({
                       </p>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 md:px-6 py-3 md:py-4">
                     <div>
                       <p className="font-medium text-slate-800">{formattedDate}</p>
                       <p className="text-xs text-gray-500 flex items-center gap-1">
@@ -76,19 +76,19 @@ export default function AppointmentTable({
                       </p>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 md:px-6 py-3 md:py-4 hidden lg:table-cell">
                     <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
-                      appt.is_walk_in 
-                        ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' 
+                      appt.is_walk_in
+                        ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
                         : 'bg-blue-50 text-blue-700 border border-blue-200'
                     }`}>
                       {appt.is_walk_in ? 'Walk-In' : 'Online'}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 md:px-6 py-3 md:py-4">
                     <AppointmentStatusBadge status={appt.status} className="text-[11px]" />
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 md:px-6 py-3 md:py-4 hidden lg:table-cell">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
                       appt.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
                       appt.payment_status === 'partial' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' :
@@ -97,7 +97,7 @@ export default function AppointmentTable({
                       {appt.payment_status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-3 md:px-6 py-3 md:py-4 text-right">
                     <div className="flex justify-end gap-2">
                       {appt.status === 'pending' && (
                         <button

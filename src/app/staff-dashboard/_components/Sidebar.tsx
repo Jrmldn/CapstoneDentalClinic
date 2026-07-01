@@ -10,7 +10,6 @@ import {
   ClipboardList,
   Receipt,
   Package,
-  ShoppingBag,
   Image as ImageIcon,
   History,
   X,
@@ -48,12 +47,6 @@ const menuGroups = [
     label: 'Management',
     items: [
       { label: 'Inventory',     href: '/staff-dashboard/inventory',      icon: Package,       key: 'inventory' },
-    ],
-  },
-  {
-    label: 'Settings',
-    items: [
-      { label: 'Products',       href: '/staff-dashboard/services',      icon: ShoppingBag,   key: 'services' },
     ],
   },
 ]

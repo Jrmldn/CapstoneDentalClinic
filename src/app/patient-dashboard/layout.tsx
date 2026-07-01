@@ -3,6 +3,7 @@ import { enforceRole } from '@/lib/auth/protection'
 import { handleLogout } from '@/actions/handleLogout'
 import { createClient } from '@/lib/supabase/serverSSR'
 import PatientLayoutClient from './_components/PatientLayoutClient'
+import Chatbot from '@/app/Chatbot'
 
 interface PatientLayoutProps {
   children: React.ReactNode
@@ -34,6 +35,7 @@ export default async function PatientLayout({ children }: PatientLayoutProps) {
       logoutAction={logoutAction}
     >
       {children}
+      <Chatbot />
     </PatientLayoutClient>
   )
 }

@@ -170,7 +170,7 @@ export function CalendarTab({
           { label: 'No Show',            dot: 'bg-orange-500' },
         ].map(l => (
           <span key={l.label} className="flex items-center gap-1.5">
-            <span className={`w-2.5 h-2.5 rounded-full ${l.dot}`} />
+            <span className={`w-2 h-2 rounded-full ${l.dot}`} />
             {l.label}
           </span>
         ))}
@@ -258,9 +258,20 @@ export function CalendarTab({
 
                   <div className="w-full space-y-1">
                     {dayAppts.length > 0 && (
-                      <span className="text-[9px] font-bold bg-blue-100 text-blue-700 block truncate px-1 rounded uppercase">
-                        {dayAppts.length} {dayAppts.length === 1 ? 'Appt' : 'Appts'}
-                      </span>
+                      <>
+                        <span className="text-[9px] font-bold bg-blue-100 text-blue-700 block truncate px-1 rounded uppercase">
+                          {dayAppts.length} {dayAppts.length === 1 ? 'Appt' : 'Appts'}
+                        </span>
+                        <div className="flex flex-wrap gap-0.5 mt-1">
+                          {[...new Set(dayAppts.map(a => a.status))].map(status => (
+                            <span
+                              key={status}
+                              title={status}
+                              className={`w-1.5 h-1.5 rounded-full ${getStatusColor(status).dot}`}
+                            />
+                          ))}
+                        </div>
+                      </>
                     )}
                   </div>
                 </button>

@@ -45,3 +45,4 @@ The grouped Treatment History session card (EHR Viewer → Treatment tab) curren
 - [ ] Session ID is clearly labeled, not a bare code
 - [ ] Singular/plural handled correctly for procedure count (1 vs 2+)
 - [ ] No regressions to expand/collapse behavior or grouping logic
+

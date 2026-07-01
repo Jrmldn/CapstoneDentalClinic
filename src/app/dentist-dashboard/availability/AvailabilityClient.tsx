@@ -171,7 +171,7 @@ export default function AvailabilityClient({ dentistId, initialBlockedSlots }: A
                 <div
                   key={day}
                   onClick={() => handleSelectDay(day)}
-                  className={`h-24 border rounded-xl p-2.5 cursor-pointer flex flex-col justify-between transition-all select-none ${dayBg} ${
+                  className={`h-14 sm:h-20 md:h-24 border rounded-xl p-1.5 sm:p-2.5 cursor-pointer flex flex-col justify-between transition-all select-none ${dayBg} ${
                     isSelected ? 'ring-2 ring-blue-600 border-blue-600 scale-[1.02] shadow-sm' : ''
                   }`}
                 >

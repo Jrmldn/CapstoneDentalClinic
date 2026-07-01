@@ -53,7 +53,7 @@ export default function ProfileTabs({
       </div>
 
       {/* Tab content */}
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         {active === 'general' && <GeneralInfoForm clinicId={clinicId} clinic={clinic} />}
         {active === 'hours' && <OperatingHoursForm clinicId={clinicId} operatingHours={operatingHours} />}
         {active === 'hmo' && <HMOsSpecialtiesForm clinicId={clinicId} hmos={hmos} specialties={specialties} />}

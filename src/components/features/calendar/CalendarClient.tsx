@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -8,8 +8,10 @@ import {
   Plus,
   Trash2,
   RefreshCw,
-  Clock
+  Clock,
+  X
 } from 'lucide-react'
+import { createPortal } from 'react-dom'
 import { fetchCalendarData, manageClinicHolidays } from '@/actions/calendarActions'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
 import type { Appointment as RescheduleAppt } from '../appointments/AppointmentTypes'
@@ -110,6 +112,23 @@ export default function CalendarClient({
 
   // Holiday Modal State
   const [isHolidayModalOpen, setIsHolidayModalOpen] = useState(false)
+
+  const [mounted, setMounted] = useState(false)
+  const [isMobileModalOpen, setIsMobileModalOpen] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isMobileModalOpen) {
+        setIsMobileModalOpen(false)
+      }
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [isMobileModalOpen])
 
   // Fetch data when year/month changes
   const loadMonthData = async (targetYear: number, targetMonth: number) => {
@@ -312,7 +331,17 @@ export default function CalendarClient({
               return (
                 <button
                   key={dateStr}
-                  onClick={() => setSelectedDate(dateStr)}
+                  onClick={() => {
+                    const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024
+                    if (isMobile) {
+                      if (appts.length > 0 || holiday) {
+                        setSelectedDate(dateStr)
+                        setIsMobileModalOpen(true)
+                      }
+                    } else {
+                      setSelectedDate(dateStr)
+                    }
+                  }}
                   className={`aspect-square border rounded-xl p-2 flex flex-col justify-between items-start transition ${cellBg} ${borderStyle} text-left outline-none relative group`}
                 >
                   <span className={`text-sm font-bold ${isSelected ? 'text-blue-600' :
@@ -354,8 +383,8 @@ export default function CalendarClient({
           </div>
         </div>
 
-        {/* Selected Day Details Section */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex flex-col justify-between max-h-[600px]">
+        {/* Selected Day Details Section (Desktop only) */}
+        <div className="hidden lg:flex bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex-col justify-between max-h-[600px] w-full">
           <div>
             <div className="border-b border-gray-100 pb-3 mb-4 flex items-center justify-between">
               <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
@@ -613,6 +642,195 @@ export default function CalendarClient({
             }}
           />
         )}
+
+      {/* Mobile Modal for Day Details */}
+      {mounted && isMobileModalOpen && selectedDate && createPortal(
+        <div
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 lg:hidden"
+          onClick={() => {
+            setIsMobileModalOpen(false)
+            setSelectedDate('')
+          }}
+        >
+          <div
+            className="bg-white rounded-xl border border-gray-100 shadow-xl p-5 flex flex-col justify-between max-h-[90vh] w-full max-w-md relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => {
+                setIsMobileModalOpen(false)
+                setSelectedDate('')
+              }}
+              className="absolute top-4 right-4 p-1.5 hover:bg-gray-100 border border-gray-200 rounded-lg transition"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+
+            <div>
+              <div className="border-b border-gray-100 pb-3 mb-4 flex items-center justify-between">
+                <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                  <CalendarIcon className="w-5 h-5 text-blue-600" />
+                  Day Details
+                </h3>
+                <span className="text-xs text-gray-500 font-semibold mr-8">
+                  {formatDate(selectedDate)}
+                </span>
+              </div>
+
+              <div className="space-y-4 overflow-y-auto max-h-[60vh] pr-1">
+                {/* Day Holiday info */}
+                {selectedDetails.holiday && (
+                  <div className={`p-4 rounded-xl border flex justify-between items-start ${selectedDetails.holiday.is_special_day ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-red-50 border-red-200 text-red-850'
+                    }`}>
+                    <div>
+                      <h4 className="font-bold text-xs uppercase tracking-wider">
+                        {selectedDetails.holiday.is_special_day ? 'Special Day Event' : 'Clinic Closure'}
+                      </h4>
+                      <p className="text-sm font-semibold mt-1">{selectedDetails.holiday.description}</p>
+                    </div>
+                    {canManageHolidays && (
+                      <button
+                        onClick={() => {
+                          handleDeleteHoliday(selectedDetails.holiday!.id)
+                          setIsMobileModalOpen(false)
+                          setSelectedDate('')
+                        }}
+                        className="p-1 hover:bg-black/5 rounded text-red-650"
+                        title="Remove Holiday"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Day Appointments */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                    Appointments ({selectedDetails.appts.length})
+                  </h4>
+                  {selectedDetails.appts.length === 0 ? (
+                    <p className="text-xs text-gray-400 italic bg-gray-50 p-4 rounded-xl text-center">
+                      No appointments scheduled for this day.
+                    </p>
+                  ) : (
+                    selectedDetails.appts.map((appt) => {
+                      const time = formatTime(appt.scheduled_at)
+                      const patientObj = Array.isArray(appt.patients) ? appt.patients[0] : appt.patients
+                      const serviceObj = Array.isArray(appt.services) ? appt.services[0] : appt.services
+                      const dentistObj = Array.isArray(appt.dentists) ? appt.dentists[0] : appt.dentists
+
+                      const normAppt = {
+                        ...appt,
+                        patients: patientObj,
+                        services: serviceObj,
+                        dentists: dentistObj
+                      } as RescheduleAppt
+
+                      const showActions = userId && role && (
+                        appt.status === 'pending' ||
+                        appt.status === 'confirmed' ||
+                        appt.status === 'rescheduled' ||
+                        appt.status === 'pending_patient_confirm'
+                      )
+
+                      return (
+                        <div key={appt.id} className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-1.5">
+                          <div className="flex justify-between items-center">
+                            <span className="font-semibold text-slate-800 text-sm">
+                              {patientObj ? `${patientObj.first_name} ${patientObj.last_name}` : 'Unknown'}
+                            </span>
+                            <AppointmentStatusBadge status={appt.status} className="text-[10px] px-2 py-0.5" />
+                          </div>
+                          <div className="flex items-center gap-4 text-xs text-gray-500">
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5 text-gray-400" />
+                              {time}
+                            </span>
+                            <span className="font-semibold text-slate-700">{serviceObj?.name ?? '—'}</span>
+                          </div>
+                          {showActions && (
+                            <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200/60 mt-1.5">
+                              {appt.status === 'pending' && (
+                                <button
+                                  onClick={() => {
+                                    handleApprove(appt.id)
+                                    setIsMobileModalOpen(false)
+                                    setSelectedDate('')
+                                  }}
+                                  disabled={isUpdatingStatus === appt.id}
+                                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-bold shadow-2xs transition disabled:opacity-50"
+                                >
+                                  Approve
+                                </button>
+                              )}
+                              
+                              {appt.status === 'confirmed' && (
+                                <button
+                                  onClick={() => {
+                                    setCompletingAppt(normAppt)
+                                    setIsMobileModalOpen(false)
+                                    setSelectedDate('')
+                                  }}
+                                  disabled={isUpdatingStatus === appt.id}
+                                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-bold shadow-2xs transition disabled:opacity-50"
+                                >
+                                  {role === 'dentist' ? 'Complete & Send to Billing' : 'Complete & Collect Payment'}
+                                </button>
+                              )}
+
+                              {(appt.status === 'pending' || appt.status === 'confirmed') && (
+                                <button
+                                  onClick={() => {
+                                    handleStatusChange(appt.id, 'no_show')
+                                    setIsMobileModalOpen(false)
+                                    setSelectedDate('')
+                                  }}
+                                  disabled={isUpdatingStatus === appt.id}
+                                  className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-[11px] font-bold transition disabled:opacity-50 border border-gray-200"
+                                >
+                                  No Show
+                                </button>
+                              )}
+
+                              {canCancel(appt.status) && (
+                                <button
+                                  onClick={() => {
+                                    handleStatusChange(appt.id, 'cancelled')
+                                    setIsMobileModalOpen(false)
+                                    setSelectedDate('')
+                                  }}
+                                  disabled={isUpdatingStatus === appt.id}
+                                  className="px-2.5 py-1 bg-red-50 hover:bg-red-150 text-red-700 rounded text-[11px] font-bold transition disabled:opacity-50 border border-red-200"
+                                >
+                                  Cancel
+                                </button>
+                              )}
+
+                              <button
+                                onClick={() => {
+                                  setReschedulingAppointment(normAppt)
+                                  setIsMobileModalOpen(false)
+                                  setSelectedDate('')
+                                }}
+                                disabled={isUpdatingStatus === appt.id}
+                                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-bold transition disabled:opacity-50 border border-slate-200"
+                              >
+                                Reschedule
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       </div>
     </div>
