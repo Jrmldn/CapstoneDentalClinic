@@ -45,7 +45,6 @@ export default async function BookPage() {
     <BookingTab
       branches={branches}
       record={patientDetails.record as unknown as PatientRecord}
-      authUserId={authUser.id}
     />
   )
 }

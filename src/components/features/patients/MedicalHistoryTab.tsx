@@ -8,16 +8,76 @@ import type { MedicalHistoryEditState } from './usePatientRecord'
 
 interface MedicalHistoryTabProps {
   localRecord: PatientRecord
-  viewerRole: 'dentist' | 'staff'
+  viewerRole: 'dentist' | 'staff' | 'superadmin'
   lastVisitDate: string
   medHistory: MedicalHistoryEditState
   readOnly?: boolean
   showSaveButton?: boolean
 }
 
+interface YesNoToggleProps {
+  value: string
+  onChange: (value: 'yes' | 'no') => void
+}
+
+function YesNoToggle({ value, onChange }: YesNoToggleProps) {
+  return (
+    <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => onChange('yes')}
+        className={`px-4 py-1.5 text-xs font-bold transition-colors ${
+          value === 'yes' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
+        }`}
+      >
+        Yes
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange('no')}
+        className={`px-4 py-1.5 text-xs font-bold border-l border-gray-200 transition-colors ${
+          value === 'no' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
+        }`}
+      >
+        No
+      </button>
+    </div>
+  )
+}
+
+interface YesNoQuestionFieldProps {
+  value: string
+  onChange: (v: string) => void
+  desc: string
+  onDescChange: (v: string) => void
+  descPlaceholder: string
+}
+
+function YesNoQuestionField({ value, onChange, desc, onDescChange, descPlaceholder }: YesNoQuestionFieldProps) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+      <YesNoToggle value={value} onChange={onChange} />
+      {value === 'yes' && (
+        <input
+          type="text"
+          placeholder={descPlaceholder}
+          value={desc}
+          onChange={e => onDescChange(e.target.value)}
+          className="flex-1 px-2.5 py-2 text-xs border border-gray-200 rounded-lg bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800"
+        />
+      )}
+    </div>
+  )
+}
+
+function autoGrowTextarea(e: React.FormEvent<HTMLTextAreaElement>) {
+  const el = e.currentTarget
+  el.style.height = 'auto'
+  el.style.height = `${el.scrollHeight}px`
+}
+
 export default function MedicalHistoryTab({
   localRecord,
-  viewerRole,
   lastVisitDate,
   medHistory,
   readOnly = false,
@@ -33,10 +93,34 @@ export default function MedicalHistoryTab({
     editMedConditions, setEditMedConditions,
     editIsPregnant, setEditIsPregnant,
     editIsSmoker, setEditIsSmoker,
-    isSavingMedHistory, onSave,
+    editPhysicianName, setEditPhysicianName,
+    editPhysicianOfficeAddress, setEditPhysicianOfficeAddress,
+    editPhysicianOfficePhone, setEditPhysicianOfficePhone,
+    editLastDentalVisit, setEditLastDentalVisit,
+    editBleedingTime, setEditBleedingTime,
+    editIsNursing, setEditIsNursing,
+    editIsBirthControl, setEditIsBirthControl,
+    editAllergyLocalAnesthetic, setEditAllergyLocalAnesthetic,
+    editAllergyPenicillin, setEditAllergyPenicillin,
+    editAllergySulfa, setEditAllergySulfa,
+    editAllergyAspirin, setEditAllergyAspirin,
+    editAllergyLatex, setEditAllergyLatex,
+    editAllergyOther, setEditAllergyOther,
+    editGoodCondition, setEditGoodCondition,
+    editUnderMedicalTreatment, setEditUnderMedicalTreatment,
+    editUnderMedicalTreatmentDesc, setEditUnderMedicalTreatmentDesc,
+    editSeriousIllnessOperation, setEditSeriousIllnessOperation,
+    editSeriousIllnessOperationDesc, setEditSeriousIllnessOperationDesc,
+    editHospitalized, setEditHospitalized,
+    editHospitalizedDesc, setEditHospitalizedDesc,
+    editPrescriptionMedication, setEditPrescriptionMedication,
+    editPrescriptionMedicationDesc, setEditPrescriptionMedicationDesc,
+    editDrugUse, setEditDrugUse,
+    isSavingMedHistory, isEditing, onEdit, onCancel, onSave,
   } = medHistory
 
-  const isReadOnly = readOnly || viewerRole === 'staff'
+  const isReadOnly = readOnly || !isEditing
+  const mh = localRecord.medicalHistory
 
   return (
     <div className="space-y-6">
@@ -119,22 +203,30 @@ export default function MedicalHistoryTab({
       <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-xs grid grid-cols-2 gap-5">
         <div className="col-span-2 flex justify-between items-center border-b border-gray-100 pb-1 mb-2">
           <h4 className="font-bold text-slate-900 text-sm">Medical History Summary</h4>
-          {localRecord.medicalHistory && (
-            <span className="text-[10px] text-gray-400 font-medium">
-              Last updated: {formatDateTime(localRecord.medicalHistory.updated_at)}
-              {localRecord.medicalHistory.detailed_info?.updated_by && ` by ${localRecord.medicalHistory.detailed_info.updated_by}`}
-              {localRecord.medicalHistory.detailed_info?.updated_by_branch && ` (${localRecord.medicalHistory.detailed_info.updated_by_branch})`}
-            </span>
-          )}
+          <div className="flex items-center gap-3">
+            {mh && (
+              <span className="text-[10px] text-gray-400 font-medium">
+                Last updated: {formatDateTime(mh.updated_at)}
+                {mh.detailed_info?.updated_by && ` by ${mh.detailed_info.updated_by}`}
+                {mh.detailed_info?.updated_by_branch && ` (${mh.detailed_info.updated_by_branch})`}
+              </span>
+            )}
+            {!readOnly && !isEditing && (
+              <button
+                onClick={onEdit}
+                className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-bold transition"
+              >
+                Edit
+              </button>
+            )}
+          </div>
         </div>
-        {localRecord.medicalHistory ? (
-          <>
-            <div className="space-y-4">
+        <div className="space-y-4">
               <div>
                 <span className="text-[10px] text-gray-400 block font-semibold">BLOOD TYPE</span>
                 {isReadOnly ? (
                   <span className="text-sm font-semibold text-slate-800 mt-0.5 block">
-                    {localRecord.medicalHistory.blood_type || 'Unknown'}
+                    {mh?.blood_type || 'Unknown'}
                   </span>
                 ) : (
                   <select
@@ -154,7 +246,7 @@ export default function MedicalHistoryTab({
                 <span className="text-[10px] text-gray-400 block font-semibold">BLOOD PRESSURE</span>
                 {isReadOnly ? (
                   <span className="text-sm font-semibold text-slate-800 mt-0.5 block">
-                    {localRecord.medicalHistory.blood_pressure || '—'}
+                    {mh?.blood_pressure || '—'}
                   </span>
                 ) : (
                   <input
@@ -162,7 +254,7 @@ export default function MedicalHistoryTab({
                     placeholder="e.g. 120/80 mmHg"
                     value={editBloodPressure}
                     onChange={e => setEditBloodPressure(e.target.value)}
-                    className="mt-0.5 w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800"
+                    className="mt-0.5 w-full px-2.5 py-2 text-xs border border-gray-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800"
                   />
                 )}
               </div>
@@ -172,7 +264,7 @@ export default function MedicalHistoryTab({
                   <span className="text-[10px] text-gray-400 block font-semibold">PREGNANCY STATUS</span>
                   {isReadOnly ? (
                     <span className="text-sm font-semibold text-slate-800 mt-0.5 block">
-                      {localRecord.medicalHistory.is_pregnant ? 'Pregnant' : 'Not Pregnant'}
+                      {mh?.is_pregnant ? 'Pregnant' : 'Not Pregnant'}
                     </span>
                   ) : (
                     <label className="flex items-center gap-2 mt-1 cursor-pointer select-none">
@@ -192,7 +284,7 @@ export default function MedicalHistoryTab({
                 <span className="text-[10px] text-gray-400 block font-semibold">SMOKING STATUS</span>
                 {isReadOnly ? (
                   <span className="text-sm font-semibold text-slate-800 mt-0.5 block">
-                    {localRecord.medicalHistory.is_smoker ? 'Smoker' : 'Non-smoker'}
+                    {mh?.is_smoker ? 'Smoker' : 'Non-smoker'}
                   </span>
                 ) : (
                   <label className="flex items-center gap-2 mt-1 cursor-pointer select-none">
@@ -211,17 +303,18 @@ export default function MedicalHistoryTab({
                 <span className="text-[10px] text-gray-400 block font-semibold">ALLERGIES</span>
                 {isReadOnly ? (
                   <span className="text-sm font-semibold text-slate-800 mt-0.5 block">
-                    {localRecord.medicalHistory.allergies?.length > 0
-                      ? localRecord.medicalHistory.allergies.join(', ')
+                    {(mh?.allergies?.length ?? 0) > 0
+                      ? mh?.allergies?.join(', ')
                       : 'No allergies listed'}
                   </span>
                 ) : (
-                  <input
-                    type="text"
+                  <textarea
                     placeholder="e.g. Penicillin, Peanuts (comma-separated)"
                     value={editAllergies}
                     onChange={e => setEditAllergies(e.target.value)}
-                    className="mt-0.5 w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800"
+                    onInput={autoGrowTextarea}
+                    rows={1}
+                    className="mt-0.5 w-full min-h-[42px] px-2.5 py-2 text-xs border border-gray-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800 resize-none"
                   />
                 )}
               </div>
@@ -232,15 +325,16 @@ export default function MedicalHistoryTab({
                 <span className="text-[10px] text-gray-400 block font-semibold">MEDICAL FLAGS</span>
                 {isReadOnly ? (
                   <span className="text-sm font-bold mt-0.5 block text-slate-800">
-                    {localRecord.medicalHistory.medical_flags || 'None'}
+                    {mh?.medical_flags || 'None'}
                   </span>
                 ) : (
-                  <input
-                    type="text"
+                  <textarea
                     placeholder="e.g. Penicillin allergy, Latex"
                     value={editMedicalFlags}
                     onChange={e => setEditMedicalFlags(e.target.value)}
-                    className="mt-0.5 w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800 placeholder:text-gray-300"
+                    onInput={autoGrowTextarea}
+                    rows={1}
+                    className="mt-0.5 w-full min-h-[42px] px-2.5 py-2 text-xs border border-gray-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800 placeholder:text-gray-300 resize-none"
                   />
                 )}
               </div>
@@ -249,17 +343,18 @@ export default function MedicalHistoryTab({
                 <span className="text-[10px] text-gray-400 block font-semibold">CURRENT MEDICATIONS</span>
                 {isReadOnly ? (
                   <span className="text-sm font-semibold text-slate-800 mt-0.5 block">
-                    {localRecord.medicalHistory.current_medications?.length > 0
-                      ? localRecord.medicalHistory.current_medications.join(', ')
+                    {(mh?.current_medications?.length ?? 0) > 0
+                      ? mh?.current_medications?.join(', ')
                       : 'None listed'}
                   </span>
                 ) : (
-                  <input
-                    type="text"
+                  <textarea
                     placeholder="e.g. Insulin, Metformin (comma-separated)"
                     value={editCurrentMeds}
                     onChange={e => setEditCurrentMeds(e.target.value)}
-                    className="mt-0.5 w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800"
+                    onInput={autoGrowTextarea}
+                    rows={1}
+                    className="mt-0.5 w-full min-h-[42px] px-2.5 py-2 text-xs border border-gray-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800 resize-none"
                   />
                 )}
               </div>
@@ -268,94 +363,251 @@ export default function MedicalHistoryTab({
                 <span className="text-[10px] text-gray-400 block font-semibold">MEDICAL CONDITIONS</span>
                 {isReadOnly ? (
                   <span className="text-sm font-semibold text-slate-800 mt-0.5 block">
-                    {localRecord.medicalHistory.medical_conditions?.length > 0
-                      ? localRecord.medicalHistory.medical_conditions.join(', ')
+                    {(mh?.medical_conditions?.length ?? 0) > 0
+                      ? mh?.medical_conditions?.join(', ')
                       : 'None listed'}
                   </span>
                 ) : (
-                  <input
-                    type="text"
+                  <textarea
                     placeholder="e.g. Diabetes, Hypertension (comma-separated)"
                     value={editMedConditions}
                     onChange={e => setEditMedConditions(e.target.value)}
-                    className="mt-0.5 w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800"
+                    onInput={autoGrowTextarea}
+                    rows={1}
+                    className="mt-0.5 w-full min-h-[42px] px-2.5 py-2 text-xs border border-gray-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800 resize-none"
                   />
                 )}
               </div>
             </div>
 
-            {localRecord.medicalHistory.detailed_info && (
-              <div className="col-span-2 border-t border-gray-100 pt-4 mt-2 space-y-4">
+            <div className="col-span-2 border-t border-gray-100 pt-4 mt-2 space-y-4">
                 <h5 className="font-bold text-slate-800 text-xs uppercase tracking-wider">Detailed Medical History Questionnaire</h5>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
                   <div className="p-3 bg-slate-50 rounded-lg border border-gray-100 col-span-1 sm:col-span-2 md:col-span-3 space-y-1.5">
                     <span className="text-[10px] text-gray-400 font-semibold uppercase block">Primary Physician Details</span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-1">
-                      <p className="text-slate-600"><span className="font-bold text-slate-700">Name:</span> {localRecord.medicalHistory.detailed_info.physician_name || '—'}</p>
-                      <p className="text-slate-600"><span className="font-bold text-slate-700">Office Address:</span> {localRecord.medicalHistory.detailed_info.physician_office_address || '—'}</p>
-                      <p className="text-slate-600"><span className="font-bold text-slate-700">Office Phone:</span> {localRecord.medicalHistory.detailed_info.physician_office_phone || '—'}</p>
-                    </div>
+                    {isReadOnly ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-1">
+                        <p className="text-slate-600"><span className="font-bold text-slate-700">Name:</span> {mh?.detailed_info?.physician_name || '—'}</p>
+                        <p className="text-slate-600"><span className="font-bold text-slate-700">Office Address:</span> {mh?.detailed_info?.physician_office_address || '—'}</p>
+                        <p className="text-slate-600"><span className="font-bold text-slate-700">Office Phone:</span> {mh?.detailed_info?.physician_office_phone || '—'}</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <input
+                          type="text"
+                          placeholder="Physician name"
+                          value={editPhysicianName}
+                          onChange={e => setEditPhysicianName(e.target.value)}
+                          className="w-full px-2.5 py-2 text-xs border border-gray-200 rounded-lg bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Office address"
+                          value={editPhysicianOfficeAddress}
+                          onChange={e => setEditPhysicianOfficeAddress(e.target.value)}
+                          className="w-full px-2.5 py-2 text-xs border border-gray-200 rounded-lg bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Office phone"
+                          value={editPhysicianOfficePhone}
+                          onChange={e => setEditPhysicianOfficePhone(e.target.value)}
+                          className="w-full px-2.5 py-2 text-xs border border-gray-200 rounded-lg bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div className="p-3 bg-slate-50 rounded-lg border border-gray-100">
                     <span className="text-[10px] text-gray-400 font-semibold uppercase block">Last Dental Visit</span>
-                    <p className="font-bold text-slate-800 mt-0.5">{localRecord.medicalHistory.detailed_info.last_dental_visit || '—'}</p>
+                    {isReadOnly ? (
+                      <p className="font-bold text-slate-800 mt-0.5">{mh?.detailed_info?.last_dental_visit || '—'}</p>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="e.g. 2025-01-15"
+                        value={editLastDentalVisit}
+                        onChange={e => setEditLastDentalVisit(e.target.value)}
+                        className="mt-0.5 w-full px-2.5 py-2 text-xs border border-gray-200 rounded-lg bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800"
+                      />
+                    )}
                   </div>
                   <div className="p-3 bg-slate-50 rounded-lg border border-gray-100">
                     <span className="text-[10px] text-gray-400 font-semibold uppercase block">Bleeding Time</span>
-                    <p className="font-bold text-slate-800 mt-0.5">{localRecord.medicalHistory.detailed_info.bleeding_time || '—'}</p>
+                    {isReadOnly ? (
+                      <p className="font-bold text-slate-800 mt-0.5">{mh?.detailed_info?.bleeding_time || '—'}</p>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="e.g. 2-5 minutes"
+                        value={editBleedingTime}
+                        onChange={e => setEditBleedingTime(e.target.value)}
+                        className="mt-0.5 w-full px-2.5 py-2 text-xs border border-gray-200 rounded-lg bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800"
+                      />
+                    )}
                   </div>
 
                   {localRecord.patient.gender === 'female' && (
                     <div className="p-3 bg-slate-50 rounded-lg border border-gray-100">
                       <span className="text-[10px] text-gray-400 font-semibold uppercase block">Women-Only Specs</span>
-                      <p className="font-semibold text-slate-700 mt-0.5">
-                        Nursing: <span className="font-bold">{localRecord.medicalHistory.detailed_info.is_nursing ? "YES" : "NO"}</span> ·{' '}
-                        Birth Control: <span className="font-bold">{localRecord.medicalHistory.detailed_info.is_birth_control ? "YES" : "NO"}</span>
-                      </p>
+                      {isReadOnly ? (
+                        <p className="font-semibold text-slate-700 mt-0.5">
+                          Nursing: <span className="font-bold">{mh?.detailed_info?.is_nursing ? "YES" : "NO"}</span> ·{' '}
+                          Birth Control: <span className="font-bold">{mh?.detailed_info?.is_birth_control ? "YES" : "NO"}</span>
+                        </p>
+                      ) : (
+                        <div className="flex flex-col gap-1 mt-1">
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" checked={editIsNursing} onChange={e => setEditIsNursing(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-blue-600" />
+                            <span className="text-xs font-semibold text-slate-700">Nursing</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" checked={editIsBirthControl} onChange={e => setEditIsBirthControl(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-blue-600" />
+                            <span className="text-xs font-semibold text-slate-700">Birth Control</span>
+                          </label>
+                        </div>
+                      )}
                     </div>
                   )}
 
                   <div className="p-3 bg-slate-50 rounded-lg border border-gray-100 col-span-1 sm:col-span-2 md:col-span-3 space-y-1.5">
                     <span className="text-[10px] text-gray-400 font-semibold uppercase block">Allergy Checklist Details</span>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-slate-650">
-                      <p><span className="font-bold text-slate-700">Local Anesthetic (Lidocaine):</span> {localRecord.medicalHistory.detailed_info.allergy_local_anesthetic ? 'YES' : 'NO'}</p>
-                      <p><span className="font-bold text-slate-700">Penicillin / Antibiotics:</span> {localRecord.medicalHistory.detailed_info.allergy_penicillin ? 'YES' : 'NO'}</p>
-                      <p><span className="font-bold text-slate-700">Sulfa Drugs:</span> {localRecord.medicalHistory.detailed_info.allergy_sulfa ? 'YES' : 'NO'}</p>
-                      <p><span className="font-bold text-slate-700">Aspirin:</span> {localRecord.medicalHistory.detailed_info.allergy_aspirin ? 'YES' : 'NO'}</p>
-                      <p><span className="font-bold text-slate-700">Latex:</span> {localRecord.medicalHistory.detailed_info.allergy_latex ? 'YES' : 'NO'}</p>
-                      {localRecord.medicalHistory.detailed_info.allergy_other && (
-                        <p className="w-full"><span className="font-bold text-slate-700">Other Allergies:</span> {localRecord.medicalHistory.detailed_info.allergy_other}</p>
-                      )}
-                    </div>
+                    {isReadOnly ? (
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-slate-650">
+                        <p><span className="font-bold text-slate-700">Local Anesthetic (Lidocaine):</span> {mh?.detailed_info?.allergy_local_anesthetic ? 'YES' : 'NO'}</p>
+                        <p><span className="font-bold text-slate-700">Penicillin / Antibiotics:</span> {mh?.detailed_info?.allergy_penicillin ? 'YES' : 'NO'}</p>
+                        <p><span className="font-bold text-slate-700">Sulfa Drugs:</span> {mh?.detailed_info?.allergy_sulfa ? 'YES' : 'NO'}</p>
+                        <p><span className="font-bold text-slate-700">Aspirin:</span> {mh?.detailed_info?.allergy_aspirin ? 'YES' : 'NO'}</p>
+                        <p><span className="font-bold text-slate-700">Latex:</span> {mh?.detailed_info?.allergy_latex ? 'YES' : 'NO'}</p>
+                        {mh?.detailed_info?.allergy_other && (
+                          <p className="w-full"><span className="font-bold text-slate-700">Other Allergies:</span> {mh?.detailed_info?.allergy_other}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" checked={editAllergyLocalAnesthetic} onChange={e => setEditAllergyLocalAnesthetic(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-blue-600" />
+                            <span className="text-xs font-semibold text-slate-700">Local Anesthetic (Lidocaine)</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" checked={editAllergyPenicillin} onChange={e => setEditAllergyPenicillin(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-blue-600" />
+                            <span className="text-xs font-semibold text-slate-700">Penicillin / Antibiotics</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" checked={editAllergySulfa} onChange={e => setEditAllergySulfa(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-blue-600" />
+                            <span className="text-xs font-semibold text-slate-700">Sulfa Drugs</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" checked={editAllergyAspirin} onChange={e => setEditAllergyAspirin(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-blue-600" />
+                            <span className="text-xs font-semibold text-slate-700">Aspirin</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" checked={editAllergyLatex} onChange={e => setEditAllergyLatex(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-blue-600" />
+                            <span className="text-xs font-semibold text-slate-700">Latex</span>
+                          </label>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Other allergies"
+                          value={editAllergyOther}
+                          onChange={e => setEditAllergyOther(e.target.value)}
+                          className="w-full px-2.5 py-2 text-xs border border-gray-200 rounded-lg bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div className="p-3 bg-slate-50 rounded-lg border border-gray-100 col-span-1 sm:col-span-2 md:col-span-3 space-y-1.5">
                     <span className="text-[10px] text-gray-400 font-semibold uppercase block">Health Questionnaire Responses</span>
-                    <div className="space-y-1 text-slate-650">
-                      <p>1. In good condition? <span className="font-bold text-slate-700 capitalize">{localRecord.medicalHistory.detailed_info.good_condition || '—'}</span></p>
-                      <p>2. Under medical treatment? <span className="font-bold text-slate-700 capitalize">{localRecord.medicalHistory.detailed_info.under_medical_treatment || '—'}</span>
-                        {localRecord.medicalHistory.detailed_info.under_medical_treatment === 'yes' && localRecord.medicalHistory.detailed_info.under_medical_treatment_desc && ` (${localRecord.medicalHistory.detailed_info.under_medical_treatment_desc})`}
-                      </p>
-                      <p>3. Serious illness or operation? <span className="font-bold text-slate-700 capitalize">{localRecord.medicalHistory.detailed_info.serious_illness_operation || '—'}</span>
-                        {localRecord.medicalHistory.detailed_info.serious_illness_operation === 'yes' && localRecord.medicalHistory.detailed_info.serious_illness_operation_desc && ` (${localRecord.medicalHistory.detailed_info.serious_illness_operation_desc})`}
-                      </p>
-                      <p>4. Been hospitalized? <span className="font-bold text-slate-700 capitalize">{localRecord.medicalHistory.detailed_info.hospitalized || '—'}</span>
-                        {localRecord.medicalHistory.detailed_info.hospitalized === 'yes' && localRecord.medicalHistory.detailed_info.hospitalized_desc && ` (${localRecord.medicalHistory.detailed_info.hospitalized_desc})`}
-                      </p>
-                      <p>5. Taking prescription/non-prescription meds? <span className="font-bold text-slate-700 capitalize">{localRecord.medicalHistory.detailed_info.prescription_medication || '—'}</span>
-                        {localRecord.medicalHistory.detailed_info.prescription_medication === 'yes' && localRecord.medicalHistory.detailed_info.prescription_medication_desc && ` (${localRecord.medicalHistory.detailed_info.prescription_medication_desc})`}
-                      </p>
-                      <p>6. Uses alcohol / other drugs? <span className="font-bold text-slate-700 capitalize">{localRecord.medicalHistory.detailed_info.drug_use || '—'}</span></p>
-                    </div>
+                    {isReadOnly ? (
+                      <div className="space-y-1 text-slate-650">
+                        <p>1. In good condition? <span className="font-bold text-slate-700 capitalize">{mh?.detailed_info?.good_condition || '—'}</span></p>
+                        <p>2. Under medical treatment? <span className="font-bold text-slate-700 capitalize">{mh?.detailed_info?.under_medical_treatment || '—'}</span>
+                          {mh?.detailed_info?.under_medical_treatment === 'yes' && mh?.detailed_info?.under_medical_treatment_desc && ` (${mh?.detailed_info?.under_medical_treatment_desc})`}
+                        </p>
+                        <p>3. Serious illness or operation? <span className="font-bold text-slate-700 capitalize">{mh?.detailed_info?.serious_illness_operation || '—'}</span>
+                          {mh?.detailed_info?.serious_illness_operation === 'yes' && mh?.detailed_info?.serious_illness_operation_desc && ` (${mh?.detailed_info?.serious_illness_operation_desc})`}
+                        </p>
+                        <p>4. Been hospitalized? <span className="font-bold text-slate-700 capitalize">{mh?.detailed_info?.hospitalized || '—'}</span>
+                          {mh?.detailed_info?.hospitalized === 'yes' && mh?.detailed_info?.hospitalized_desc && ` (${mh?.detailed_info?.hospitalized_desc})`}
+                        </p>
+                        <p>5. Taking prescription/non-prescription meds? <span className="font-bold text-slate-700 capitalize">{mh?.detailed_info?.prescription_medication || '—'}</span>
+                          {mh?.detailed_info?.prescription_medication === 'yes' && mh?.detailed_info?.prescription_medication_desc && ` (${mh?.detailed_info?.prescription_medication_desc})`}
+                        </p>
+                        <p>6. Uses alcohol / other drugs? <span className="font-bold text-slate-700 capitalize">{mh?.detailed_info?.drug_use || '—'}</span></p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5">
+                        <div>
+                          <span className="text-[11px] text-slate-600 font-semibold block mb-1">1. In good condition?</span>
+                          <YesNoToggle value={editGoodCondition} onChange={setEditGoodCondition} />
+                        </div>
+                        <div>
+                          <span className="text-[11px] text-slate-600 font-semibold block mb-1">2. Under medical treatment?</span>
+                          <YesNoQuestionField
+                            value={editUnderMedicalTreatment}
+                            onChange={setEditUnderMedicalTreatment}
+                            desc={editUnderMedicalTreatmentDesc}
+                            onDescChange={setEditUnderMedicalTreatmentDesc}
+                            descPlaceholder="Describe treatment"
+                          />
+                        </div>
+                        <div>
+                          <span className="text-[11px] text-slate-600 font-semibold block mb-1">3. Serious illness or operation?</span>
+                          <YesNoQuestionField
+                            value={editSeriousIllnessOperation}
+                            onChange={setEditSeriousIllnessOperation}
+                            desc={editSeriousIllnessOperationDesc}
+                            onDescChange={setEditSeriousIllnessOperationDesc}
+                            descPlaceholder="Describe illness/operation"
+                          />
+                        </div>
+                        <div>
+                          <span className="text-[11px] text-slate-600 font-semibold block mb-1">4. Been hospitalized?</span>
+                          <YesNoQuestionField
+                            value={editHospitalized}
+                            onChange={setEditHospitalized}
+                            desc={editHospitalizedDesc}
+                            onDescChange={setEditHospitalizedDesc}
+                            descPlaceholder="Describe hospitalization"
+                          />
+                        </div>
+                        <div>
+                          <span className="text-[11px] text-slate-600 font-semibold block mb-1">5. Taking prescription/non-prescription meds?</span>
+                          <YesNoQuestionField
+                            value={editPrescriptionMedication}
+                            onChange={setEditPrescriptionMedication}
+                            desc={editPrescriptionMedicationDesc}
+                            onDescChange={setEditPrescriptionMedicationDesc}
+                            descPlaceholder="Describe medication"
+                          />
+                        </div>
+                        <div>
+                          <span className="text-[11px] text-slate-600 font-semibold block mb-1">6. Uses alcohol / other drugs?</span>
+                          <input
+                            type="text"
+                            placeholder="e.g. No, Occasionally"
+                            value={editDrugUse}
+                            onChange={e => setEditDrugUse(e.target.value)}
+                            className="px-2.5 py-1 text-xs border border-gray-200 rounded-lg bg-white focus:ring-1 focus:ring-blue-500 outline-none font-semibold text-slate-800"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
-            )}
-
             {!isReadOnly && showSaveButton && (
-              <div className="col-span-2 flex justify-end pt-2">
+              <div className="col-span-2 flex justify-end gap-2 pt-2">
+                <button
+                  onClick={onCancel}
+                  disabled={isSavingMedHistory}
+                  className="px-4 py-1.5 border border-gray-200 text-slate-600 rounded-lg hover:bg-gray-100 transition font-bold text-xs disabled:opacity-50"
+                >
+                  Cancel
+                </button>
                 <button
                   onClick={onSave}
                   disabled={isSavingMedHistory}
@@ -366,12 +618,6 @@ export default function MedicalHistoryTab({
                 </button>
               </div>
             )}
-          </>
-        ) : (
-          <div className="col-span-2 text-center py-6 text-gray-400 text-sm">
-            No medical history filled out for this patient.
-          </div>
-        )}
       </div>
     </div>
   )

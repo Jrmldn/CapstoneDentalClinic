@@ -11,7 +11,8 @@ import {
   insertAppointmentLog,
   getAppointmentStatus,
   updateAppointmentDetails,
-  updateClinicMaxLimit
+  updateClinicMaxLimit,
+  getOngoingAppointmentsForPatient,
 } from '@/services/appointmentService'
 import { sendEmail } from '@/lib/email/resend'
 import {
@@ -49,7 +50,7 @@ export interface CreateAppointmentData {
   clinic_id: number
   patient_id: number
   dentist_id: number
-  service_id: number
+  service_id?: number
   scheduled_at: string      // ISO string
   end_at: string            // ISO string
   notes?: string
@@ -100,6 +101,12 @@ export async function createAppointment(data: CreateAppointmentData) {
 
       if (!patientRecord || patientRecord.id !== data.patient_id) {
         return { success: false, error: 'Patients can only book appointments for themselves' }
+      }
+
+      const { count, error: countError } = await getOngoingAppointmentsForPatient(data.patient_id)
+      if (countError) return { success: false, error: 'Failed to check existing appointments.' }
+      if (count && count > 0) {
+        return { success: false, error: 'You already have an ongoing appointment. Please wait for it to be completed or cancelled before booking a new one.' }
       }
     }
 
@@ -188,29 +195,9 @@ export async function updateAppointmentStatus(
       }
     }
 
-    // A2: Enforce reschedule limits for patients
-    const isPatientReschedule = role === 'patient' && rescheduledAt
-    if (isPatientReschedule) {
-      const rescheduleCount = current.reschedule_count ?? 0
-      if (rescheduleCount >= 3) {
-        return { success: false, error: 'Reschedule limit reached. You may only reschedule up to 3 times per appointment.' }
-      }
-      const bookedAt = current.booked_at
-      if (bookedAt) {
-        const hoursSinceBooking = (Date.now() - new Date(bookedAt).getTime()) / (1000 * 60 * 60)
-        if (hoursSinceBooking < 1) {
-          return { success: false, error: 'You cannot reschedule within 1 hour of booking. Please wait a moment.' }
-        }
-      }
-    }
-
     const updateData: Record<string, unknown> = { status: newStatus }
     if (rescheduledAt) updateData.scheduled_at = rescheduledAt
     if (rescheduledEnd) updateData.end_at = rescheduledEnd
-    // A2: Increment reschedule_count when patient reschedules
-    if (isPatientReschedule) {
-      updateData.reschedule_count = (current.reschedule_count ?? 0) + 1
-    }
 
     // If declining a reschedule (moving from pending_patient_confirm to pending),
     // find the original scheduled times in the log notes and revert to them.

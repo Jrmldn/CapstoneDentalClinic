@@ -9,7 +9,7 @@ import {
   HeartPulse,
   X,
   RefreshCw,
-  Camera,
+  Archive,
   ScanLine
 } from 'lucide-react'
 import { usePatientRecord } from './usePatientRecord'
@@ -19,7 +19,7 @@ import TreatmentTab from './TreatmentTab'
 import PrescriptionsTab from './PrescriptionsTab'
 import PeriodontalTab from './PeriodontalTab'
 import FollowupsTab from './FollowupsTab'
-import PhotosTab from './PhotosTab'
+import OldRecordsTab from './OldRecordsTab'
 import type { RecordTab, PatientRecord } from './types'
 
 interface PatientRecordModalProps {
@@ -27,7 +27,7 @@ interface PatientRecordModalProps {
   onClose: () => void
   dentistId?: number
   clinicId?: number
-  viewerRole?: 'dentist' | 'staff'
+  viewerRole?: 'dentist' | 'staff' | 'superadmin'
 }
 
 export default function PatientRecordModal({ record, onClose, dentistId, clinicId, viewerRole = 'dentist' }: PatientRecordModalProps) {
@@ -53,7 +53,7 @@ export default function PatientRecordModal({ record, onClose, dentistId, clinicI
     { id: 'treatments', label: 'Treatment', icon: History    },
     { id: 'info',     label: 'Medical',    icon: User       },
     { id: 'periodontal', label: 'Periodontal',   icon: HeartPulse },
-    { id: 'photos',   label: 'Photos',     icon: Camera     },
+    { id: 'records',  label: 'Old Records', icon: Archive    },
   ]
 
   const handleChartRefresh = async () => {
@@ -129,6 +129,7 @@ export default function PatientRecordModal({ record, onClose, dentistId, clinicI
               onRefresh={handleChartRefresh}
               readOnly={!snapshotMode}
               historyOnly={!snapshotMode}
+              periodontalFindings={localRecord.periodontalFindings || []}
             />
           )}
           {activeRecordTab === 'treatments' && (
@@ -185,8 +186,6 @@ export default function PatientRecordModal({ record, onClose, dentistId, clinicI
               viewerRole={viewerRole}
               lastVisitDate={lastVisitDate}
               medHistory={medHistory}
-              readOnly={true}
-              showSaveButton={false}
             />
           )}
           {activeRecordTab === 'periodontal' && (
@@ -200,11 +199,11 @@ export default function PatientRecordModal({ record, onClose, dentistId, clinicI
               readOnly={true}
             />
           )}
-          {activeRecordTab === 'photos' && (
-            <PhotosTab
+          {activeRecordTab === 'records' && (
+            <OldRecordsTab
               patientId={localRecord.patient.id}
+              clinicId={clinicId}
               viewerRole={viewerRole}
-              readOnly={true}
             />
           )}
         </div>

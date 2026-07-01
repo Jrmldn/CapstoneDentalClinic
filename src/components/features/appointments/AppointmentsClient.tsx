@@ -19,7 +19,6 @@ export default function AppointmentsClient({
   userId,
   initialAppointments,
   patients,
-  services,
   dentists
 }: AppointmentsClientProps) {
   const router = useRouter()
@@ -209,7 +208,6 @@ export default function AppointmentsClient({
         isOpen={isBookModalOpen}
         onClose={() => { setIsBookModalOpen(false); setPreSelectedPatientId(null) }}
         patients={patients}
-        services={services}
         dentists={dentists}
         clinicId={clinicId}
         onSuccess={refreshAppointments}
@@ -222,7 +220,6 @@ export default function AppointmentsClient({
         onClose={() => setIsWalkInModalOpen(false)}
         onSuccess={refreshAppointments}
         clinicId={clinicId}
-        services={services}
         dentists={dentists}
       />
 

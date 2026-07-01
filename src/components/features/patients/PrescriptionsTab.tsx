@@ -243,10 +243,12 @@ export default function PrescriptionsTab({
           {!readOnly && dentistId && (
             <button
               onClick={() => setShowForm(!showForm)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition"
+              className={showForm
+                ? 'flex items-center gap-1.5 px-4 py-2 border border-gray-200 hover:bg-gray-50 text-slate-600 rounded-lg text-xs font-semibold transition'
+                : 'flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition'}
             >
               {showForm ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-              {showForm ? 'Close Form' : 'New Prescription'}
+              {showForm ? 'Cancel' : 'New Prescription'}
             </button>
           )}
         </div>
@@ -255,11 +257,8 @@ export default function PrescriptionsTab({
       {/* New Prescription Form */}
       {showForm && (
         <form onSubmit={handleSave} className="bg-white p-5 rounded-xl border border-gray-250/60 shadow-xs space-y-4 animate-in slide-in-from-top-4 duration-200">
-          <div className="flex justify-between items-center border-b border-gray-100 pb-2">
+          <div className="border-b border-gray-100 pb-2">
             <span className="font-bold text-slate-800 text-xs uppercase tracking-wider">New Prescription</span>
-            <button type="button" onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-650">
-              <X className="w-4 h-4" />
-            </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

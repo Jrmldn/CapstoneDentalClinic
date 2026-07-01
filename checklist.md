@@ -13,6 +13,7 @@
 - [x] Staff module backend (Clinic profile, inventory, and personnel actions implemented)
 - [x] Map-based clinic discovery (Interactive Leaflet map with filters and interactive cards)
 - [x] Codebase health & Observability (Server logs, error handling, and loading state stability)
+- [x] Responsive design (Landing page and staff dashboard responsive; server stub types fixed)
 - [ ] Payment gateway, notifications (SMS/Email), chatbot, and PDF export remaining
 
 ## Security (all weeks)

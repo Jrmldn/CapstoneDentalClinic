@@ -111,7 +111,7 @@ export interface CreateAppointmentInsertData {
   clinic_id: number
   patient_id: number
   dentist_id: number
-  service_id: number
+  service_id?: number | null
   scheduled_at: string
   end_at: string
   notes?: string | null
@@ -150,6 +150,14 @@ export async function insertAppointmentLog(logData: AppointmentLogInsertData) {
   return supabaseAdmin
     .from('appointment_logs')
     .insert([logData as never])
+}
+
+export async function getOngoingAppointmentsForPatient(patientId: number) {
+  return supabaseAdmin
+    .from('appointments')
+    .select('id', { count: 'exact', head: true })
+    .eq('patient_id', patientId)
+    .in('status', ['pending', 'confirmed', 'rescheduled', 'pending_patient_confirm'])
 }
 
 /**

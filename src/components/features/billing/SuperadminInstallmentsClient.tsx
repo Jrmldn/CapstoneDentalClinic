@@ -1,17 +1,15 @@
 'use client'
 
 import { useMemo, useState, type ReactNode } from 'react'
-import { Search, ChevronLeft, ChevronRight, Eye, CheckCircle2, Clock, XCircle, AlertTriangle } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, Eye, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import InstallmentDetailModal from './InstallmentDetailModal'
-import { toDateKey, formatDate } from '@/lib/date'
-import type { InstallmentPlan, InstallmentPayment } from './types'
+import { formatDate } from '@/lib/date'
+import type { InstallmentPlan } from './types'
 
 interface SuperadminInstallmentsClientProps {
   initialPlans: InstallmentPlan[]
   clinicOptions: { id: number; name: string }[]
 }
-
-const TODAY = toDateKey()
 
 function getPlanProgress(plan: InstallmentPlan) {
   const payments = plan.installment_payments ?? []
@@ -19,14 +17,9 @@ function getPlanProgress(plan: InstallmentPlan) {
   return { paid, total: payments.length }
 }
 
-function hasOverdue(payments: InstallmentPayment[]) {
-  return payments.some(p => p.status !== 'paid' && p.due_date < TODAY)
-}
-
 function getPlanStatusBadge(plan: InstallmentPlan) {
   if (plan.status === 'completed') return { label: 'Completed', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
   if (plan.status === 'cancelled') return { label: 'Cancelled', cls: 'bg-gray-100 text-gray-500 border-gray-200' }
-  if (hasOverdue(plan.installment_payments ?? [])) return { label: 'Overdue', cls: 'bg-red-50 text-red-700 border-red-200' }
   return { label: 'Active', cls: 'bg-blue-50 text-blue-700 border-blue-200' }
 }
 
@@ -46,7 +39,6 @@ export default function SuperadminInstallmentsClient({
   const stats = useMemo(() => {
     const active = plans.filter(p => p.status === 'active').length
     const completed = plans.filter(p => p.status === 'completed').length
-    const overdue = plans.filter(p => p.status === 'active' && hasOverdue(p.installment_payments ?? [])).length
     const outstanding = plans
       .filter(p => p.status === 'active')
       .reduce((sum, p) => {
@@ -55,7 +47,7 @@ export default function SuperadminInstallmentsClient({
           .reduce((s, pay) => s + Number(pay.amount), 0)
         return sum + unpaid
       }, 0)
-    return { active, completed, overdue, outstanding }
+    return { active, completed, outstanding }
   }, [plans])
 
   const filtered = useMemo(() => {
@@ -69,8 +61,7 @@ export default function SuperadminInstallmentsClient({
         clinicName.includes(search.toLowerCase())
       const matchesClinic = clinicFilter === 'all' || String(p.clinic_id) === clinicFilter
       let matchesStatus = true
-      if (statusFilter === 'active') matchesStatus = p.status === 'active' && !hasOverdue(p.installment_payments ?? [])
-      else if (statusFilter === 'overdue') matchesStatus = p.status === 'active' && hasOverdue(p.installment_payments ?? [])
+      if (statusFilter === 'active') matchesStatus = p.status === 'active'
       else if (statusFilter === 'completed') matchesStatus = p.status === 'completed'
       else if (statusFilter === 'cancelled') matchesStatus = p.status === 'cancelled'
       return matchesSearch && matchesClinic && matchesStatus
@@ -100,12 +91,6 @@ export default function SuperadminInstallmentsClient({
           value={stats.completed}
           icon={<CheckCircle2 className="w-5 h-5 text-emerald-500" />}
           bg="bg-emerald-50"
-        />
-        <StatCard
-          label="With Overdue"
-          value={stats.overdue}
-          icon={<AlertTriangle className="w-5 h-5 text-red-500" />}
-          bg="bg-red-50"
         />
         <StatCard
           label="Total Outstanding"
@@ -146,7 +131,6 @@ export default function SuperadminInstallmentsClient({
           >
             <option value="all">All Statuses</option>
             <option value="active">Active</option>
-            <option value="overdue">Overdue</option>
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
           </select>

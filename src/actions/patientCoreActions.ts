@@ -8,7 +8,6 @@ import { supabaseAdmin } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/serverSSR'
 import { ensureRole } from '@/lib/auth/ensureRole'
 import { validatePatientAccess } from '@/lib/auth/validatePatientAccess'
-import { encryptMedicalData } from '@/lib/encryption/medicalEncryption'
 import { insertAppointment, insertAppointmentLog } from '@/services/appointmentService'
 import type { PaymentMethod } from '@/actions/appointmentActions'
 
@@ -131,29 +130,15 @@ export async function registerPatient(data: RegisterPatientData) {
       data.is_smoker !== undefined
 
     if (hasMedicalData) {
-      const [
-        enc_blood_type,
-        enc_allergies,
-        enc_medications,
-        enc_conditions,
-        enc_surgeries,
-      ] = await Promise.all([
-        data.blood_type        ? encryptMedicalData(data.blood_type) : Promise.resolve(null),
-        encryptMedicalData(JSON.stringify(data.allergies ?? [])),
-        encryptMedicalData(JSON.stringify(data.current_medications ?? [])),
-        encryptMedicalData(JSON.stringify(data.medical_conditions ?? [])),
-        data.previous_surgeries ? encryptMedicalData(data.previous_surgeries) : Promise.resolve(null),
-      ])
-
       const { error: medError } = await supabaseAdmin
         .from('patient_medical_history')
         .insert([{
           patient_id: patient.id,
-          blood_type: enc_blood_type,
-          allergies: enc_allergies,
-          current_medications: enc_medications,
-          medical_conditions: enc_conditions,
-          previous_surgeries: enc_surgeries,
+          blood_type: data.blood_type ?? null,
+          allergies: JSON.stringify(data.allergies ?? []),
+          current_medications: JSON.stringify(data.current_medications ?? []),
+          medical_conditions: JSON.stringify(data.medical_conditions ?? []),
+          previous_surgeries: data.previous_surgeries ?? null,
           is_pregnant: data.is_pregnant ?? false,
           is_smoker: data.is_smoker ?? false,
         }])
@@ -267,7 +252,7 @@ export async function updatePatientProfile(
 ) {
   const access = await validatePatientAccess(patientId)
   if (!access.allowed) return { success: false, error: access.reason }
-  if (access.role !== 'patient' && access.role !== 'staff') {
+  if (access.role !== 'patient' && access.role !== 'staff' && access.role !== 'superadmin') {
     return { success: false, error: 'Insufficient permissions' }
   }
 
@@ -341,9 +326,12 @@ export interface WalkInBookingData {
   first_name: string
   last_name: string
   phone: string
+  gender?: string
+  address?: string
+  birthdate?: string
   clinic_id: number
   dentist_id: number
-  service_id: number
+  service_id?: number
   scheduled_at: string
   end_at: string
   notes?: string
@@ -362,6 +350,9 @@ export async function registerWalkInPatientAndBook(data: WalkInBookingData) {
         first_name: data.first_name,
         last_name: data.last_name,
         phone: data.phone,
+        gender: data.gender ?? null,
+        address: data.address ?? null,
+        birthdate: data.birthdate ?? null,
         is_guest: true,
         user_id: null,
       }])
@@ -382,7 +373,7 @@ export async function registerWalkInPatientAndBook(data: WalkInBookingData) {
       clinic_id: data.clinic_id,
       patient_id: patient.id,
       dentist_id: data.dentist_id,
-      service_id: data.service_id,
+      service_id: data.service_id ?? null,
       scheduled_at: data.scheduled_at,
       end_at: data.end_at,
       notes: data.notes ?? null,

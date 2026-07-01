@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, RefreshCw, FileText, Trash2, Activity, ClipboardList, User, HeartPulse, Calendar, Package, ShoppingBag } from 'lucide-react'
+import { X, RefreshCw, FileText, Trash2, Activity, ClipboardList, User, HeartPulse, Package, ShoppingBag } from 'lucide-react'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
 import { createDraftInvoice } from '@/actions/billingActions'
 import { updateDentalChart } from '@/actions/dentalChartActions'
 import { fetchPatientRecord } from '@/actions/patientMedicalActions'
 import { addTreatmentRecords, addPrescriptions } from '@/actions/clinicalRecordActions'
+import { addPeriodontalFindings } from '@/actions/periodontalFindingsActions'
 import { updateInventoryStock } from '@/actions/inventoryActions'
 import { fetchProducts } from '@/actions/serviceActions'
 import { usePatientRecord } from '../patients/usePatientRecord'
@@ -23,6 +24,7 @@ import type { Service } from '../billing/types'
 import type { ToothConditionData } from '@/actions/dentalChartActions'
 import type { StagedTreatmentData } from '../patients/TreatmentTab'
 import type { StagedPrescriptionData } from '../patients/PrescriptionsTab'
+import type { PeriodontalFindingsInput } from '../patients/PeriodontalFindingsSection'
 import { serviceRequiresToothNumber } from '@/utils/teeth'
 import type { InventoryItem } from '../inventory/types'
 import type { Product } from '../billing/types'
@@ -89,6 +91,7 @@ export default function DentistChartBillingModal({
 
   // Cart state
   const [currentSessionItems, setCurrentSessionItems] = useState<SessionItem[]>([])
+  const [periodontalFindings, setPeriodontalFindings] = useState<PeriodontalFindingsInput | null>(null)
 
   // Inventory picker state
   const [showProductPicker, setShowProductPicker] = useState(false)
@@ -149,6 +152,11 @@ export default function DentistChartBillingModal({
       }
     })
     setCurrentSessionItems(prev => [...prev, ...newItems])
+  }
+
+  const handleFindingsStage = (data: PeriodontalFindingsInput) => {
+    const hasAny = data.gingivitis.length || data.periodontal_condition.length || data.occlusion.length || data.appliances.length
+    setPeriodontalFindings(hasAny ? data : null)
   }
 
   const handleTreatmentAdd = (data: StagedTreatmentData) => {
@@ -296,6 +304,7 @@ export default function DentistChartBillingModal({
     const allChartConditions = currentSessionItems
       .filter(item => item.type === 'chart_condition' && item.chartConditions)
       .flatMap(item => item.chartConditions!)
+    let savedChartId: number | null = null
     if (allChartConditions.length > 0) {
       const chartResult = await updateDentalChart(
         appointment.patients.id,
@@ -307,6 +316,22 @@ export default function DentistChartBillingModal({
         setErrorMsg(chartResult.error || 'Failed to save dental chart conditions')
         setIsSubmitting(false)
         return
+      }
+      savedChartId = chartResult.chartId ?? null
+    }
+
+    // 1.5 Save periodontal findings (single record for this session)
+    if (periodontalFindings) {
+      const findingsResult = await addPeriodontalFindings({
+        patient_id: appointment.patients.id,
+        clinic_id: clinicId,
+        dentist_id: dentistId,
+        appointment_id: appointment.id,
+        dental_chart_id: savedChartId,
+        ...periodontalFindings,
+      })
+      if (!findingsResult.success) {
+        console.error('Failed to save periodontal findings:', findingsResult.error)
       }
     }
 
@@ -429,6 +454,7 @@ export default function DentistChartBillingModal({
     setIsSubmitting(false)
     if (draftResult.success) {
       setCurrentSessionItems([])
+      setPeriodontalFindings(null)
       onSuccess()
     } else {
       setErrorMsg(draftResult.error || 'Failed to create draft invoice')
@@ -442,10 +468,8 @@ export default function DentistChartBillingModal({
   const tabs: Array<{ id: RecordTab; label: string; icon: React.ComponentType<{ className?: string }> }> = [
     { id: 'chart', label: 'Dental Chart', icon: Activity },
     { id: 'treatments', label: 'Treatment', icon: ClipboardList },
-    { id: 'prescriptions', label: 'Prescriptions', icon: ClipboardList },
     { id: 'info', label: 'Medical History', icon: User },
     { id: 'periodontal', label: 'Periodontal', icon: HeartPulse },
-    { id: 'followups', label: 'Follow-ups', icon: Calendar },
   ]
 
   return createPortal(
@@ -478,21 +502,21 @@ export default function DentistChartBillingModal({
           {/* Left Panel: EHR Workspace (55% width) */}
           <div className="w-[55%] border-r border-gray-150 flex flex-col bg-slate-50/30 overflow-hidden">
             {/* EHR Tab bar */}
-            <div className="flex border-b border-gray-100 bg-white px-4 overflow-x-auto shrink-0">
+            <div className="flex border-b border-gray-100 bg-white px-4 shrink-0">
               {tabs.map(tab => {
                 const Icon = tab.icon
                 return (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold transition-all border-b-2 outline-none shrink-0 ${
+                    className={`flex flex-col items-center gap-1 flex-1 py-3 text-[11px] font-bold transition-all border-b-2 outline-none ${
                       activeTab === tab.id
                         ? 'border-blue-600 text-blue-600'
                         : 'border-transparent text-slate-500 hover:text-slate-700'
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
-                    {tab.label}
+                    <Icon className="w-5 h-5" />
+                    <span>{tab.label}</span>
                   </button>
                 )
               })}
@@ -507,7 +531,7 @@ export default function DentistChartBillingModal({
                 </div>
               ) : localRecord ? (
                 <>
-                  {activeTab === 'chart' && (
+                  <div className={activeTab !== 'chart' ? 'hidden' : ''}>
                     <DentalChartTab
                       patientId={localRecord.patient.id}
                       clinicId={clinicId}
@@ -516,9 +540,11 @@ export default function DentistChartBillingModal({
                       onRefresh={handleRefreshRecord}
                       readOnly={false}
                       onChartSave={handleChartConditionsAdd}
+                      periodontalFindings={[]}
+                      onFindingsSave={handleFindingsStage}
                     />
-                  )}
-                  {activeTab === 'treatments' && (
+                  </div>
+                  <div className={activeTab !== 'treatments' ? 'hidden' : 'space-y-8'}>
                     <TreatmentTab
                       patientId={localRecord.patient.id}
                       clinicId={clinicId}
@@ -527,32 +553,55 @@ export default function DentistChartBillingModal({
                       onRefresh={handleRefreshRecord}
                       onAddTreatment={handleTreatmentAdd}
                     />
-                  )}
-                  {activeTab === 'prescriptions' && (
-                    <PrescriptionsTab
-                      patientId={localRecord.patient.id}
-                      clinicId={clinicId}
-                      dentistId={dentistId}
-                      prescriptions={localRecord.prescriptions || []}
-                      onRefresh={handleRefreshRecord}
-                      patient={{
-                        first_name: localRecord.patient.first_name,
-                        last_name: localRecord.patient.last_name,
-                        birthdate: localRecord.patient.birthdate,
-                        gender: localRecord.patient.gender,
-                      }}
-                      onAddPrescription={handlePrescriptionAdd}
-                    />
-                  )}
-                  {activeTab === 'info' && (
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="flex-1 border-t border-gray-200" />
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Prescriptions</span>
+                        <div className="flex-1 border-t border-gray-200" />
+                      </div>
+                      <PrescriptionsTab
+                        patientId={localRecord.patient.id}
+                        clinicId={clinicId}
+                        dentistId={dentistId}
+                        prescriptions={localRecord.prescriptions || []}
+                        onRefresh={handleRefreshRecord}
+                        patient={{
+                          first_name: localRecord.patient.first_name,
+                          last_name: localRecord.patient.last_name,
+                          birthdate: localRecord.patient.birthdate,
+                          gender: localRecord.patient.gender,
+                        }}
+                        onAddPrescription={handlePrescriptionAdd}
+                      />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="flex-1 border-t border-gray-200" />
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Follow-ups</span>
+                        <div className="flex-1 border-t border-gray-200" />
+                      </div>
+                      <FollowupsTab
+                        patientId={localRecord.patient.id}
+                        clinicId={clinicId}
+                        dentistId={dentistId}
+                        appointments={localRecord.appointments || []}
+                        onRefresh={handleRefreshRecord}
+                        onAddFollowup={() => {}}
+                      />
+                      <p className="text-[10px] text-slate-500 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1.5 mt-3">
+                        Follow-up dates are reflected in the dentist, clinic staff, and patient calendar views.
+                      </p>
+                    </div>
+                  </div>
+                  <div className={activeTab !== 'info' ? 'hidden' : ''}>
                     <MedicalHistoryTab
                       localRecord={localRecord}
                       viewerRole="dentist"
                       lastVisitDate={lastVisitDate}
                       medHistory={medHistory}
                     />
-                  )}
-                  {activeTab === 'periodontal' && (
+                  </div>
+                  <div className={activeTab !== 'periodontal' ? 'hidden' : ''}>
                     <PeriodontalTab
                       patientId={localRecord.patient.id}
                       clinicId={clinicId}
@@ -562,17 +611,7 @@ export default function DentistChartBillingModal({
                       onRefresh={handleRefreshRecord}
                       onAddPeriodontal={() => {}}
                     />
-                  )}
-                  {activeTab === 'followups' && (
-                    <FollowupsTab
-                      patientId={localRecord.patient.id}
-                      clinicId={clinicId}
-                      dentistId={dentistId}
-                      appointments={localRecord.appointments || []}
-                      onRefresh={handleRefreshRecord}
-                      onAddFollowup={() => {}}
-                    />
-                  )}
+                  </div>
                 </>
               ) : (
                 <div className="p-8 text-center text-gray-400">Failed to load patient clinical records.</div>

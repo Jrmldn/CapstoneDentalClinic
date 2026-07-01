@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Calendar, ChevronLeft, ChevronRight, CalendarClock, AlertCircle, Star, MessageSquare } from 'lucide-react'
+import { Calendar, ChevronLeft, ChevronRight, AlertCircle, Star, MessageSquare } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { updateAppointmentStatus } from '@/actions/appointmentActions'
@@ -171,18 +171,6 @@ export function AppointmentsTab({
                       </p>
                     )}
                   </div>
-                  {/* Reschedule link — patients cannot cancel, only reschedule */}
-                  {appt.status !== 'pending_patient_confirm' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-blue-600 hover:bg-blue-50 hover:text-blue-700 border-blue-200 font-semibold flex items-center gap-1.5"
-                      onClick={() => router.push(`/patient-dashboard/booking?reschedule=true&apptId=${appt.id}`)}
-                    >
-                      <CalendarClock className="w-3.5 h-3.5" />
-                      Reschedule
-                    </Button>
-                  )}
                 </div>
               </div>
             ))

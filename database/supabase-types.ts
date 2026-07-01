@@ -765,7 +765,6 @@ export type Database = {
         Row: {
           amount: number
           created_at: string | null
-          due_date: string
           id: number
           installment_number: number
           paid_at: string | null
@@ -775,7 +774,6 @@ export type Database = {
         Insert: {
           amount: number
           created_at?: string | null
-          due_date: string
           id?: number
           installment_number: number
           paid_at?: string | null
@@ -785,7 +783,6 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string | null
-          due_date?: string
           id?: number
           installment_number?: number
           paid_at?: string | null
@@ -1131,47 +1128,75 @@ export type Database = {
           },
         ]
       }
-      clinic_hmo: {
+      patient_documents: {
         Row: {
+          clinic_id: number | null
+          created_at: string
+          file_name: string
+          file_path: string
+          file_type: string
           id: number
-          clinic_id: number
-          hmo_name: string
-          created_at: string | null
+          mime_type: string
+          patient_id: number
+          section: string
+          size_bytes: number
+          uploaded_by: string | null
+          uploaded_by_branch: string
+          uploaded_by_name: string
         }
         Insert: {
+          clinic_id?: number | null
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_type: string
           id?: number
-          clinic_id: number
-          hmo_name: string
-          created_at?: string | null
+          mime_type: string
+          patient_id: number
+          section: string
+          size_bytes: number
+          uploaded_by?: string | null
+          uploaded_by_branch: string
+          uploaded_by_name: string
         }
         Update: {
+          clinic_id?: number | null
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_type?: string
           id?: number
-          clinic_id?: number
-          hmo_name?: string
-          created_at?: string | null
+          mime_type?: string
+          patient_id?: number
+          section?: string
+          size_bytes?: number
+          uploaded_by?: string | null
+          uploaded_by_branch?: string
+          uploaded_by_name?: string
         }
-        Relationships: []
-      }
-      clinic_specialties: {
-        Row: {
-          id: number
-          clinic_id: number
-          specialty_name: string
-          created_at: string | null
-        }
-        Insert: {
-          id?: number
-          clinic_id: number
-          specialty_name: string
-          created_at?: string | null
-        }
-        Update: {
-          id?: number
-          clinic_id?: number
-          specialty_name?: string
-          created_at?: string | null
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "patient_documents_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_documents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       patient_medical_history: {
         Row: {
@@ -1361,6 +1386,87 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "paymongo_payments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      periodontal_findings: {
+        Row: {
+          appliances: Json
+          appointment_id: number | null
+          clinic_id: number
+          created_at: string | null
+          dental_chart_id: number | null
+          dentist_id: number
+          gingivitis: Json
+          id: number
+          occlusion: Json
+          patient_id: number
+          periodontal_condition: Json
+          recorded_at: string
+        }
+        Insert: {
+          appliances?: Json
+          appointment_id?: number | null
+          clinic_id: number
+          created_at?: string | null
+          dental_chart_id?: number | null
+          dentist_id: number
+          gingivitis?: Json
+          id?: number
+          occlusion?: Json
+          patient_id: number
+          periodontal_condition?: Json
+          recorded_at?: string
+        }
+        Update: {
+          appliances?: Json
+          appointment_id?: number | null
+          clinic_id?: number
+          created_at?: string | null
+          dental_chart_id?: number | null
+          dentist_id?: number
+          gingivitis?: Json
+          id?: number
+          occlusion?: Json
+          patient_id?: number
+          periodontal_condition?: Json
+          recorded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "periodontal_findings_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "periodontal_findings_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "periodontal_findings_dental_chart_id_fkey"
+            columns: ["dental_chart_id"]
+            isOneToOne: false
+            referencedRelation: "dental_charts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "periodontal_findings_dentist_id_fkey"
+            columns: ["dentist_id"]
+            isOneToOne: false
+            referencedRelation: "dentists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "periodontal_findings_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"

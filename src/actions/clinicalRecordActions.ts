@@ -5,7 +5,6 @@ import { sanitizeServerError } from '@/lib/errors/sanitizeError'
 import { revalidatePath } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase/server'
 import { ensureRole } from '@/lib/auth/ensureRole'
-import { encryptMedicalData } from '@/lib/encryption/medicalEncryption'
 
 // TYPES
 
@@ -66,16 +65,10 @@ export interface TmjAssessmentData {
 // ADD CLINICAL ASSESSMENT
 
 export async function addClinicalAssessment(data: ClinicalAssessmentData) {
-  const auth = await ensureRole('dentist')
+  const auth = await ensureRole('dentist', 'superadmin')
   if (!auth.success) return { success: false, error: auth.error }
 
   try {
-    const [enc_diagnosis, enc_treatment_plan, enc_notes] = await Promise.all([
-      encryptMedicalData(data.diagnosis),
-      encryptMedicalData(data.treatment_plan),
-      data.notes ? encryptMedicalData(data.notes) : Promise.resolve(null),
-    ])
-
     const { data: assessment, error } = await supabaseAdmin
       .from('clinical_assessments')
       .insert([{
@@ -84,9 +77,9 @@ export async function addClinicalAssessment(data: ClinicalAssessmentData) {
         dentist_id: data.dentist_id,
         appointment_id: data.appointment_id ?? null,
         chief_complaint: data.chief_complaint,
-        diagnosis: enc_diagnosis,
-        treatment_plan: enc_treatment_plan,
-        notes: enc_notes,
+        diagnosis: data.diagnosis,
+        treatment_plan: data.treatment_plan,
+        notes: data.notes ?? null,
         assessed_at: new Date().toISOString(),
       }])
       .select()
@@ -108,15 +101,10 @@ export async function addClinicalAssessment(data: ClinicalAssessmentData) {
 // ADD TREATMENT RECORD
 
 export async function addTreatmentRecord(data: TreatmentRecordData) {
-  const auth = await ensureRole('dentist')
+  const auth = await ensureRole('dentist', 'superadmin')
   if (!auth.success) return { success: false, error: auth.error }
 
   try {
-    const [enc_treatment, enc_treat_notes] = await Promise.all([
-      encryptMedicalData(data.treatment),
-      data.notes ? encryptMedicalData(data.notes) : Promise.resolve(null),
-    ])
-
     const { data: record, error } = await supabaseAdmin
       .from('treatment_history')
       .insert([{
@@ -126,8 +114,8 @@ export async function addTreatmentRecord(data: TreatmentRecordData) {
         appointment_id: data.appointment_id ?? null,
         service_id: data.service_id ?? null,
         tooth_number: data.tooth_number ?? null,
-        treatment: enc_treatment,
-        notes: enc_treat_notes,
+        treatment: data.treatment,
+        notes: data.notes ?? null,
         performed_at: data.performed_at ?? new Date().toISOString(),
       }])
       .select()
@@ -147,7 +135,7 @@ export async function addTreatmentRecord(data: TreatmentRecordData) {
   }
 }
 
-// ADD MULTIPLE TREATMENT RECORDS (batch, encrypted)
+// ADD MULTIPLE TREATMENT RECORDS (batch)
 // Used by the dentist billing handoff to log every treated line at once.
 // No ensureRole here — the caller (createDraftInvoice) is already role-gated.
 
@@ -155,29 +143,21 @@ export async function addTreatmentRecords(rows: TreatmentRecordData[]) {
   if (rows.length === 0) return { success: true, records: [] }
 
   try {
-    const encryptedRows = await Promise.all(
-      rows.map(async (data) => {
-        const [enc_treatment, enc_treat_notes] = await Promise.all([
-          encryptMedicalData(data.treatment),
-          data.notes ? encryptMedicalData(data.notes) : Promise.resolve(null),
-        ])
-        return {
-          patient_id: data.patient_id,
-          clinic_id: data.clinic_id,
-          dentist_id: data.dentist_id,
-          appointment_id: data.appointment_id ?? null,
-          service_id: data.service_id ?? null,
-          tooth_number: data.tooth_number ?? null,
-          treatment: enc_treatment,
-          notes: enc_treat_notes,
-          performed_at: data.performed_at ?? new Date().toISOString(),
-        }
-      })
-    )
+    const insertRows = rows.map((data) => ({
+      patient_id: data.patient_id,
+      clinic_id: data.clinic_id,
+      dentist_id: data.dentist_id,
+      appointment_id: data.appointment_id ?? null,
+      service_id: data.service_id ?? null,
+      tooth_number: data.tooth_number ?? null,
+      treatment: data.treatment,
+      notes: data.notes ?? null,
+      performed_at: data.performed_at ?? new Date().toISOString(),
+    }))
 
     const { data: records, error } = await supabaseAdmin
       .from('treatment_history')
-      .insert(encryptedRows)
+      .insert(insertRows)
       .select()
 
     if (error) throw new Error(error.message)
@@ -197,18 +177,10 @@ export async function addTreatmentRecords(rows: TreatmentRecordData[]) {
 // ADD PRESCRIPTION
 
 export async function addPrescription(data: PrescriptionData) {
-  const auth = await ensureRole('dentist')
+  const auth = await ensureRole('dentist', 'superadmin')
   if (!auth.success) return { success: false, error: auth.error }
 
   try {
-    const [enc_medication, enc_dosage, enc_frequency, enc_duration, enc_rx_notes] = await Promise.all([
-      encryptMedicalData(data.medication),
-      encryptMedicalData(data.dosage),
-      encryptMedicalData(data.frequency),
-      data.duration ? encryptMedicalData(data.duration) : Promise.resolve(null),
-      data.notes    ? encryptMedicalData(data.notes)    : Promise.resolve(null),
-    ])
-
     const { data: prescription, error } = await supabaseAdmin
       .from('prescriptions')
       .insert([{
@@ -216,11 +188,11 @@ export async function addPrescription(data: PrescriptionData) {
         clinic_id: data.clinic_id,
         dentist_id: data.dentist_id,
         appointment_id: data.appointment_id ?? null,
-        medication: enc_medication,
-        dosage:     enc_dosage,
-        frequency:  enc_frequency,
-        duration:   enc_duration,
-        notes:      enc_rx_notes,
+        medication: data.medication,
+        dosage:     data.dosage,
+        frequency:  data.frequency,
+        duration:   data.duration ?? null,
+        notes:      data.notes ?? null,
         prescribed_at: new Date().toISOString(),
       }])
       .select()
@@ -240,7 +212,7 @@ export async function addPrescription(data: PrescriptionData) {
   }
 }
 
-// ADD MULTIPLE PRESCRIPTIONS (batch, encrypted)
+// ADD MULTIPLE PRESCRIPTIONS (batch)
 // Used by the dentist billing handoff to log every prescription at once.
 // No ensureRole here — the caller is already role-gated.
 
@@ -248,33 +220,22 @@ export async function addPrescriptions(rows: PrescriptionData[]) {
   if (rows.length === 0) return { success: true, prescriptions: [] }
 
   try {
-    const encryptedRows = await Promise.all(
-      rows.map(async (data) => {
-        const [enc_medication, enc_dosage, enc_frequency, enc_duration, enc_rx_notes] = await Promise.all([
-          encryptMedicalData(data.medication),
-          encryptMedicalData(data.dosage),
-          encryptMedicalData(data.frequency),
-          data.duration ? encryptMedicalData(data.duration) : Promise.resolve(null),
-          data.notes    ? encryptMedicalData(data.notes)    : Promise.resolve(null),
-        ])
-        return {
-          patient_id: data.patient_id,
-          clinic_id: data.clinic_id,
-          dentist_id: data.dentist_id,
-          appointment_id: data.appointment_id ?? null,
-          medication: enc_medication,
-          dosage:     enc_dosage,
-          frequency:  enc_frequency,
-          duration:   enc_duration,
-          notes:      enc_rx_notes,
-          prescribed_at: new Date().toISOString(),
-        }
-      })
-    )
+    const insertRows = rows.map((data) => ({
+      patient_id: data.patient_id,
+      clinic_id: data.clinic_id,
+      dentist_id: data.dentist_id,
+      appointment_id: data.appointment_id ?? null,
+      medication: data.medication,
+      dosage:     data.dosage,
+      frequency:  data.frequency,
+      duration:   data.duration ?? null,
+      notes:      data.notes ?? null,
+      prescribed_at: new Date().toISOString(),
+    }))
 
     const { data: prescriptions, error } = await supabaseAdmin
       .from('prescriptions')
-      .insert(encryptedRows)
+      .insert(insertRows)
       .select()
 
     if (error) throw new Error(error.message)
@@ -294,12 +255,10 @@ export async function addPrescriptions(rows: PrescriptionData[]) {
 // ADD PERIODONTAL SCREENING
 
 export async function addPeriodontalScreening(data: PeriodontalScreeningData) {
-  const auth = await ensureRole('dentist')
+  const auth = await ensureRole('dentist', 'superadmin')
   if (!auth.success) return { success: false, error: auth.error }
 
   try {
-    const enc_findings = data.findings ? await encryptMedicalData(data.findings) : null
-
     const { data: screening, error } = await supabaseAdmin
       .from('periodontal_screenings')
       .insert([{
@@ -309,7 +268,7 @@ export async function addPeriodontalScreening(data: PeriodontalScreeningData) {
         appointment_id: data.appointment_id ?? null,
         pocket_depths: data.pocket_depths,
         bleeding_points: data.bleeding_points,
-        findings: enc_findings,
+        findings: data.findings ?? null,
         screened_at: new Date().toISOString(),
       }])
       .select()
@@ -332,7 +291,7 @@ export async function addPeriodontalScreening(data: PeriodontalScreeningData) {
 // ADD TMJ ASSESSMENT
 
 export async function addTmjAssessment(data: TmjAssessmentData) {
-  const auth = await ensureRole('dentist')
+  const auth = await ensureRole('dentist', 'superadmin')
   if (!auth.success) return { success: false, error: auth.error }
 
   try {

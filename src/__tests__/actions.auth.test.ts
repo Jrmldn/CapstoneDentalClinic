@@ -21,11 +21,6 @@ vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: { from: vi.fn() },
 }))
 
-vi.mock('@/lib/encryption/medicalEncryption', () => ({
-  encryptMedicalData: vi.fn((v: string) => Promise.resolve(`enc:${v}`)),
-  decryptMedicalData: vi.fn((v: string) => Promise.resolve(v.replace(/^enc:/, ''))),
-}))
-
 vi.mock('@/services/appointmentService', () => ({
   getAppointmentStatus: vi.fn(),
   insertAppointmentLog: vi.fn().mockResolvedValue({ error: null }),

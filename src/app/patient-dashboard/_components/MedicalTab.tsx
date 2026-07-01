@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
-import { History, BookOpen, Building2, User, Calendar } from 'lucide-react'
+import React, { useState, useMemo } from 'react'
+import { ClipboardList } from 'lucide-react'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { PatientRecord } from './types'
 import { formatDate } from './utils'
 
@@ -10,153 +11,147 @@ interface MedicalTabProps {
 }
 
 export function MedicalTab({ record }: MedicalTabProps) {
-  const treatments = record.treatmentHistory
+  const [branchFilter, setBranchFilter] = useState('')
+  const [dentistFilter, setDentistFilter] = useState('')
+  const [monthFilter, setMonthFilter] = useState('')
 
-  const clinicOptions = useMemo(() => {
+  const { totalVisits, lastVisit, primaryDentist } = useMemo(() => {
+    const history = record.treatmentHistory
+    const total = history.length
+
+    const sorted = [...history].filter(t => t.performed_at).sort(
+      (a, b) => new Date(b.performed_at!).getTime() - new Date(a.performed_at!).getTime()
+    )
+    const last = sorted[0]?.performed_at ? formatDate(sorted[0].performed_at) : '—'
+
+    const dentistCount: Record<string, number> = {}
+    for (const t of history) {
+      if (t.dentists) {
+        const name = `Dr. ${t.dentists.first_name} ${t.dentists.last_name}`
+        dentistCount[name] = (dentistCount[name] ?? 0) + 1
+      }
+    }
+    const primary = Object.entries(dentistCount).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '—'
+
+    return { totalVisits: total, lastVisit: last, primaryDentist: primary }
+  }, [record.treatmentHistory])
+
+  const uniqueBranches = useMemo(() => {
     const names = new Set<string>()
-    treatments.forEach(t => {
-      const clinic = Array.isArray(t.clinics) ? t.clinics[0] : t.clinics
-      if (clinic?.name) names.add(clinic.name)
-    })
+    for (const t of record.treatmentHistory) {
+      if (t.clinics?.name) names.add(t.clinics.name)
+    }
     return Array.from(names).sort()
-  }, [treatments])
+  }, [record.treatmentHistory])
 
-  const dentistOptions = useMemo(() => {
+  const uniqueDentists = useMemo(() => {
     const names = new Set<string>()
-    treatments.forEach(t => {
-      const d = Array.isArray(t.dentists) ? t.dentists[0] : t.dentists
-      if (d) names.add(`${d.first_name} ${d.last_name}`)
-    })
+    for (const t of record.treatmentHistory) {
+      if (t.dentists) names.add(`Dr. ${t.dentists.first_name} ${t.dentists.last_name}`)
+    }
     return Array.from(names).sort()
-  }, [treatments])
-
-  const [filterClinic, setFilterClinic] = useState('')
-  const [filterDentist, setFilterDentist] = useState('')
-  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest')
+  }, [record.treatmentHistory])
 
   const filtered = useMemo(() => {
-    let list = [...treatments]
-
-    if (filterClinic) {
-      list = list.filter(t => {
-        const clinic = Array.isArray(t.clinics) ? t.clinics[0] : t.clinics
-        return clinic?.name === filterClinic
-      })
-    }
-
-    if (filterDentist) {
-      list = list.filter(t => {
-        const d = Array.isArray(t.dentists) ? t.dentists[0] : t.dentists
-        return d ? `${d.first_name} ${d.last_name}` === filterDentist : false
-      })
-    }
-
-    list.sort((a, b) => {
-      const dateA = a.performed_at ? new Date(a.performed_at).getTime() : 0
-      const dateB = b.performed_at ? new Date(b.performed_at).getTime() : 0
-      return sortOrder === 'newest' ? dateB - dateA : dateA - dateB
+    return record.treatmentHistory.filter(t => {
+      if (branchFilter && t.clinics?.name !== branchFilter) return false
+      if (dentistFilter) {
+        const name = t.dentists ? `Dr. ${t.dentists.first_name} ${t.dentists.last_name}` : ''
+        if (name !== dentistFilter) return false
+      }
+      if (monthFilter && t.performed_at) {
+        const ym = t.performed_at.slice(0, 7)
+        if (ym !== monthFilter) return false
+      }
+      return true
     })
-
-    return list
-  }, [treatments, filterClinic, filterDentist, sortOrder])
+  }, [record.treatmentHistory, branchFilter, dentistFilter, monthFilter])
 
   return (
-    <div className="space-y-5">
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-          <History className="w-5 h-5 text-blue-600" />
-          <h3 className="font-bold text-slate-800 text-base">Treatment History</h3>
+    <div className="space-y-6">
+      {/* Stats row */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Visits</span>
+          <p className="text-2xl font-extrabold text-slate-800 mt-1">{totalVisits}</p>
         </div>
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Last Visit</span>
+          <p className="text-sm font-bold text-slate-800 mt-1">{lastVisit}</p>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Primary Dentist</span>
+          <p className="text-sm font-bold text-slate-800 mt-1">{primaryDentist}</p>
+        </div>
+      </div>
 
-        {/* Filters */}
-        <div className="px-5 py-3 bg-slate-50/60 border-b border-slate-100 flex flex-wrap gap-3">
-          <div className="flex items-center gap-2 min-w-0">
-            <Building2 className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+      {/* Treatment History card */}
+      <Card className="border border-slate-200 shadow-sm overflow-hidden">
+        <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4">
+          <CardTitle className="text-base font-bold flex items-center gap-2 text-slate-800">
+            <ClipboardList className="w-5 h-5 text-blue-600" />
+            Treatment History
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-5 space-y-4">
+          {/* Filters */}
+          <div className="flex flex-wrap gap-3">
             <select
-              value={filterClinic}
-              onChange={e => setFilterClinic(e.target.value)}
-              className="text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-blue-500"
+              value={branchFilter}
+              onChange={e => setBranchFilter(e.target.value)}
+              className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:bg-white outline-none text-slate-700 focus:ring-2 focus:ring-blue-500 min-w-[140px]"
             >
               <option value="">All Branches</option>
-              {clinicOptions.map(c => (
-                <option key={c} value={c}>{c}</option>
+              {uniqueBranches.map(b => (
+                <option key={b} value={b}>{b}</option>
               ))}
             </select>
-          </div>
 
-          <div className="flex items-center gap-2 min-w-0">
-            <User className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
             <select
-              value={filterDentist}
-              onChange={e => setFilterDentist(e.target.value)}
-              className="text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-blue-500"
+              value={dentistFilter}
+              onChange={e => setDentistFilter(e.target.value)}
+              className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:bg-white outline-none text-slate-700 focus:ring-2 focus:ring-blue-500 min-w-[140px]"
             >
               <option value="">All Dentists</option>
-              {dentistOptions.map(d => (
+              {uniqueDentists.map(d => (
                 <option key={d} value={d}>{d}</option>
               ))}
             </select>
+
+            <input
+              type="month"
+              value={monthFilter}
+              onChange={e => setMonthFilter(e.target.value)}
+              className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:bg-white outline-none text-slate-700 focus:ring-2 focus:ring-blue-500"
+            />
           </div>
 
-          <div className="flex items-center gap-2 min-w-0">
-            <Calendar className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-            <select
-              value={sortOrder}
-              onChange={e => setSortOrder(e.target.value as 'newest' | 'oldest')}
-              className="text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-blue-500"
-            >
-              <option value="newest">Newest First</option>
-              <option value="oldest">Oldest First</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Table */}
-        <div className="overflow-x-auto">
-          {filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-14 text-center">
-              <BookOpen className="w-8 h-8 text-slate-300 mb-3" />
-              <p className="text-sm font-semibold text-slate-400">No treatment records found</p>
-              <p className="text-xs text-slate-400 mt-1">
-                {filterClinic || filterDentist ? 'Try adjusting the filters above.' : 'Your treatment history will appear here.'}
-              </p>
+          {/* List */}
+          {filtered.length > 0 ? (
+            <div className="space-y-3">
+              {filtered.map(t => (
+                <div key={t.id} className="p-4 bg-white border border-slate-200 rounded-xl shadow-xs">
+                  <div className="flex justify-between items-start">
+                    <h5 className="font-bold text-slate-900">{t.services?.name ?? 'Treatment'}</h5>
+                    <span className="text-xs text-slate-400 shrink-0 ml-3">
+                      {t.performed_at ? formatDate(t.performed_at) : '—'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {t.dentists ? `Dr. ${t.dentists.first_name} ${t.dentists.last_name}` : ''}
+                    {t.clinics?.name ? ` · ${t.clinics.name}` : ''}
+                  </p>
+                  {t.notes && (
+                    <p className="text-xs text-slate-600 mt-2 bg-slate-50 p-2 rounded">{t.notes}</p>
+                  )}
+                </div>
+              ))}
             </div>
           ) : (
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="bg-slate-50 text-slate-500 font-bold border-b border-slate-100 uppercase tracking-wider text-[10px]">
-                  <th className="px-5 py-3">Treatment</th>
-                  <th className="px-5 py-3">Branch</th>
-                  <th className="px-5 py-3">Dentist</th>
-                  <th className="px-5 py-3">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {filtered.map(tr => {
-                  const dentistObj = Array.isArray(tr.dentists) ? tr.dentists[0] : tr.dentists
-                  const clinicObj = Array.isArray(tr.clinics) ? tr.clinics[0] : tr.clinics
-                  return (
-                    <tr key={tr.id} className="hover:bg-slate-50/60 transition">
-                      <td className="px-5 py-3.5 font-semibold text-slate-800">
-                        {tr.services?.name ?? tr.treatment ?? '—'}
-                      </td>
-                      <td className="px-5 py-3.5 text-slate-600">
-                        {clinicObj?.name ?? '—'}
-                      </td>
-                      <td className="px-5 py-3.5 text-slate-600">
-                        {dentistObj ? `Dr. ${dentistObj.first_name} ${dentistObj.last_name}` : '—'}
-                      </td>
-                      <td className="px-5 py-3.5 text-slate-500">
-                        {tr.performed_at ? formatDate(tr.performed_at) : '—'}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+            <p className="text-xs text-slate-400 text-center py-6">No treatments found</p>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

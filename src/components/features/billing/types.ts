@@ -33,7 +33,6 @@ export interface InstallmentPayment {
   id: number
   plan_id: number
   installment_number: number
-  due_date: string
   amount: number
   status: string
   paid_at: string | null

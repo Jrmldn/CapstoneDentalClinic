@@ -206,15 +206,6 @@ export function OverviewTab({
                         Dentist: Dr. {next.dentists?.first_name} {next.dentists?.last_name}
                       </p>
                     </div>
-                    {next.status !== 'pending_patient_confirm' && (
-                      <Button
-                        onClick={() => router.push(`/patient-dashboard/booking?reschedule=true&apptId=${next.id}`)}
-                        className="bg-slate-900 hover:bg-slate-800 text-white font-bold"
-                        size="sm"
-                      >
-                        Reschedule
-                      </Button>
-                    )}
                   </div>
                 </div>
               )

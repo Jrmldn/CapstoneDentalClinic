@@ -28,7 +28,6 @@ export function getEligibleInstallmentService(tx: TransactionWithItems): Install
 
 export interface DerivedInstallment {
   installment_number: number
-  due_date: string
   amount: number
 }
 
@@ -36,27 +35,17 @@ function round2(value: number): number {
   return parseFloat(value.toFixed(2))
 }
 
-function addMonths(dateStr: string, months: number): string {
-  const [y, m, d] = dateStr.split('-').map(Number)
-  const base = new Date(y, m - 1 + months, d)
-  const yy = base.getFullYear()
-  const mm = String(base.getMonth() + 1).padStart(2, '0')
-  const dd = String(base.getDate()).padStart(2, '0')
-  return `${yy}-${mm}-${dd}`
-}
-
 // Fixed downpayment + fixed number of installments; monthly amount derived per patient.
-// Installment 1 is the downpayment due on firstDueDate; each subsequent installment is
-// one month later. The final installment absorbs any rounding remainder.
+// Installment 1 is the downpayment; each subsequent installment is derived from remaining balance.
+// The final installment absorbs any rounding remainder.
 export function deriveInstallmentSchedule(
   total: number,
   downpayment: number,
-  numInstallments: number,
-  firstDueDate: string
+  numInstallments: number
 ): DerivedInstallment[] {
   const first = round2(Math.min(downpayment, total))
   const schedule: DerivedInstallment[] = [
-    { installment_number: 1, due_date: firstDueDate, amount: first },
+    { installment_number: 1, amount: first },
   ]
 
   const remaining = round2(total - first)
@@ -69,7 +58,6 @@ export function deriveInstallmentSchedule(
       : monthlyDerived
     schedule.push({
       installment_number: i + 2,
-      due_date: addMonths(firstDueDate, i + 1),
       amount,
     })
   }

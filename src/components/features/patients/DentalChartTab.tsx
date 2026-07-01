@@ -3,18 +3,27 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus, X } from 'lucide-react'
-import type { DentalChart, ToothCondition } from './types'
+import type { DentalChart, ToothCondition, PeriodontalFinding } from './types'
 import { updateDentalChart, ToothConditionData } from '@/actions/dentalChartActions'
+import { addPeriodontalFindings } from '@/actions/periodontalFindingsActions'
 import { formatDateTime } from '@/lib/date'
+import PeriodontalFindingsSection, {
+  PERIODONTAL_FINDING_LABELS,
+  CATEGORY_TITLES,
+  type PeriodontalFindingsInput,
+  type PeriodontalFindingsCategory,
+} from './PeriodontalFindingsSection'
 
 export interface StagedConditionDisplay extends ToothCondition {
   dentistName: string
   clinicName: string
+  dental_chart_id: number
 }
 
 export interface SessionGroup {
   dateKey: string
   recorded_at: string
+  dental_chart_id: number
   toothNumbers: number[]
   conditionSummary: Record<string, number>
   conditions: StagedConditionDisplay[]
@@ -32,6 +41,8 @@ interface DentalChartTabProps {
   historyOnly?: boolean
   onChartSave?: (conditions: ToothConditionData[]) => void
   stagedConditions?: ToothConditionData[]
+  periodontalFindings?: PeriodontalFinding[]
+  onFindingsSave?: (data: PeriodontalFindingsInput) => void
 }
 
 
@@ -257,6 +268,14 @@ function ToothButton({ num, surfaceMap, selectedSurfaces, surfaceConditions, onT
 
 
 const EMPTY_CONDITIONS: ToothConditionData[] = []
+const EMPTY_FINDINGS: PeriodontalFinding[] = []
+const emptyFindingsInput: PeriodontalFindingsInput = {
+  gingivitis: [],
+  periodontal_condition: [],
+  occlusion: [],
+  appliances: [],
+}
+const FINDING_CATEGORIES: PeriodontalFindingsCategory[] = ['gingivitis', 'periodontal_condition', 'occlusion', 'appliances']
 
 export default function DentalChartTab({
   patientId,
@@ -268,6 +287,8 @@ export default function DentalChartTab({
   historyOnly = false,
   onChartSave,
   stagedConditions = EMPTY_CONDITIONS,
+  periodontalFindings = EMPTY_FINDINGS,
+  onFindingsSave,
 }: DentalChartTabProps) {
   const [showPrimary, setShowPrimary] = useState(true)
   const [selectedSurfaces, setSelectedSurfaces] = useState<Set<string>>(new Set())
@@ -276,6 +297,7 @@ export default function DentalChartTab({
   const [showConditionForm, setShowConditionForm] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [viewingSession, setViewingSession] = useState<SessionGroup | null>(null)
+  const [findings, setFindings] = useState<PeriodontalFindingsInput>(emptyFindingsInput)
 
   // Load staged conditions into local form state
   useEffect(() => {
@@ -416,9 +438,11 @@ export default function DentalChartTab({
   }
 
 
+  const hasAnyFinding = FINDING_CATEGORIES.some(cat => findings[cat].length > 0)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!dentistId || selectedSurfaces.size === 0) return
+    if (!dentistId || (selectedSurfaces.size === 0 && !hasAnyFinding)) return
     setIsSubmitting(true)
 
     const conditionsData: ToothConditionData[] = Array.from(selectedSurfaces).map(key => {
@@ -436,54 +460,73 @@ export default function DentalChartTab({
 
     if (onChartSave) {
       onChartSave(conditionsData)
+      if (onFindingsSave) onFindingsSave(findings)
       setIsSubmitting(false)
       return
     }
 
     const res = await updateDentalChart(patientId, clinicId, dentistId, conditionsData)
-    setIsSubmitting(false)
-
-    if (res.success) {
-      alert('Dental chart updated successfully!')
-      setSurfaceConditions({})
-      setSurfaceNotes({})
-      setShowConditionForm(false)
-      setSelectedSurfaces(new Set())
-      await onRefresh()
-    } else {
+    if (!res.success) {
+      setIsSubmitting(false)
       alert(res.error ?? 'Failed to update dental chart')
+      return
     }
+
+    if (hasAnyFinding) {
+      const findingsRes = await addPeriodontalFindings({
+        patient_id: patientId,
+        clinic_id: clinicId,
+        dentist_id: dentistId,
+        appointment_id: null,
+        dental_chart_id: res.chartId ?? null,
+        ...findings,
+      })
+      if (!findingsRes.success) {
+        console.error('Failed to save periodontal findings:', findingsRes.error)
+      }
+    }
+
+    setIsSubmitting(false)
+    alert('Dental chart updated successfully!')
+    setSurfaceConditions({})
+    setSurfaceNotes({})
+    setFindings(emptyFindingsInput)
+    setShowConditionForm(false)
+    setSelectedSurfaces(new Set())
+    await onRefresh()
   }
 
   // Map parent chart's dentist/clinic to each condition for displaying in history
-  const allConds = (dentalCharts ?? []).flatMap(c => 
+  const allConds = (dentalCharts ?? []).flatMap(c =>
     (c.tooth_conditions ?? []).map(tc => {
       const dentistObj = Array.isArray(c.dentists) ? c.dentists[0] : c.dentists
       const dentistName = dentistObj ? `Dr. ${dentistObj.first_name} ${dentistObj.last_name}` : 'Attending Dentist'
       return {
         ...tc,
         dentistName,
-        clinicName: (Array.isArray(c.clinics) ? c.clinics[0] : c.clinics)?.name || 'Clinic'
+        clinicName: (Array.isArray(c.clinics) ? c.clinics[0] : c.clinics)?.name || 'Clinic',
+        dental_chart_id: c.id,
       }
     })
   )
 
-  const sessionMap = new Map<string, SessionGroup>()
+  const sessionMap = new Map<number, SessionGroup>()
 
   allConds.forEach(cond => {
-    const timestampKey = cond.recorded_at || new Date().toISOString()
-    let group = sessionMap.get(timestampKey)
+    let group = sessionMap.get(cond.dental_chart_id)
     if (!group) {
+      const timestampKey = cond.recorded_at || new Date().toISOString()
       group = {
         dateKey: new Date(timestampKey).toISOString().split('T')[0] ?? '',
         recorded_at: timestampKey,
+        dental_chart_id: cond.dental_chart_id,
         toothNumbers: [],
         conditionSummary: {},
         conditions: [],
         dentistName: cond.dentistName,
         clinicName: cond.clinicName
       }
-      sessionMap.set(timestampKey, group)
+      sessionMap.set(cond.dental_chart_id, group)
     }
 
     if (!group.toothNumbers.includes(cond.tooth_number)) {
@@ -710,6 +753,14 @@ export default function DentalChartTab({
                 </>
               )}
 
+              {/* Periodontal findings — optional, merged into the same submit */}
+              <div className="flex items-center gap-3 pt-1">
+                <div className="flex-1 border-t border-gray-200" />
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Periodontal Findings</span>
+                <div className="flex-1 border-t border-gray-200" />
+              </div>
+              <PeriodontalFindingsSection value={findings} onChange={setFindings} />
+
               <div className="flex justify-between items-center pt-1">
                 <div />
                 <div className="flex gap-2.5">
@@ -728,7 +779,7 @@ export default function DentalChartTab({
                       return (
                         <button
                           type="submit"
-                          disabled={selectedSurfaces.size === 0}
+                          disabled={selectedSurfaces.size === 0 && !hasAnyFinding}
                           className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold disabled:opacity-50 transition"
                         >
                           {hasNonHealthy ? 'Add to Invoice' : 'Add to Session'}
@@ -738,7 +789,7 @@ export default function DentalChartTab({
                   ) : (
                     <button
                       type="submit"
-                      disabled={isSubmitting || selectedSurfaces.size === 0}
+                      disabled={isSubmitting || (selectedSurfaces.size === 0 && !hasAnyFinding)}
                       className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold disabled:opacity-50 transition"
                     >
                       {isSubmitting ? 'Saving…' : 'Save Conditions & Notes'}
@@ -819,6 +870,7 @@ export default function DentalChartTab({
         <ChartSessionViewModal
           session={viewingSession}
           allConditions={allConds}
+          periodontalFindings={periodontalFindings}
           onClose={() => setViewingSession(null)}
         />
       )}
@@ -830,14 +882,16 @@ interface ChartSessionViewModalProps {
   session: {
     dateKey: string
     recorded_at: string
+    dental_chart_id: number
     dentistName: string
     clinicName: string
   }
   allConditions: ToothCondition[]
+  periodontalFindings: PeriodontalFinding[]
   onClose: () => void
 }
 
-function ChartSessionViewModal({ session, allConditions, onClose }: ChartSessionViewModalProps) {
+function ChartSessionViewModal({ session, allConditions, periodontalFindings, onClose }: ChartSessionViewModalProps) {
   const [showPrimary, setShowPrimary] = useState(true)
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
@@ -872,6 +926,9 @@ function ChartSessionViewModal({ session, allConditions, onClose }: ChartSession
       ])
     )
   }
+
+  const sessionFinding = periodontalFindings.find(f => f.dental_chart_id === session.dental_chart_id)
+  const hasFindings = sessionFinding && FINDING_CATEGORIES.some(cat => sessionFinding[cat].length > 0)
 
   return createPortal(
     <div className="fixed inset-0 bg-black/60 z-55 flex items-center justify-center p-4 backdrop-blur-xs">
@@ -973,6 +1030,33 @@ function ChartSessionViewModal({ session, allConditions, onClose }: ChartSession
                 </div>
               </div>
             </div>
+
+            {/* Periodontal findings divider */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 border-t border-gray-200" />
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Periodontal Findings</span>
+              <div className="flex-1 border-t border-gray-200" />
+            </div>
+            {!hasFindings ? (
+              <p className="text-center py-6 text-gray-400 italic text-xs">No periodontal findings recorded for this session.</p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {FINDING_CATEGORIES.map(cat => (
+                  sessionFinding![cat].length > 0 && (
+                    <div key={cat}>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase block mb-1">{CATEGORY_TITLES[cat]}</span>
+                      <div className="flex flex-wrap gap-1">
+                        {sessionFinding![cat].map(key => (
+                          <span key={key} className="text-[10px] font-semibold bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">
+                            {PERIODONTAL_FINDING_LABELS[key] ?? key}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

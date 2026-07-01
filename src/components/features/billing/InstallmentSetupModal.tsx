@@ -5,7 +5,6 @@ import { createPortal } from 'react-dom'
 import { X, AlertCircle, RefreshCw, CalendarDays } from 'lucide-react'
 import { createInstallmentPlan } from '@/actions/installmentActions'
 import { deriveInstallmentSchedule, getEligibleInstallmentService } from '@/utils/installment-helpers'
-import { toDateKey, formatDate } from '@/lib/date'
 import type { Transaction } from './types'
 
 interface InstallmentSetupModalProps {
@@ -16,15 +15,12 @@ interface InstallmentSetupModalProps {
   onSuccess: () => void
 }
 
-const TODAY = toDateKey()
-
 export default function InstallmentSetupModal({
   isOpen,
   onClose,
   transaction,
   onSuccess,
 }: InstallmentSetupModalProps) {
-  const [firstDueDate, setFirstDueDate] = useState(TODAY)
   const [notes, setNotes] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
@@ -39,15 +35,13 @@ export default function InstallmentSetupModal({
     return deriveInstallmentSchedule(
       transaction.total_amount,
       service.downpayment_amount,
-      service.num_installments,
-      firstDueDate
+      service.num_installments
     )
-  }, [service, transaction.total_amount, firstDueDate])
+  }, [service, transaction.total_amount])
 
   const handleClose = () => {
     setFormError('')
     setNotes('')
-    setFirstDueDate(TODAY)
     onClose()
   }
 
@@ -55,12 +49,10 @@ export default function InstallmentSetupModal({
     e.preventDefault()
     setFormError('')
     if (!service || service.num_installments == null) { setFormError('This transaction has no installment-eligible service.'); return }
-    if (!firstDueDate) { setFormError('Select a first due date.'); return }
 
     setIsSubmitting(true)
     const result = await createInstallmentPlan({
       transaction_id: transaction.id,
-      first_due_date: firstDueDate,
       notes: notes || undefined,
     })
 
@@ -135,29 +127,16 @@ export default function InstallmentSetupModal({
                 </div>
               </div>
 
-              {/* First due date */}
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-slate-700">First Due Date (downpayment)</label>
-                <input
-                  type="date"
-                  required
-                  value={firstDueDate}
-                  onChange={(e) => setFirstDueDate(e.target.value)}
-                  className="px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50"
-                />
-              </div>
-
-              {/* Derived schedule (read-only) */}
+              {/* Installment preview (read-only) */}
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Payment Schedule</label>
+                <label className="text-sm font-semibold text-slate-700">Installments</label>
                 <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
                   {schedule.map((inst) => (
                     <div key={inst.installment_number} className="grid grid-cols-[28px_1fr_auto] gap-2 items-center text-sm">
                       <span className="text-xs text-slate-400 font-semibold text-right">{inst.installment_number}.</span>
                       <span className="text-slate-600">
-                        {formatDate(inst.due_date)}
                         {inst.installment_number === 1 && (
-                          <span className="ml-1.5 text-[10px] font-bold text-indigo-600">DOWNPAYMENT</span>
+                          <span className="text-[10px] font-bold text-indigo-600">DOWNPAYMENT</span>
                         )}
                       </span>
                       <span className="font-semibold text-slate-800 text-right">₱{Number(inst.amount).toLocaleString()}</span>

@@ -5,7 +5,6 @@ import { sanitizeServerError } from '@/lib/errors/sanitizeError'
 import { revalidatePath } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase/server'
 import { validatePatientAccess } from '@/lib/auth/validatePatientAccess'
-import { encryptMedicalData, decryptMedicalData } from '@/lib/encryption/medicalEncryption'
 import { resolveUpdaterInfo } from './patientCoreActions'
 
 // TYPES
@@ -17,6 +16,7 @@ export interface FetchPatientRecordOptions {
   includeAssessments?: boolean
   includePrescriptions?: boolean
   includePeriodontalScreenings?: boolean
+  includePeriodontalFindings?: boolean
   includeTmjAssessments?: boolean
   includeOralSurgeryRecords?: boolean
   includeAppointments?: boolean
@@ -36,6 +36,16 @@ export interface PatientMedicalHistoryData {
 }
 
 // FETCH PATIENT RECORD
+
+function parseJsonArray(value: string): string[] {
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed : []
+  } catch (error) {
+    console.error('Failed to parse medical data as JSON array:', error instanceof Error ? error.message : error)
+    return []
+  }
+}
 
 export async function fetchPatientRecord(
   patientId: number,
@@ -98,6 +108,16 @@ export async function fetchPatientRecord(
       .eq('patient_id', patientId)
       .order('screened_at', { ascending: false })
 
+    let periodontalFindingsQuery = supabaseAdmin
+      .from('periodontal_findings')
+      .select(`
+        *,
+        dentists ( id, first_name, last_name ),
+        clinics ( id, name )
+      `)
+      .eq('patient_id', patientId)
+      .order('recorded_at', { ascending: false })
+
     let tmjQuery = supabaseAdmin
       .from('tmj_assessments')
       .select(`
@@ -133,6 +153,7 @@ export async function fetchPatientRecord(
       assessmentsQuery = assessmentsQuery.eq('clinic_id', clinicId)
       prescriptionsQuery = prescriptionsQuery.eq('clinic_id', clinicId)
       periodontalQuery = periodontalQuery.eq('clinic_id', clinicId)
+      periodontalFindingsQuery = periodontalFindingsQuery.eq('clinic_id', clinicId)
       tmjQuery = tmjQuery.eq('clinic_id', clinicId)
       oralSurgeryQuery = oralSurgeryQuery.eq('clinic_id', clinicId)
       appointmentsQuery = appointmentsQuery.eq('clinic_id', clinicId)
@@ -145,6 +166,7 @@ export async function fetchPatientRecord(
     const includeAssessments = fetchAll || options?.includeAssessments
     const includePrescriptions = fetchAll || options?.includePrescriptions
     const includePeriodontalScreenings = fetchAll || options?.includePeriodontalScreenings
+    const includePeriodontalFindings = fetchAll || options?.includePeriodontalFindings
     const includeTmjAssessments = fetchAll || options?.includeTmjAssessments
     const includeOralSurgeryRecords = fetchAll || options?.includeOralSurgeryRecords
     const includeAppointments = fetchAll || options?.includeAppointments
@@ -157,6 +179,7 @@ export async function fetchPatientRecord(
       assessmentsRes,
       prescriptionsRes,
       periodontalRes,
+      periodontalFindingsRes,
       tmjRes,
       oralSurgeryRes,
       appointmentsRes,
@@ -195,6 +218,10 @@ export async function fetchPatientRecord(
         ? periodontalQuery
         : Promise.resolve({ data: [], error: null }),
 
+      includePeriodontalFindings
+        ? periodontalFindingsQuery
+        : Promise.resolve({ data: [], error: null }),
+
       includeTmjAssessments
         ? tmjQuery
         : Promise.resolve({ data: [], error: null }),
@@ -210,57 +237,23 @@ export async function fetchPatientRecord(
 
     if (patientRes.error) throw new Error(patientRes.error.message)
 
-    // Decrypt medical history fields
     const rawMed = medHistoryRes.data as unknown as Record<string, string | null | boolean | string[]>
     const medicalHistory = rawMed ? {
       ...rawMed,
-      blood_type:           rawMed.blood_type           ? await decryptMedicalData(rawMed.blood_type as string)           : null,
-      blood_pressure:       rawMed.blood_pressure       ? await decryptMedicalData(rawMed.blood_pressure as string)       : null,
-      medical_flags:        rawMed.medical_flags        ? await decryptMedicalData(rawMed.medical_flags as string)        : null,
-      previous_surgeries:   rawMed.previous_surgeries   ? await decryptMedicalData(rawMed.previous_surgeries as string)   : null,
-      allergies:            rawMed.allergies            ? JSON.parse(await decryptMedicalData(rawMed.allergies as string))            : [],
-      current_medications:  rawMed.current_medications  ? JSON.parse(await decryptMedicalData(rawMed.current_medications as string))  : [],
-      medical_conditions:   rawMed.medical_conditions   ? JSON.parse(await decryptMedicalData(rawMed.medical_conditions as string))   : [],
+      blood_type:           (rawMed.blood_type as string | null)         ?? null,
+      blood_pressure:       (rawMed.blood_pressure as string | null)     ?? null,
+      medical_flags:        (rawMed.medical_flags as string | null)      ?? null,
+      previous_surgeries:   (rawMed.previous_surgeries as string | null) ?? null,
+      allergies:            rawMed.allergies            ? parseJsonArray(rawMed.allergies as string)            : [],
+      current_medications:  rawMed.current_medications  ? parseJsonArray(rawMed.current_medications as string)  : [],
+      medical_conditions:   rawMed.medical_conditions   ? parseJsonArray(rawMed.medical_conditions as string)   : [],
     } : null
 
-    // Decrypt prescriptions
-    const prescriptions = await Promise.all(
-      (prescriptionsRes.data ?? []).map(async (rx) => ({
-        ...rx,
-        medication: rx.medication ? await decryptMedicalData(rx.medication) : rx.medication,
-        dosage:     rx.dosage     ? await decryptMedicalData(rx.dosage)     : rx.dosage,
-        frequency:  rx.frequency  ? await decryptMedicalData(rx.frequency)  : rx.frequency,
-        duration:   rx.duration   ? await decryptMedicalData(rx.duration)   : rx.duration,
-        notes:      rx.notes      ? await decryptMedicalData(rx.notes)      : rx.notes,
-      }))
-    )
-
-    // Decrypt clinical assessments
-    const assessments = await Promise.all(
-      (assessmentsRes.data ?? []).map(async (a) => ({
-        ...a,
-        diagnosis:      a.diagnosis      ? await decryptMedicalData(a.diagnosis)      : a.diagnosis,
-        treatment_plan: a.treatment_plan ? await decryptMedicalData(a.treatment_plan) : a.treatment_plan,
-        notes:          a.notes          ? await decryptMedicalData(a.notes)          : a.notes,
-      }))
-    )
-
-    // Decrypt treatment history
-    const treatmentHistory = await Promise.all(
-      (treatmentHistoryRes.data ?? []).map(async (t) => ({
-        ...t,
-        treatment: t.treatment ? await decryptMedicalData(t.treatment) : t.treatment,
-        notes:     t.notes     ? await decryptMedicalData(t.notes)     : t.notes,
-      }))
-    )
-
-    // Decrypt periodontal screenings
-    const periodontalScreenings = await Promise.all(
-      (periodontalRes.data ?? []).map(async (p) => ({
-        ...p,
-        findings: p.findings ? await decryptMedicalData(p.findings) : p.findings,
-      }))
-    )
+    const prescriptions = prescriptionsRes.data ?? []
+    const assessments = assessmentsRes.data ?? []
+    const treatmentHistory = treatmentHistoryRes.data ?? []
+    const periodontalScreenings = periodontalRes.data ?? []
+    const periodontalFindings = periodontalFindingsRes.data ?? []
 
     return {
       success: true,
@@ -272,6 +265,7 @@ export async function fetchPatientRecord(
         assessments,
         prescriptions,
         periodontalScreenings,
+        periodontalFindings,
         tmjAssessments: tmjRes.data ?? [],
         oralSurgeryRecords: oralSurgeryRes.data ?? [],
         appointments: appointmentsRes.data ?? [],
@@ -295,47 +289,36 @@ export async function updatePatientMedicalHistory(
 ) {
   const access = await validatePatientAccess(patientId)
   if (!access.allowed) return { success: false, error: access.reason }
-  if (access.role !== 'patient' && access.role !== 'staff') {
+  if (access.role !== 'dentist' && access.role !== 'staff' && access.role !== 'superadmin') {
     return { success: false, error: 'Insufficient permissions' }
   }
 
   try {
     const { updatedBy, branchName } = await resolveUpdaterInfo()
 
-    const [
-      enc_blood_type,
-      enc_blood_pressure,
-      enc_medical_flags,
-      enc_allergies,
-      enc_medications,
-      enc_conditions,
-      enc_surgeries,
-    ] = await Promise.all([
-      data.blood_type       ? encryptMedicalData(data.blood_type)       : Promise.resolve(null),
-      data.blood_pressure   ? encryptMedicalData(data.blood_pressure)   : Promise.resolve(null),
-      data.medical_flags    ? encryptMedicalData(data.medical_flags)    : Promise.resolve(null),
-      encryptMedicalData(JSON.stringify(data.allergies ?? [])),
-      encryptMedicalData(JSON.stringify(data.current_medications ?? [])),
-      encryptMedicalData(JSON.stringify(data.medical_conditions ?? [])),
-      data.previous_surgeries ? encryptMedicalData(data.previous_surgeries) : Promise.resolve(null),
-    ])
+    const { data: existingHist } = await supabaseAdmin
+      .from('patient_medical_history')
+      .select('detailed_info')
+      .eq('patient_id', patientId)
+      .maybeSingle()
 
     const { data: updated, error } = await supabaseAdmin
       .from('patient_medical_history')
       .upsert(
         {
           patient_id: patientId,
-          blood_type: enc_blood_type,
-          blood_pressure: enc_blood_pressure,
-          medical_flags: enc_medical_flags,
-          allergies: enc_allergies,
-          current_medications: enc_medications,
-          medical_conditions: enc_conditions,
-          previous_surgeries: enc_surgeries,
+          blood_type: data.blood_type ?? null,
+          blood_pressure: data.blood_pressure ?? null,
+          medical_flags: data.medical_flags ?? null,
+          allergies: JSON.stringify(data.allergies ?? []),
+          current_medications: JSON.stringify(data.current_medications ?? []),
+          medical_conditions: JSON.stringify(data.medical_conditions ?? []),
+          previous_surgeries: data.previous_surgeries ?? null,
           is_pregnant: data.is_pregnant ?? false,
           is_smoker: data.is_smoker ?? false,
           updated_at: new Date().toISOString(),
           detailed_info: {
+            ...(existingHist?.detailed_info as Record<string, unknown> || {}),
             ...(data.detailed_info || {}),
             updated_by: updatedBy,
             updated_by_branch: branchName,
