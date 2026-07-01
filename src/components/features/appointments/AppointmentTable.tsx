@@ -69,8 +69,8 @@ export default function AppointmentTable({
                   </td>
                   <td className="px-3 md:px-6 py-3 md:py-4">
                     <div>
-                      <p className="font-medium text-slate-800">{formattedDate}</p>
-                      <p className="text-xs text-gray-500 flex items-center gap-1">
+                      <p className="font-medium text-slate-800 whitespace-nowrap">{formattedDate}</p>
+                      <p className="text-xs text-gray-500 flex items-center gap-1 whitespace-nowrap">
                         <Clock className="w-3.5 h-3.5 text-gray-400" />
                         {formattedTime}
                       </p>

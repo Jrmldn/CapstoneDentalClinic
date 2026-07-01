@@ -70,6 +70,12 @@ function generateId() {
   return Math.random().toString(36).slice(2, 9)
 }
 
+function tabButtonClass(isActive: boolean) {
+  return `flex flex-col items-center gap-1 flex-1 py-3 text-[11px] font-bold transition-all border-b-2 outline-none ${
+    isActive ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+  }`
+}
+
 
 
 export default function DentistChartBillingModal({
@@ -101,6 +107,7 @@ export default function DentistChartBillingModal({
   const [mounted, setMounted] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [showInvoiceDrawer, setShowInvoiceDrawer] = useState(false)
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -474,7 +481,7 @@ export default function DentistChartBillingModal({
 
   return createPortal(
     <div className="fixed inset-0 bg-black/60 z-55 flex items-center justify-center p-4 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-7xl h-[95vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-7xl h-[95vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 relative">
 
         {/* Main Modal Header */}
         <div className="px-5 py-2.5 border-b border-gray-150 flex justify-between items-center bg-slate-50 shrink-0">
@@ -497,10 +504,10 @@ export default function DentistChartBillingModal({
         </div>
 
         {/* Split Screen Container */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
 
           {/* Left Panel: EHR Workspace (55% width) */}
-          <div className="w-[55%] border-r border-gray-150 flex flex-col bg-slate-50/30 overflow-hidden">
+          <div className="w-full md:w-[55%] border-r-0 md:border-r border-gray-150 flex flex-col bg-slate-50/30 overflow-hidden">
             {/* EHR Tab bar */}
             <div className="flex border-b border-gray-100 bg-white px-4 shrink-0">
               {tabs.map(tab => {
@@ -509,14 +516,10 @@ export default function DentistChartBillingModal({
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex flex-col items-center gap-1 flex-1 py-3 text-[11px] font-bold transition-all border-b-2 outline-none ${
-                      activeTab === tab.id
-                        ? 'border-blue-600 text-blue-600'
-                        : 'border-transparent text-slate-500 hover:text-slate-700'
-                    }`}
+                    className={tabButtonClass(activeTab === tab.id)}
                   >
                     <Icon className="w-5 h-5" />
-                    <span>{tab.label}</span>
+                    <span className={activeTab === tab.id ? '' : 'hidden sm:inline'}>{tab.label}</span>
                   </button>
                 )
               })}
@@ -619,9 +622,21 @@ export default function DentistChartBillingModal({
             </div>
           </div>
 
-          {/* Right Panel: Invoice Preview (45% width) */}
-          <div className="w-[45%] flex flex-col bg-white overflow-hidden">
-            <div className="px-5 py-2.5 border-b border-gray-100 bg-slate-50/50 shrink-0">
+          {/* Mobile-only backdrop for the invoice drawer */}
+          {showInvoiceDrawer && (
+            <div
+              onClick={() => setShowInvoiceDrawer(false)}
+              className="md:hidden fixed inset-0 bg-black/50 z-10 animate-in fade-in duration-200"
+            />
+          )}
+
+          {/* Right Panel: Invoice Preview (45% width on desktop, slide-in drawer on mobile) */}
+          <div
+            className={`fixed md:static inset-y-0 right-0 z-20 md:z-auto w-[85%] max-w-sm md:w-[45%] md:max-w-none flex flex-col bg-white overflow-hidden shadow-2xl md:shadow-none transition-transform duration-200 md:translate-x-0 ${
+              showInvoiceDrawer ? 'flex translate-x-0' : 'hidden md:flex translate-x-full'
+            }`}
+          >
+            <div className="px-5 py-2.5 border-b border-gray-100 bg-slate-50/50 shrink-0 flex items-center justify-between">
               <h4 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
                 <FileText className="w-4 h-4 text-emerald-600" />
                 Invoice Preview
@@ -631,6 +646,13 @@ export default function DentistChartBillingModal({
                   </span>
                 )}
               </h4>
+              <button
+                type="button"
+                onClick={() => setShowInvoiceDrawer(false)}
+                className="md:hidden p-1 hover:bg-gray-200 rounded-full transition"
+              >
+                <X className="w-4 h-4 text-gray-500" />
+              </button>
             </div>
 
             <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
@@ -946,6 +968,23 @@ export default function DentistChartBillingModal({
             </form>
           </div>
         </div>
+
+        {/* Mobile FAB: opens the invoice drawer */}
+        {!showInvoiceDrawer && (
+          <button
+            type="button"
+            onClick={() => setShowInvoiceDrawer(true)}
+            className="md:hidden absolute bottom-4 left-4 z-10 flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 text-white rounded-full shadow-lg font-bold text-xs active:scale-95 transition"
+          >
+            <FileText className="w-4 h-4" />
+            View Invoice
+            {currentSessionItems.length > 0 && (
+              <span className="ml-0.5 text-[10px] font-bold bg-white text-emerald-700 px-1.5 py-0.5 rounded-full">
+                {currentSessionItems.length}
+              </span>
+            )}
+          </button>
+        )}
 
         {/* Confirm Modal */}
         {showConfirmModal && (

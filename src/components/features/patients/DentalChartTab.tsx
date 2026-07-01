@@ -615,14 +615,14 @@ export default function DentalChartTab({
           </div>
 
           {/* Chart grid */}
-          <div className="pb-2 w-full">
-            <div className="flex flex-col gap-2.5 w-full select-none">
+          <div className="overflow-x-auto pb-2">
+            <div className="flex flex-col gap-2.5 min-w-[700px] select-none">
               <div className="flex justify-center w-full">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">FACIAL / BUCCAL ↑</span>
               </div>
 
               {/* Upper Permanent */}
-              <div className="flex justify-center gap-0.5 sm:gap-1 w-full">
+              <div className="flex justify-center gap-1 w-full">
                 {upperPermanent.map(num => (
                   <ToothButton
                     key={num} num={num} surfaceMap={buildSurfaceMap(num)}
@@ -634,7 +634,7 @@ export default function DentalChartTab({
 
               {/* Upper Temporary */}
               {showPrimary && (
-                <div className="flex justify-center gap-0.5 sm:gap-1 w-full">
+                <div className="flex justify-center gap-1 w-full">
                   {upperTemporary.map(num => (
                     <ToothButton
                       key={num} num={num} surfaceMap={buildSurfaceMap(num)}
@@ -654,7 +654,7 @@ export default function DentalChartTab({
 
               {/* Lower Temporary */}
               {showPrimary && (
-                <div className="flex justify-center gap-0.5 sm:gap-1 w-full">
+                <div className="flex justify-center gap-1 w-full">
                   {lowerTemporary.map(num => (
                     <ToothButton
                       key={num} num={num} surfaceMap={buildSurfaceMap(num)}
@@ -666,7 +666,7 @@ export default function DentalChartTab({
               )}
 
               {/* Lower Permanent */}
-              <div className="flex justify-center gap-0.5 sm:gap-1 w-full">
+              <div className="flex justify-center gap-1 w-full">
                 {lowerPermanent.map(num => (
                   <ToothButton
                     key={num} num={num} surfaceMap={buildSurfaceMap(num)}
@@ -712,7 +712,7 @@ export default function DentalChartTab({
                   </p>
 
                   {/* Column headers */}
-                  <div className="grid grid-cols-[140px_1fr_1fr] gap-3 px-3">
+                  <div className="hidden sm:grid sm:grid-cols-[140px_1fr_1fr] gap-3 px-3">
                     <span className="text-[10px] font-bold text-slate-400 uppercase">Surface</span>
                     <span className="text-[10px] font-bold text-slate-400 uppercase">Condition</span>
                     <span className="text-[10px] font-bold text-slate-400 uppercase">Notes</span>
@@ -725,7 +725,7 @@ export default function DentalChartTab({
                       const toothNum = key.slice(0, dashIdx)
                       const surface = key.slice(dashIdx + 1)
                       return (
-                        <div key={key} className="grid grid-cols-[140px_1fr_1fr] gap-3 items-center bg-slate-50 rounded-lg px-3 py-2">
+                        <div key={key} className="grid grid-cols-1 sm:grid-cols-[140px_1fr_1fr] gap-2 sm:gap-3 sm:items-center bg-slate-50 rounded-lg px-3 py-2">
                           <span className="text-xs font-bold text-slate-700">
                             Tooth #{toothNum} —{' '}
                             <span className="font-semibold text-slate-500">{cap(surface)}</span>

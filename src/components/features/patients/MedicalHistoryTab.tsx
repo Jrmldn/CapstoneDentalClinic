@@ -124,8 +124,8 @@ export default function MedicalHistoryTab({
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-xs grid grid-cols-3 gap-4">
-        <div className="col-span-3 flex justify-between items-center border-b border-gray-100 pb-1 mb-2">
+      <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-xs grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div className="col-span-2 sm:col-span-3 flex justify-between items-center border-b border-gray-100 pb-1 mb-2">
           <h4 className="font-bold text-slate-900 text-sm">Personal Details</h4>
           {localRecord.medicalHistory?.detailed_info?.profile_updated_by ? (
             <span className="text-[10px] text-gray-400 font-medium">
@@ -141,35 +141,35 @@ export default function MedicalHistoryTab({
             )
           )}
         </div>
-        <div>
+        <div className="min-w-0">
           <span className="text-[10px] text-gray-400 block font-semibold">GENDER</span>
-          <span className="text-sm font-medium capitalize text-slate-800">{localRecord.patient.gender}</span>
+          <span className="text-sm font-medium capitalize text-slate-800 break-words">{localRecord.patient.gender}</span>
         </div>
-        <div>
+        <div className="min-w-0">
           <span className="text-[10px] text-gray-400 block font-semibold">BIRTHDATE</span>
-          <span className="text-sm font-medium text-slate-800">{localRecord.patient.birthdate}</span>
+          <span className="text-sm font-medium text-slate-800 break-words">{localRecord.patient.birthdate}</span>
         </div>
-        <div>
+        <div className="min-w-0">
           <span className="text-[10px] text-gray-400 block font-semibold">PHONE</span>
-          <span className="text-sm font-medium text-slate-800">{formatPhone(localRecord.patient.phone)}</span>
+          <span className="text-sm font-medium text-slate-800 break-words">{formatPhone(localRecord.patient.phone)}</span>
         </div>
         {localRecord.patient.email && (
-          <div>
+          <div className="min-w-0">
             <span className="text-[10px] text-gray-400 block font-semibold">EMAIL</span>
-            <span className="text-sm font-medium text-slate-800">{localRecord.patient.email}</span>
+            <span className="text-sm font-medium text-slate-800 break-words">{localRecord.patient.email}</span>
           </div>
         )}
-        <div>
+        <div className="min-w-0">
           <span className="text-[10px] text-gray-400 block font-semibold">LAST VISIT</span>
-          <span className="text-sm font-semibold text-blue-600">{lastVisitDate}</span>
+          <span className="text-sm font-semibold text-blue-600 break-words">{lastVisitDate}</span>
         </div>
-        <div>
+        <div className="min-w-0">
           <span className="text-[10px] text-gray-400 block font-semibold">PREVIOUS DENTIST</span>
-          <span className="text-sm font-medium text-slate-800">{localRecord.patient.previous_dentist || 'None'}</span>
+          <span className="text-sm font-medium text-slate-800 break-words">{localRecord.patient.previous_dentist || 'None'}</span>
         </div>
-        <div className="col-span-3">
+        <div className="col-span-2 sm:col-span-3 min-w-0">
           <span className="text-[10px] text-gray-400 block font-semibold">ADDRESS</span>
-          <span className="text-sm font-medium text-slate-800">{localRecord.patient.address || '—'}</span>
+          <span className="text-sm font-medium text-slate-800 break-words">{localRecord.patient.address || '—'}</span>
         </div>
 
         {(() => {

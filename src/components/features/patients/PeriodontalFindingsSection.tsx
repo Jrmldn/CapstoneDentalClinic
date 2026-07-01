@@ -89,7 +89,7 @@ export default function PeriodontalFindingsSection({ value, onChange }: Periodon
 
   return (
     <div>
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 sm:gap-2">
         {(Object.keys(CATEGORY_OPTIONS) as PeriodontalFindingsCategory[]).map(category => (
           <div key={category} className="space-y-1.5">
             <span className="text-[10px] font-bold text-slate-400 uppercase block">{CATEGORY_TITLES[category]}</span>
