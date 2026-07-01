@@ -5,7 +5,7 @@
 - [ ] Fix format/layout/design of treatment history on patient dashboard
 - [ ] Superadmin oversee system and make modifications (staff, doctor, patient side)
 - [ ] Enforce password requirements (minimum 8 chars, special chars: !, @, #, $, %, &, *, _ — 1 uppercase, 1 lowercase, 1 numeric)
-- [ ] Redirect new patient account to profile details first, show notification to complete profile
+- [ ] Redirect new patient account to profile details first, show on notification icon with red dot badge showing "welcome{name}!, complete your profile details blablabla" to complete profile
 - [ ] Replace native alert boxes with modals (success, failed, confirmation, etc.)
 - [ ] Wire up Paymongo integration
 - [ ] Integrate Semaphore SMS
